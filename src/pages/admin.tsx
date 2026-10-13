@@ -78,7 +78,7 @@ export function AdminDashboard() {
         <RangePills value={range} onChange={setRange} />
         <span className="text-xs font-semibold text-ink-3">{t("Cash with riders and payable are always as of now.")}</span>
       </div>
-      {(d.openPayoutRequests > 0 || d.pendingMerchants > 0 || d.pendingVerifications > 0) && (
+      {(d.openPayoutRequests > 0 || d.pendingMerchants > 0 || d.pendingVerifications > 0 || d.lockedRiders > 0) && (
         <div className="mb-4 flex flex-wrap gap-2">
           {d.openPayoutRequests > 0 && (
             <AlertChip icon={HandCoins} tone="brand" onClick={() => navigate("/app/payouts")}>
@@ -88,6 +88,11 @@ export function AdminDashboard() {
           {d.pendingMerchants > 0 && (
             <AlertChip icon={Store} tone="sun" onClick={() => navigate("/app/merchants")}>
               {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
+            </AlertChip>
+          )}
+          {d.lockedRiders > 0 && (
+            <AlertChip icon={Bike} tone="sun" onClick={() => navigate("/app/riders")}>
+              {t("{n} rider(s) locked out, activate from Riders →", { n: d.lockedRiders })}
             </AlertChip>
           )}
           {d.pendingVerifications > 0 && (
@@ -618,7 +623,9 @@ export function Riders() {
                   </p>
                   <p className="text-sm text-ink-2">{r.phone}{r.riderArea && ` · ${r.riderArea}`}</p>
                 </div>
-                {r.status !== "active" && <Badge tone="red">{t("Suspended")}</Badge>}
+                {r.status !== "active" && (
+                  <Badge tone="red">{r.lockedByLogin ? t("Locked: too many wrong passwords") : t("Suspended")}</Badge>
+                )}
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-page p-3">

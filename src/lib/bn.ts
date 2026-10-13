@@ -1070,4 +1070,7 @@ export const BN: Record<string, string> = {
   "Go to Merchant login →": "মার্চেন্ট লগইনে যান →",
   "Create rider": "রাইডার তৈরি করুন",
   "Only name, phone and password are required. Fill in the rest now or later from the rider's profile.": "শুধু নাম, ফোন ও পাসওয়ার্ড বাধ্যতামূলক। বাকি তথ্য এখন বা পরে রাইডারের প্রোফাইল থেকে দিতে পারবেন।",
+  "Locked: too many wrong passwords": "লক: অনেকবার ভুল পাসওয়ার্ড",
+  "{n} rider(s) locked out, activate from Riders →": "{n} জন রাইডার লক হয়ে গেছে, রাইডার পেজ থেকে চালু করুন →",
+  "Too many wrong passwords. This account is suspended. Ask the Morning Rider office to activate it.": "অনেকবার ভুল পাসওয়ার্ড দেওয়া হয়েছে। অ্যাকাউন্টটি স্থগিত। চালু করতে Morning Rider অফিসে যোগাযোগ করুন।",
 };

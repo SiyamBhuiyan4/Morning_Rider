@@ -110,7 +110,12 @@ export const setStatus = mutation({
     if (admin._id === args.userId) throw new ConvexError("You cannot change your own status.");
     const user = await ctx.db.get("users", args.userId);
     if (!user) throw new ConvexError("User not found.");
-    await ctx.db.patch("users", user._id, { status: args.status });
+    await ctx.db.patch(
+      "users",
+      user._id,
+      // Activating clears an automatic lock and its wrong-password count.
+      args.status === "active" ? { status: args.status, failedLogins: 0, lockedByLogin: undefined } : { status: args.status, lockedByLogin: undefined },
+    );
     if (args.status !== "active") await revokeSessions(ctx, user._id);
     return null;
   },
@@ -164,7 +169,7 @@ export const setPassword = mutation({
     if (admin._id === args.userId) throw new ConvexError("Use Account → Change password for yourself.");
     const user = await ctx.db.get("users", args.userId);
     if (!user || user.role === "admin") throw new ConvexError("User not found.");
-    await ctx.db.patch("users", user._id, await hashPassword(args.password.trim()));
+    await ctx.db.patch("users", user._id, { ...(await hashPassword(args.password.trim())), failedLogins: 0 });
     await revokeSessions(ctx, user._id);
     return null;
   },

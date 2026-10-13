@@ -122,7 +122,12 @@ export const admin = query({
       .query("merchantVerifications")
       .withIndex("by_status_and_submittedAt", (q) => q.eq("status", "submitted"))
       .take(200);
+    const suspendedRiders = await ctx.db
+      .query("users")
+      .withIndex("by_role_and_status", (q) => q.eq("role", "rider").eq("status", "suspended"))
+      .take(200);
     return {
+      lockedRiders: suspendedRiders.filter((u) => u.lockedByLogin).length,
       openPayoutRequests: payoutRequests.length,
       pendingVerifications: pendingVerifications.length,
       counts: await statusCounts(ctx, "all"),

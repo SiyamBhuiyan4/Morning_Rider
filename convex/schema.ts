@@ -108,6 +108,9 @@ export default defineSchema({
     // merchant business verification; undefined = not submitted yet
     verification: v.optional(verificationStatus),
     demo: v.optional(v.boolean()), // sample data, removable from the admin dashboard
+    // Riders: wrong passwords in a row; at RIDER_MAX_FAILURES the account is suspended.
+    failedLogins: v.optional(v.number()),
+    lockedByLogin: v.optional(v.boolean()), // suspended automatically for too many wrong passwords
     createdAt: v.number(),
   })
     .index("by_phone", ["phone"])

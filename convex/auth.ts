@@ -27,14 +27,20 @@ import { payoutMethod } from "./schema";
   so `login` reports failure by *returning* — otherwise the failure row would
   be discarded together with the error and the count would never grow.
 */
-const MAX_FAILURES = 1000; // Siyam's choice (2026-10-14); was 5
+const MAX_FAILURES = 30; // Siyam's choice (2026-10-14)
 const FAILURE_WINDOW_MS = 15 * 60 * 1000;
 /*
   Site-wide ceiling. The per-phone lock stops guessing one account; this stops
   "password spraying" — one common password tried against many numbers —
   which never trips any single account's lock.
 */
-const GLOBAL_MAX_FAILURES = 1000; // must be >= MAX_FAILURES; was 300
+const GLOBAL_MAX_FAILURES = 300; // must be >= MAX_FAILURES
+/*
+  Riders (Siyam's rule): 30 wrong passwords in a row and the account is
+  suspended until the office presses Activate. Merchants keep the
+  15-minute lock instead.
+*/
+export const RIDER_MAX_FAILURES = 30;
 /** Public sign-ups allowed per hour, so nobody can flood the approval queue. */
 const MAX_SIGNUPS_PER_HOUR = 30;
 
@@ -157,7 +163,12 @@ async function attemptLogin(
     .query("loginFailures")
     .withIndex("by_phone_and_at", (q) => q.eq("phone", phone).gte("at", since))
     .take(MAX_FAILURES + 1);
-  if (recent.length >= MAX_FAILURES) {
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_phone", (q) => q.eq("phone", phone))
+    .unique();
+  // Riders are suspended after RIDER_MAX_FAILURES instead (see below), so the timed lock skips them.
+  if (recent.length >= MAX_FAILURES && user?.role !== "rider") {
     return {
       ok: false,
       error: "Too many wrong attempts. This account is locked for 15 minutes.",
@@ -171,10 +182,6 @@ async function attemptLogin(
     return { ok: false, error: "Too many login attempts right now. Please try again in a few minutes." };
   }
 
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_phone", (q) => q.eq("phone", phone))
-    .unique();
 
   /*
     Unknown phone still pays for a full derivation, so the response time
@@ -211,6 +218,25 @@ async function attemptLogin(
       wrongDoor: user.role,
     };
   }
+  if (user && !matches && user.role === "rider") {
+    // Counted on the account, not in a time window: only a correct login or the office resets it.
+    const failed = (user.failedLogins ?? 0) + 1;
+    if (failed >= RIDER_MAX_FAILURES && user.status === "active") {
+      await ctx.db.patch("users", user._id, { failedLogins: failed, status: "suspended", lockedByLogin: true });
+      await revokeSessions(ctx, user._id);
+    } else {
+      await ctx.db.patch("users", user._id, { failedLogins: failed });
+    }
+    await ctx.db.insert("loginFailures", { phone, at: now });
+    const left = RIDER_MAX_FAILURES - failed;
+    return {
+      ok: false,
+      error:
+        left > 0
+          ? `Wrong phone number or password. ${left} ${left === 1 ? "try" : "tries"} left.`
+          : "Too many wrong passwords. This account is suspended. Ask the Morning Rider office to activate it.",
+    };
+  }
   if (!user || !matches || !roles.includes(user.role)) {
     await ctx.db.insert("loginFailures", { phone, at: now });
     const old = await ctx.db
@@ -232,10 +258,16 @@ async function attemptLogin(
     return { ok: false, error: "Your account is waiting for admin approval." };
   }
   if (user.status === "suspended") {
-    return { ok: false, error: "This account has been suspended. Contact Morning Rider." };
+    return {
+      ok: false,
+      error: user.lockedByLogin
+        ? "Too many wrong passwords. This account is suspended. Ask the Morning Rider office to activate it."
+        : "This account has been suspended. Contact Morning Rider.",
+    };
   }
 
   for (const f of recent) await ctx.db.delete("loginFailures", f._id);
+  if (user.failedLogins) await ctx.db.patch("users", user._id, { failedLogins: 0 });
   const session = await issueSession(ctx, user._id, user.role === "admin" ? ADMIN_SESSION_TTL_MS : undefined);
   return { ok: true, ...session };
 }
