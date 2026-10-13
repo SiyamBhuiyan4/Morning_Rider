@@ -266,6 +266,7 @@ export default defineSchema({
     interviewAt: v.optional(v.number()),
     interviewPlace: v.optional(v.string()),
     riderId: v.optional(v.id("users")), // the account created on hiring
+    demo: v.optional(v.boolean()), // sample applicant, removed with the demo data
     createdAt: v.number(),
   })
     .index("by_status_and_createdAt", ["status", "createdAt"])

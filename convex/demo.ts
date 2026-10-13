@@ -1,4 +1,14 @@
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type ActionCtx,
+  type MutationCtx,
+} from "./_generated/server";
+import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { randomHex, hashPassword, requireUser } from "./lib/auth";
@@ -11,103 +21,195 @@ import { codCharge, computeCharges, getRates, merchantNet, type Status } from ".
   (parcels, events, payouts, cash hand-overs) hangs off those accounts — so
   "Clear demo data" deletes exactly that and can never touch a real record.
 
-  Demo accounts get random passwords nobody knows. To look at the merchant or
+  Demo accounts share one random password nobody knows. To look at the merchant or
   rider panel, use "Reset password" on a demo account in the admin panel.
 */
 
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
 
-const MERCHANTS = [
-  { name: "Rakib Hasan", businessName: "Demo Fashion House", phone: "01300000101", pickupAddress: "House 12, Road 7, Dhanmondi, Dhaka", payoutMethod: "bkash" as const, payoutAccount: "01300000101", status: "active" as const },
-  { name: "Nusrat Jahan", businessName: "Demo Gadget Shop", phone: "01300000102", pickupAddress: "Shop 34, Bashundhara City, Panthapath, Dhaka", payoutMethod: "nagad" as const, payoutAccount: "01300000102", status: "active" as const },
-  { name: "Tanvir Ahmed", businessName: "Demo Organic Food", phone: "01300000103", pickupAddress: "Sector 7, Uttara, Dhaka", payoutMethod: "bank" as const, payoutAccount: "City Bank 1234567890", status: "pending" as const },
+type PayoutMethod = NonNullable<Doc<"users">["payoutMethod"]>;
+type Verification = Doc<"users">["verification"];
+type UserStatus = Doc<"users">["status"];
+
+/*
+  12 of everything, each a little different, so every page shows the cases
+  Siyam will meet: verified / under review / rejected / unverified merchants,
+  active / suspended riders with full, partial and empty profiles, new and
+  interview-stage applicants, 12+ parcels in every status, payouts, payout
+  requests in every state, cash hand-overs, and 12 repeat customers whose
+  Fraud check risk runs from low to high.
+*/
+const MERCHANTS: {
+  name: string;
+  businessName: string;
+  pickupAddress: string;
+  payoutMethod: PayoutMethod;
+  payoutAccount: string;
+  status: UserStatus;
+  verification: Verification;
+  email?: string;
+}[] = [
+  { name: "Rakib Hasan", businessName: "Demo Fashion House", pickupAddress: "House 12, Road 7, Dhanmondi, Dhaka", payoutMethod: "bkash", payoutAccount: "01300000101", status: "active", verification: "approved", email: "fashion.house@example.com" },
+  { name: "Nusrat Jahan", businessName: "Demo Gadget Shop", pickupAddress: "Shop 34, Bashundhara City, Panthapath, Dhaka", payoutMethod: "nagad", payoutAccount: "01300000102", status: "active", verification: "approved" },
+  { name: "Tanvir Ahmed", businessName: "Demo Organic Food", pickupAddress: "House 5, Road 2, Sector 7, Uttara", payoutMethod: "bank", payoutAccount: "City Bank 1234567890", status: "pending", verification: "submitted" },
+  { name: "Sharmin Akter", businessName: "Demo Beauty Corner", pickupAddress: "Shop 8, Mirpur 2 Market, Dhaka", payoutMethod: "rocket", payoutAccount: "013000001048", status: "active", verification: "approved", email: "beauty.corner@example.com" },
+  { name: "Fahim Chowdhury", businessName: "Demo Book House", pickupAddress: "Nilkhet Book Market, Shop 112, Dhaka", payoutMethod: "bkash", payoutAccount: "01300000105", status: "active", verification: "submitted" },
+  { name: "Jannatul Ferdous", businessName: "Demo Home Bakers", pickupAddress: "House 40, Road 12, Sector 13, Uttara", payoutMethod: "nagad", payoutAccount: "01300000106", status: "active", verification: "approved" },
+  { name: "Arif Hossain", businessName: "Demo Mobile Zone", pickupAddress: "Chowrasta, Gazipur Sadar", payoutMethod: "bank", payoutAccount: "Dutch-Bangla Bank 7012345678", status: "active", verification: "approved" },
+  { name: "Mehedi Hasan", businessName: "Demo Frozen Foods", pickupAddress: "Chashara, Narayanganj", payoutMethod: "cash", payoutAccount: "", status: "active", verification: "approved", email: "frozen.foods@example.com" },
+  { name: "Sadia Islam", businessName: "Demo Kids Toys", pickupAddress: "Road 11, Banani, Dhaka", payoutMethod: "bkash", payoutAccount: "01300000109", status: "active", verification: "rejected" },
+  { name: "Kamrul Islam", businessName: "Demo Pharma Plus", pickupAddress: "Town Hall, Mohammadpur, Dhaka", payoutMethod: "rocket", payoutAccount: "013000001109", status: "active", verification: undefined },
+  { name: "Lamia Rahman", businessName: "Demo Gift Gallery", pickupAddress: "Gulshan 2 Circle, Dhaka", payoutMethod: "nagad", payoutAccount: "01300000111", status: "pending", verification: undefined },
+  { name: "Zahid Hasan", businessName: "Demo Electronics BD", pickupAddress: "Elephant Road, Dhaka", payoutMethod: "bkash", payoutAccount: "01300000112", status: "suspended", verification: "approved" },
 ];
+const merchantPhone = (i: number) => `013000001${String(i + 1).padStart(2, "0")}`;
 
-/* Made-up personal details so the rider profile page has something to show. */
-const RIDER_PROFILES = [
-  {
-    dateOfBirth: "1998-03-14", idType: "nid" as const, idNumber: "1990000000001", maritalStatus: "married" as const,
-    religion: "islam" as const, education: "hsc" as const, institution: "Mirpur College", bloodGroup: "B+",
-    facebook: "facebook.com/demo.karim", fatherName: "Abdul Karim", fatherPhone: "01300000301",
-    motherName: "Rahima Begum", motherPhone: "01300000302", presentAddress: "Section 10, Mirpur, Dhaka",
-    permanentAddress: "Village Charpara, Mymensingh", bikeNumber: "Dhaka Metro-HA 11-0001", licenseNumber: "DK0000001",
-  },
-  {
-    dateOfBirth: "2001-07-02", idType: "nid" as const, idNumber: "2000000000002", maritalStatus: "single" as const,
-    religion: "islam" as const, education: "ssc" as const, bloodGroup: "O+", facebook: "facebook.com/demo.sohel",
-    fatherName: "Mokbul Hossain", fatherPhone: "01300000303", guardianName: "Rafiq Uddin", guardianRelation: "Uncle",
-    guardianPhone: "01300000304", presentAddress: "Road 4, Dhanmondi, Dhaka", permanentAddress: "Sadar, Comilla",
-    bikeNumber: "Dhaka Metro-LA 22-0002",
-  },
-  {
-    dateOfBirth: "2004-11-20", idType: "birth_certificate" as const, idNumber: "20040000000000003",
-    maritalStatus: "single" as const, religion: "hinduism" as const, education: "jsc" as const, bloodGroup: "A+",
-    fatherName: "Sunil Das", fatherPhone: "01300000305", motherName: "Mala Das", motherPhone: "01300000306",
-    presentAddress: "Sector 11, Uttara, Dhaka", permanentAddress: "Sector 11, Uttara, Dhaka",
-  },
+/** Merchants that send the sample parcels (active and verified), with what they mostly sell. */
+const SENDERS: { index: number; categories: Category[]; items: string[] }[] = [
+  { index: 0, categories: ["shopping", "gift", "home"], items: ["2 T-shirts", "Ladies kurti", "Bed sheet set", "Gift-wrapped saree"] },
+  { index: 1, categories: ["electronics", "business"], items: ["Bluetooth earbuds", "Power bank 20000mAh", "Office router", "Smart watch"] },
+  { index: 3, categories: ["cosmetics", "medicine"], items: ["Face wash + serum", "Lipstick set", "Sunscreen + vitamin C", "Perfume 50ml"] },
+  { index: 5, categories: ["bakery", "food"], items: ["Birthday cake 2 lb", "Cookies box", "Home-made biryani", "Brownies 12 pcs"] },
+  { index: 6, categories: ["electronics", "document", "parcel"], items: ["Used phone (boxed)", "Warranty papers", "Phone covers x3", "Earphones"] },
+  { index: 7, categories: ["frozen", "food"], items: ["Frozen chicken nuggets", "Frozen paratha 20 pcs", "Prawn 1 kg", "Beef 2 kg"] },
 ];
 
 const RIDERS = [
-  { name: "Demo Rider Karim", phone: "01300000201", riderArea: "Mirpur" },
-  { name: "Demo Rider Sohel", phone: "01300000202", riderArea: "Dhanmondi" },
-  { name: "Demo Rider Jamal", phone: "01300000203", riderArea: "Uttara" },
+  { name: "Demo Rider Karim", riderArea: "Mirpur" },
+  { name: "Demo Rider Sohel", riderArea: "Dhanmondi" },
+  { name: "Demo Rider Jamal", riderArea: "Uttara" },
+  { name: "Demo Rider Rubel", riderArea: "Gulshan" },
+  { name: "Demo Rider Nayeem", riderArea: "Gazipur" },
+  { name: "Demo Rider Sumon", riderArea: "Narayanganj" },
+  { name: "Demo Rider Biplob", riderArea: "Banani" },
+  { name: "Demo Rider Tushar", riderArea: "Mohammadpur" },
+  { name: "Demo Rider Rasel", riderArea: "Uttara" },
+  { name: "Demo Rider Arafat", riderArea: "Tongi" },
+  { name: "Demo Rider Liton", riderArea: "Badda" },
+  { name: "Demo Rider Shuvo", riderArea: "Bashundhara" },
 ];
+const riderPhone = (i: number) => `013000002${String(i + 1).padStart(2, "0")}`;
+const SUSPENDED_RIDER = 11; // Shuvo: suspended, kept for history
+const NO_PROFILE_RIDER = 10; // Liton: profile not filled in yet
 
-const CUSTOMERS = [
-  ["Ayesha Siddika", "House 14, Road 7, Sector 4", "Uttara", "uttara"],
-  ["Mahmud Hossain", "House 8, Block C", "Banani", "dhaka_city"],
-  ["Farhana Akter", "College Road", "Tongi, Gazipur", "gazipur_city"],
-  ["Shakil Khan", "Chashara", "Narayanganj Sadar", "narayanganj_city"],
-  ["Rumana Islam", "Flat 5A, Road 3", "Mirpur 10", "dhaka_city"],
-  ["Imran Kabir", "House 22, Road 11, Sector 9", "Uttara", "uttara"],
-  ["Sabbir Rahman", "Joydebpur Chowrasta", "Gazipur Sadar", "gazipur_city"],
-  ["Tania Sultana", "Road 27", "Dhanmondi", "dhaka_city"],
-  ["Hasan Mahmud", "Gulshan Avenue", "Gulshan 1", "dhaka_city"],
-  ["Mitu Begum", "Sector 11", "Uttara", "uttara"],
-] as const;
+const FATHERS = ["Abdul Karim", "Mokbul Hossain", "Sunil Das", "Abul Kalam", "Nurul Islam", "Joseph Gomes", "Harun Mia", "Shafiqul Alam", "Ratan Barua", "Mofiz Uddin", "Delwar Hossain", "Anwar Hossain"];
+const MOTHERS = ["Rahima Begum", "Salma Khatun", "Mala Das", "Nasima Akter", "Rokeya Begum", "Mary Gomes", "Parvin Akter", "Hasina Begum", "Shanti Barua", "Jahanara Begum", "Kohinoor Begum", "Fatema Begum"];
+const HOMES = ["Mymensingh", "Comilla", "Sylhet", "Bogura", "Barishal", "Gazipur", "Rangpur", "Khulna", "Chattogram", "Faridpur", "Tangail", "Noakhali"];
+const RELIGIONS = ["islam", "islam", "hinduism", "islam", "christianity", "islam", "islam", "islam", "buddhism", "islam", "islam", "hinduism"] as const;
+const MARITAL = ["married", "single", "single", "married", "divorced", "single", "married", "single", "married", "widowed", "single", "single"] as const;
+const EDUCATION = ["hsc", "ssc", "jsc", "bachelor", "diploma", "primary", "hsc", "masters", "ssc", "none", "hsc", "ssc"] as const;
+const BLOOD = ["B+", "O+", "A+", "AB+", "O-", "B-", "A-", "O+", "B+", "AB-", "A+", "O+"];
+const BIRTH_YEARS = [1990, 1998, 2004, 1995, 1988, 2002, 1993, 1985, 1999, 1979, 2003, 2001];
 
-const CATEGORIES = ["shopping", "electronics", "frozen", "bakery", "medicine", "food", "gift", "document"] as const;
+function riderProfile(i: number, phone: string) {
+  const young = BIRTH_YEARS[i] >= 2004;
+  const base = {
+    dateOfBirth: `${BIRTH_YEARS[i]}-${String((i % 12) + 1).padStart(2, "0")}-${String(((i * 7) % 27) + 1).padStart(2, "0")}`,
+    idType: young ? ("birth_certificate" as const) : ("nid" as const),
+    idNumber: young ? `${BIRTH_YEARS[i]}${String(i + 1).padStart(13, "0")}` : String(1990000000001 + i * 1111111),
+    maritalStatus: MARITAL[i],
+    religion: RELIGIONS[i],
+    education: EDUCATION[i],
+    bloodGroup: BLOOD[i],
+    whatsapp: phone,
+    fatherName: FATHERS[i],
+    fatherPhone: `013000003${String(i * 2 + 1).padStart(2, "0")}`,
+    presentAddress: `${RIDERS[i].riderArea}, Dhaka`,
+    permanentAddress: `Sadar, ${HOMES[i]}`,
+  };
+  // A partly filled profile, to show how gaps look.
+  if (i === 9) return { ...base, education: undefined, bloodGroup: undefined, permanentAddress: undefined };
+  return {
+    ...base,
+    institution: ["hsc", "bachelor", "masters", "diploma"].includes(EDUCATION[i]) ? `${HOMES[i]} College` : undefined,
+    facebook: i % 3 === 2 ? undefined : `facebook.com/demo.rider${i + 1}`,
+    motherName: i % 4 === 1 ? undefined : MOTHERS[i],
+    motherPhone: i % 4 === 1 ? undefined : `013000003${String(i * 2 + 2).padStart(2, "0")}`,
+    ...(i % 4 === 1 || i === 8
+      ? { guardianName: `${FATHERS[(i + 5) % 12]}`, guardianRelation: i === 8 ? "Elder brother" : "Uncle", guardianPhone: `013000004${String(i + 1).padStart(2, "0")}` }
+      : {}),
+    bikeNumber: i % 5 === 4 ? undefined : `Dhaka Metro-${["HA", "LA", "GA", "BHA"][i % 4]} ${11 + i}-${String(1000 + i * 37)}`,
+    licenseNumber: i % 5 === 4 ? undefined : `DK${String(1000000 + i * 4321)}`,
+    notes: i === 0 ? "Most reliable rider. Knows Mirpur very well." : i === SUSPENDED_RIDER ? "Suspended: did not hand over cash on time twice." : undefined,
+  };
+}
 
-const ITEMS = ["2 T-shirts", "Bluetooth earbuds", "Frozen chicken nuggets", "Birthday cake 2 lb", "Paracetamol + saline", "Home-made biryani", "Gift box", "Office documents"];
-
-/** Status, how many days ago it was booked, and what the money side looks like. */
-const PLAN: { status: Status; daysAgo: number; partial?: number; cashIn?: boolean; paid?: boolean }[] = [
-  { status: "pending", daysAgo: 0 },
-  { status: "pending", daysAgo: 0 },
-  { status: "pending", daysAgo: 0 },
-  { status: "picked_up", daysAgo: 0 },
-  { status: "picked_up", daysAgo: 1 },
-  { status: "at_hub", daysAgo: 1 },
-  { status: "at_hub", daysAgo: 1 },
-  { status: "out_for_delivery", daysAgo: 1 },
-  { status: "out_for_delivery", daysAgo: 1 },
-  { status: "out_for_delivery", daysAgo: 2 },
-  { status: "hold", daysAgo: 2 },
-  { status: "delivered", daysAgo: 0 },
-  { status: "delivered", daysAgo: 1 },
-  { status: "delivered", daysAgo: 2 },
-  { status: "delivered", daysAgo: 3, cashIn: true },
-  { status: "delivered", daysAgo: 4, cashIn: true },
-  { status: "delivered", daysAgo: 6, cashIn: true, paid: true },
-  { status: "delivered", daysAgo: 7, cashIn: true, paid: true },
-  { status: "delivered", daysAgo: 8, cashIn: true, paid: true },
-  { status: "delivered", daysAgo: 9, cashIn: true, paid: true },
-  { status: "partial_delivered", daysAgo: 3, partial: 500, cashIn: true },
-  { status: "returning", daysAgo: 2 },
-  { status: "returned", daysAgo: 5 },
-  { status: "returned", daysAgo: 10, paid: true },
-  { status: "cancelled", daysAgo: 4 },
+const APPLICANTS = [
+  { name: "Rahim Uddin", area: "Mirpur 10", hasBike: true, hasLicense: false, email: "rahim.demo@example.com", note: "I know Mirpur and Uttara roads well." },
+  { name: "Saiful Islam", area: "Uttara Sector 10", hasBike: true, hasLicense: true },
+  { name: "Habib Rahman", area: "Gazipur Sadar", hasBike: false, hasLicense: false, note: "I can ride a cycle." },
+  { name: "Monir Hossain", area: "Banani", hasBike: true, hasLicense: true, email: "monir.demo@example.com" },
+  { name: "Shahin Alam", area: "Narayanganj Sadar", hasBike: false, hasLicense: true, note: "Can join from next week." },
+  { name: "Rony Das", area: "Mohammadpur", hasBike: true, hasLicense: false },
+  { name: "Polash Mia", area: "Tongi", hasBike: true, hasLicense: true, note: "2 years with another courier." },
+  { name: "Asif Iqbal", area: "Uttara Sector 4", hasBike: true, hasLicense: true, email: "asif.demo@example.com" },
+  { name: "Mamun Sarkar", area: "Badda", hasBike: false, hasLicense: false },
+  { name: "Jewel Rana", area: "Dhanmondi", hasBike: true, hasLicense: true, note: "Only evenings." },
+  { name: "Sagor Ahmed", area: "Khilgaon", hasBike: true, hasLicense: false },
+  { name: "Ridoy Hasan", area: "Uttara Sector 13", hasBike: true, hasLicense: true, email: "ridoy.demo@example.com", note: "Full time." },
 ];
+const applicantPhone = (i: number) => `013000005${String(i + 1).padStart(2, "0")}`;
+
+type Zone = Doc<"parcels">["zone"];
+type Category = NonNullable<Doc<"parcels">["category"]>;
+
+/* Places across all four zones, used for one-off customers. */
+const PLACES: [string, string, Zone][] = [
+  ["House 14, Road 7, Sector 4", "Uttara Sector 4", "uttara"],
+  ["House 22, Road 11, Sector 9", "Uttara Sector 9", "uttara"],
+  ["Road 3, Sector 13", "Uttara Sector 13", "uttara"],
+  ["Sector 11, Rabindra Sarani", "Uttara Sector 11", "uttara"],
+  ["Diabari Main Road", "Diabari", "uttara"],
+  ["House 8, Block C", "Banani", "dhaka_city"],
+  ["Flat 5A, Road 3", "Mirpur 10", "dhaka_city"],
+  ["Road 27", "Dhanmondi", "dhaka_city"],
+  ["Gulshan Avenue", "Gulshan 1", "dhaka_city"],
+  ["Shyamoli Ring Road", "Shyamoli", "dhaka_city"],
+  ["Malibagh Chowdhury Para", "Malibagh", "dhaka_city"],
+  ["Block D, Bashundhara R/A", "Bashundhara", "dhaka_city"],
+  ["College Road", "Tongi", "gazipur_city"],
+  ["Joydebpur Chowrasta", "Gazipur Sadar", "gazipur_city"],
+  ["Board Bazar Main Road", "Board Bazar", "gazipur_city"],
+  ["Chashara", "Narayanganj Sadar", "narayanganj_city"],
+  ["Fatullah Bazar", "Fatullah", "narayanganj_city"],
+  ["Siddhirganj Power House Road", "Siddhirganj", "narayanganj_city"],
+];
+const FIRST = ["Ayesha", "Mahmud", "Farhana", "Shakil", "Rumana", "Imran", "Sabbir", "Tania", "Hasan", "Mitu", "Rafi", "Nadia", "Tareq", "Sumaiya", "Rashed", "Anika", "Babul", "Shirin", "Kawsar", "Popy"];
+const LAST = ["Siddika", "Hossain", "Akter", "Khan", "Islam", "Kabir", "Rahman", "Sultana", "Mahmud", "Begum", "Chowdhury", "Ahmed"];
 
 /*
-  Two customers who order again and again, so Fraud check has something to
-  show: one takes every parcel (low risk), one keeps refusing (high risk).
-  Numbers are indexes into PLAN.
+  12 customers who order again and again. Letters are their parcels, newest
+  first: D delivered, P partial, R returned, G returning, C cancelled,
+  p pending, u picked up, h at hub, o out for delivery, H hold.
 */
-const REPEAT_CUSTOMERS = [
-  { phone: "01710000777", parcels: [15, 16, 17, 18, 19] },
-  { phone: "01710000666", parcels: [21, 22, 23, 3] },
+const REPEAT_CUSTOMERS: { phone: string; name: string; place: number; history: string }[] = [
+  { phone: "01710000777", name: "Nadia Chowdhury", place: 1, history: "DDDDDD" },
+  { phone: "01710000601", name: "Rafi Ahmed", place: 6, history: "pDDDD" },
+  { phone: "01710000602", name: "Sumaiya Islam", place: 13, history: "DPDD" },
+  { phone: "01710000603", name: "Tareq Rahman", place: 8, history: "DRD" },
+  { phone: "01710000604", name: "Anika Sultana", place: 2, history: "RDD" },
+  { phone: "01710000605", name: "Babul Mia", place: 15, history: "RDRD" },
+  { phone: "01710000606", name: "Shirin Akter", place: 10, history: "oDCC" },
+  { phone: "01710000666", name: "Kawsar Hossain", place: 16, history: "uRRR" },
+  { phone: "01710000607", name: "Popy Begum", place: 5, history: "GRD" },
+  { phone: "01710000608", name: "Rashed Khan", place: 12, history: "RR" },
+  { phone: "01710000609", name: "Imran Kabir", place: 3, history: "poH" },
+  { phone: "01710000610", name: "Mitu Islam", place: 7, history: "CC" },
 ];
+const LETTER: Record<string, Status> = {
+  D: "delivered", P: "partial_delivered", R: "returned", G: "returning", C: "cancelled",
+  p: "pending", u: "picked_up", h: "at_hub", o: "out_for_delivery", H: "hold",
+};
+const ALL_STATUSES: Status[] = ["pending", "picked_up", "at_hub", "out_for_delivery", "hold", "delivered", "partial_delivered", "returning", "returned", "cancelled"];
+/** How long ago a parcel in this (unfinished) state was booked, in days. */
+const OPEN_AGE: Partial<Record<Status, number>> = { pending: 0, picked_up: 0, at_hub: 1, out_for_delivery: 1, hold: 2, returning: 3 };
+
+const COD = [650, 1200, 0, 850, 2400, 1500, 990, 3200, 450, 1800, 5200, 750];
+const WEIGHTS = [0.5, 1, 1.5, 2, 3, 5, 0.3, 1, 2.5, 4, 0.8, 1.2];
+const NOTES = [undefined, "Call before delivery", undefined, "Fragile, handle with care", "Deliver after 5 PM", undefined, "Office address, deliver before 6 PM", undefined, "Keep upright", "Customer prefers bKash, ask before"];
+const HOLD_REASONS = ["Customer asked to deliver tomorrow", "Customer not at home", "Address not found, calling customer"];
+const RETURN_REASONS = ["Customer not answering the phone", "Customer refused the parcel", "Customer says they never ordered", "Wrong size, customer refused"];
 
 /** The steps a parcel went through to reach `status`. */
 function pathTo(status: Status): Status[] {
@@ -149,196 +251,382 @@ async function demoUsers(ctx: MutationCtx | Parameters<typeof requireUser>[0]) {
   return out;
 }
 
-async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
+/** Sample documents for one merchant's business verification, already in storage. */
+export const demoFiles = v.object({
+  phone: v.string(),
+  nidFront: v.id("_storage"),
+  nidBack: v.id("_storage"),
+  tinFile: v.optional(v.id("_storage")),
+  tradeLicenseFile: v.optional(v.id("_storage")),
+  otherFiles: v.array(v.id("_storage")),
+});
+type DemoFiles = typeof demoFiles.type;
+
+type Planned = {
+  status: Status;
+  daysAgo: number;
+  customer?: (typeof REPEAT_CUSTOMERS)[number];
+};
+
+/** Every parcel to create: the repeat customers' histories, then one-offs until each status has 12. */
+function planParcels(): Planned[] {
+  const out: Planned[] = [];
+  for (const [c, customer] of REPEAT_CUSTOMERS.entries()) {
+    [...customer.history].forEach((letter, k) => {
+      const status = LETTER[letter];
+      const daysAgo = OPEN_AGE[status] ?? 3 + k * 4 + (c % 3);
+      out.push({ status, daysAgo, customer });
+    });
+  }
+  for (const status of ALL_STATUSES) {
+    let have = out.filter((p) => p.status === status).length;
+    for (let n = 0; have < 12; n++, have++) {
+      out.push({ status, daysAgo: OPEN_AGE[status] ?? 2 + ((n * 5 + status.length) % 27) });
+    }
+  }
+  return out;
+}
+
+async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined, files: DemoFiles[]) {
   if ((await demoUsers(ctx)).length > 0) throw new ConvexError("Demo data is already loaded.");
-  for (const m of [...MERCHANTS, ...RIDERS]) {
+  const phones = [...MERCHANTS.map((_, i) => merchantPhone(i)), ...RIDERS.map((_, i) => riderPhone(i))];
+  for (const phone of phones) {
     const clash = await ctx.db
       .query("users")
-      .withIndex("by_phone", (q) => q.eq("phone", m.phone))
+      .withIndex("by_phone", (q) => q.eq("phone", phone))
       .unique();
-    if (clash) throw new ConvexError(`Phone ${m.phone} is already used by a real account.`);
+    if (clash) throw new ConvexError(`Phone ${phone} is already used by a real account.`);
   }
 
   const now = Date.now();
   const rates = await getRates(ctx);
-  // Nobody knows these passwords; "Reset password" in the admin panel gives access.
-  const lockedPassword = async () => hashPassword("Demo" + randomHex(12) + "9");
+  // One random password nobody knows, shared by every demo account (hashing is slow).
+  // "Reset password" / "Set password" in the admin panel gives access.
+  const locked = await hashPassword("Demo" + randomHex(12) + "9");
 
+  /* ---- merchants + verification */
   const merchantIds: Id<"users">[] = [];
-  for (const m of MERCHANTS) {
-    merchantIds.push(
-      await ctx.db.insert("users", {
-        ...m,
-        role: "merchant",
-        // the active ones are verified; the pending one hasn't sent documents yet
-        verification: m.status === "active" ? "approved" : undefined,
-        demo: true,
-        ...(await lockedPassword()),
-        createdAt: now - 12 * DAY,
-      }),
-    );
+  for (const [i, m] of MERCHANTS.entries()) {
+    const phone = merchantPhone(i);
+    const id = await ctx.db.insert("users", {
+      name: m.name,
+      businessName: m.businessName,
+      phone,
+      email: m.email,
+      pickupAddress: m.pickupAddress,
+      payoutMethod: m.payoutMethod,
+      payoutAccount: m.payoutAccount || undefined,
+      role: "merchant",
+      status: m.status,
+      verification: m.verification,
+      demo: true,
+      ...locked,
+      createdAt: now - (40 - i * 2) * DAY,
+    });
+    merchantIds.push(id);
+    const f = files.find((x) => x.phone === phone);
+    if (m.verification && f) {
+      const submittedAt = now - (m.verification === "submitted" ? 1 + (i % 3) : 30 - i) * DAY;
+      await ctx.db.insert("merchantVerifications", {
+        merchantId: id,
+        nidNumber: String(1980000000000 + i * 7654321),
+        nidFront: f.nidFront,
+        nidBack: f.nidBack,
+        tinNumber: f.tinFile ? String(100000000000 + i * 1234567) : undefined,
+        tinFile: f.tinFile,
+        tradeLicenseNumber: f.tradeLicenseFile ? `TRAD/DNCC/${String(10000 + i * 371)}/2026` : undefined,
+        tradeLicenseFile: f.tradeLicenseFile,
+        otherFiles: f.otherFiles,
+        status: m.verification,
+        reason: m.verification === "rejected" ? "The NID photo is blurry. Please upload a clear photo of both sides." : undefined,
+        submittedAt,
+        decidedAt: m.verification === "submitted" ? undefined : submittedAt + DAY,
+      });
+      for (const storageId of [f.nidFront, f.nidBack, f.tinFile, f.tradeLicenseFile, ...f.otherFiles]) {
+        if (storageId) await ctx.db.insert("verificationFiles", { storageId, merchantId: id });
+      }
+    }
   }
-  const activeMerchants = merchantIds.slice(0, 2);
+
+  /* ---- riders + profiles */
   const riderIds: Id<"users">[] = [];
   for (const [i, r] of RIDERS.entries()) {
+    const phone = riderPhone(i);
     const riderId = await ctx.db.insert("users", {
       ...r,
+      phone,
       role: "rider",
-      status: "active",
+      status: i === SUSPENDED_RIDER ? "suspended" : "active",
       demo: true,
-      ...(await lockedPassword()),
-      createdAt: now - 12 * DAY,
+      ...locked,
+      createdAt: now - (60 - i * 4) * DAY,
     });
     riderIds.push(riderId);
-    await ctx.db.insert("riderProfiles", { riderId, ...RIDER_PROFILES[i], whatsapp: r.phone, updatedAt: now });
+    if (i !== NO_PROFILE_RIDER) {
+      await ctx.db.insert("riderProfiles", { riderId, ...riderProfile(i, phone), updatedAt: now - i * DAY });
+    }
+  }
+  const workingRiders = riderIds.filter((_, i) => i !== SUSPENDED_RIDER);
+
+  /* ---- rider applications: 7 new, 5 invited to interview */
+  for (const [i, a] of APPLICANTS.entries()) {
+    const interview = i % 12 >= 7;
+    await ctx.db.insert("riderApplications", {
+      ...a,
+      phone: applicantPhone(i),
+      status: interview ? "interview" : "new",
+      interviewAt: interview ? Math.round((now + (1 + (i % 3)) * DAY) / HOUR) * HOUR + (10 + (i % 5)) * HOUR : undefined,
+      interviewPlace: interview ? "Morning Rider office, House 30, Road 9, Sector 9, Uttara" : undefined,
+      demo: true,
+      createdAt: now - (2 + i) * DAY,
+    });
   }
 
+  /* ---- parcels */
   const counts = new Map<string, number>();
-  const bump = (scope: string, s: Status) => counts.set(`${scope}|${s}`, (counts.get(`${scope}|${s}`) ?? 0) + 1);
-  const paidByMerchant = new Map<Id<"users">, Doc<"parcels">["_id"][]>();
-  const cashByRider = new Map<Id<"users">, { amount: number; count: number }>();
+  const bump = (scope: string, st: Status) => counts.set(`${scope}|${st}`, (counts.get(`${scope}|${st}`) ?? 0) + 1);
   const CODE = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const plan = planParcels();
+  const finished: Doc<"parcels">[] = [];
 
-  for (let i = 0; i < PLAN.length; i++) {
-    const plan = PLAN[i];
-    const regular = REPEAT_CUSTOMERS.find((c) => c.parcels.includes(i));
-    const [recipientName, address, district, zone] = regular ? CUSTOMERS[regular.parcels[0] % CUSTOMERS.length] : CUSTOMERS[i % CUSTOMERS.length];
-    const category = CATEGORIES[i % CATEGORIES.length];
-    const merchantId = activeMerchants[i % activeMerchants.length];
-    const pickupRiderId = riderIds[i % riderIds.length];
-    const deliveryRiderId = riderIds[(i + 1) % riderIds.length];
-    const weightKg = [0.5, 1, 1.5, 2, 3][i % 5];
-    const codAmount = [650, 1200, 850, 2400, 1500, 990, 3200, 450][i % 8];
-    const steps = pathTo(plan.status);
-    const createdAt = now - plan.daysAgo * DAY - (i % 6) * 3600_000 - 2 * 3600_000;
-    const stepGap = Math.min(4 * 3600_000, (now - createdAt) / (steps.length + 1));
+  for (const [i, pl] of plan.entries()) {
+    const sender = SENDERS[i % SENDERS.length];
+    const merchantId = merchantIds[sender.index];
+    const round = Math.floor(i / SENDERS.length);
+    const category = sender.categories[round % sender.categories.length];
+    const place = PLACES[pl.customer ? pl.customer.place : (i * 7) % PLACES.length];
+    const [address, district, zone] = place;
+    const recipientName = pl.customer?.name ?? `${FIRST[i % FIRST.length]} ${LAST[(i * 5) % LAST.length]}`;
+    const recipientPhone = pl.customer?.phone ?? "017" + String(20000000 + ((i * 7919) % 79999999)).padStart(8, "0");
+    const pickupRiderId = workingRiders[i % workingRiders.length];
+    const deliveryRiderId = workingRiders[(i + 3) % workingRiders.length];
+    const weightKg = WEIGHTS[i % WEIGHTS.length];
+    let codAmount = COD[(i * 5) % COD.length];
+    if (pl.status === "partial_delivered" && codAmount === 0) codAmount = 1600;
+    const steps = pathTo(pl.status);
+    const createdAt = now - pl.daysAgo * DAY - ((i % 9) + 1) * HOUR;
+    const stepGap = Math.min(4 * HOUR, (now - createdAt) / (steps.length + 1));
+    const lastAt = createdAt + (steps.length - 1) * stepGap;
 
-    const final = ["delivered", "partial_delivered", "returned", "cancelled"].includes(plan.status);
-    const delivered = plan.status === "delivered" || plan.status === "partial_delivered";
-    const collected = plan.status === "delivered" ? codAmount : plan.status === "partial_delivered" ? (plan.partial ?? 0) : 0;
+    const isFinal = ["delivered", "partial_delivered", "returned", "cancelled"].includes(pl.status);
+    const delivered = pl.status === "delivered" || pl.status === "partial_delivered";
+    const collected =
+      pl.status === "delivered"
+        ? codAmount
+        : pl.status === "partial_delivered"
+          ? Math.round((codAmount * [0.5, 0.3, 0.7, 0.4][i % 4]) / 10) * 10
+          : 0;
     const charges = computeCharges(rates, zone, weightKg, codAmount);
     const reachedDelivery = steps.includes("out_for_delivery");
+    // Older finished parcels are already settled with the merchant / cash handed in.
+    const paid = (delivered || pl.status === "returned") && pl.daysAgo >= 9;
+    // Most cash is handed in after a few days; some riders are still holding theirs.
+    const cashIn = delivered && collected > 0 && pl.daysAgo >= 4 && i % 4 !== 1;
 
     let trackingCode = "MR";
     const bytes = new Uint8Array(8);
     crypto.getRandomValues(bytes);
     for (const b of bytes) trackingCode += CODE[b % 32];
+    const invoice = `INV-${2001 + i}`;
 
-    const phone = regular?.phone ?? "017" + String(10000000 + ((i * 7919) % 89999999)).padStart(8, "0");
     const doc = {
       trackingCode,
       merchantId,
-      invoice: `INV-${1001 + i}`,
+      invoice,
       recipientName,
-      recipientPhone: phone,
+      recipientPhone,
       recipientAddress: address,
       district,
       zone,
       category,
       weightKg,
       codAmount,
-      itemDescription: ITEMS[i % ITEMS.length],
-      note: i % 4 === 0 ? "Call before delivery" : undefined,
+      itemDescription: sender.items[round % sender.items.length],
+      note: NOTES[i % NOTES.length],
       deliveryCharge: charges.deliveryCharge,
       codCharge: delivered ? codCharge(rates, zone, collected) : charges.codCharge,
       returnCharge: charges.returnCharge,
-      status: plan.status,
-      pickupRiderId: plan.status === "cancelled" ? undefined : pickupRiderId,
+      status: pl.status,
+      pickupRiderId: pl.status === "cancelled" ? undefined : pickupRiderId,
       deliveryRiderId: reachedDelivery ? deliveryRiderId : undefined,
       collectedAmount: collected,
-      settlement: (plan.paid ? "paid" : delivered || plan.status === "returned" ? "unpaid" : "open") as Doc<"parcels">["settlement"],
-      cashState: (collected > 0 ? (plan.cashIn ? "deposited" : "with_rider") : "none") as Doc<"parcels">["cashState"],
-      searchText: [trackingCode, `INV-${1001 + i}`, recipientName, phone].join(" "),
+      settlement: (paid ? "paid" : delivered || pl.status === "returned" ? "unpaid" : "open") as Doc<"parcels">["settlement"],
+      cashState: (collected > 0 ? (cashIn ? "deposited" : "with_rider") : "none") as Doc<"parcels">["cashState"],
+      searchText: [trackingCode, invoice, recipientName, recipientPhone].join(" "),
       createdAt,
-      updatedAt: createdAt + (steps.length - 1) * stepGap,
-      finalAt: final ? createdAt + (steps.length - 1) * stepGap : undefined,
+      updatedAt: lastAt,
+      finalAt: isFinal ? lastAt : undefined,
     };
     const id = await ctx.db.insert("parcels", doc);
-    bump("all", plan.status);
-    bump(merchantId, plan.status);
+    bump("all", pl.status);
+    bump(merchantId, pl.status);
+    if (isFinal) finished.push({ ...doc, _id: id, _creationTime: now });
 
-    for (let s = 0; s < steps.length; s++) {
+    for (let st = 0; st < steps.length; st++) {
+      const step = steps[st];
       await ctx.db.insert("parcelEvents", {
         parcelId: id,
-        status: steps[s],
+        status: step,
         note:
-          s === 0
+          st === 0
             ? "Parcel created"
-            : steps[s] === "hold"
-              ? "Customer asked to deliver tomorrow"
-              : steps[s] === "returning"
-                ? "Customer not answering the phone"
-                : undefined,
-        byUserId: s === 0 ? merchantId : steps[s] === "at_hub" || steps[s] === "returned" ? adminId : deliveryRiderId,
-        byRole: s === 0 ? "merchant" : steps[s] === "at_hub" || steps[s] === "returned" ? "admin" : "rider",
-        at: createdAt + s * stepGap,
+            : step === "hold"
+              ? HOLD_REASONS[i % HOLD_REASONS.length]
+              : step === "returning"
+                ? RETURN_REASONS[i % RETURN_REASONS.length]
+                : step === "partial_delivered"
+                  ? "Customer kept only part of the order"
+                  : step === "cancelled"
+                    ? "Merchant cancelled before pickup"
+                    : undefined,
+        byUserId: st === 0 || step === "cancelled" ? merchantId : step === "at_hub" || step === "returned" ? adminId : deliveryRiderId,
+        byRole: st === 0 || step === "cancelled" ? "merchant" : step === "at_hub" || step === "returned" ? "admin" : "rider",
+        at: createdAt + st * stepGap,
       });
-    }
-    if (plan.paid) paidByMerchant.set(merchantId, [...(paidByMerchant.get(merchantId) ?? []), id]);
-    if (plan.cashIn && collected > 0) {
-      const c = cashByRider.get(deliveryRiderId) ?? { amount: 0, count: 0 };
-      cashByRider.set(deliveryRiderId, { amount: c.amount + collected, count: c.count + 1 });
     }
   }
 
   for (const [key, count] of counts) {
-    const [scope, status] = key.split("|") as [string, Status];
+    const [scope, st] = key.split("|") as [string, Status];
     const row = await ctx.db
       .query("statusCounts")
-      .withIndex("by_scope_and_status", (q) => q.eq("scope", scope).eq("status", status))
+      .withIndex("by_scope_and_status", (q) => q.eq("scope", scope).eq("status", st))
       .unique();
     if (row) await ctx.db.patch("statusCounts", row._id, { count: row.count + count });
-    else await ctx.db.insert("statusCounts", { scope, status, count });
+    else await ctx.db.insert("statusCounts", { scope, status: st, count });
   }
 
-  // One past payout per merchant, covering the "paid" parcels.
-  const payer = adminId ?? riderIds[0];
-  for (const [merchantId, ids] of paidByMerchant) {
-    const parcels = (await Promise.all(ids.map((id) => ctx.db.get("parcels", id)))).filter((p) => p !== null);
-    const collected = parcels.reduce((s, p) => s + p.collectedAmount, 0);
-    const net = parcels.reduce((s, p) => s + merchantNet(p), 0);
-    const m = await ctx.db.get("users", merchantId);
-    const payoutId = await ctx.db.insert("payouts", {
-      merchantId,
-      amount: net,
-      parcelCount: parcels.length,
-      collected,
-      charges: collected - net,
-      method: m?.payoutMethod ?? "bkash",
-      payoutAccount: m?.payoutAccount,
-      reference: "DEMO-TX-" + randomHex(3).toUpperCase(),
-      note: "Demo payout",
-      createdBy: payer,
-      createdAt: now - 5 * DAY,
-    });
-    for (const p of parcels) await ctx.db.patch("parcels", p._id, { payoutId });
+  /* ---- payouts: the settled parcels, two payouts per merchant (12 in all) */
+  const payer = adminId ?? workingRiders[0];
+  const payoutIds: Id<"payouts">[] = [];
+  for (const sender of SENDERS) {
+    const merchantId = merchantIds[sender.index];
+    const m = MERCHANTS[sender.index];
+    const settled = finished
+      .filter((p) => p.merchantId === merchantId && p.settlement === "paid")
+      .sort((a, b) => (a.finalAt ?? 0) - (b.finalAt ?? 0));
+    // Two payouts, split where both come out positive (a batch of only returns can't be paid).
+    const positive = (b: Doc<"parcels">[]) => b.reduce((sum, p) => sum + merchantNet(p), 0) > 0;
+    let batches = [settled];
+    for (let k = Math.ceil(settled.length / 2), tries = 0; tries < settled.length; tries++, k = (k % (settled.length - 1)) + 1) {
+      const a = settled.slice(0, k);
+      const b = settled.slice(k);
+      if (a.length && b.length && positive(a) && positive(b)) {
+        batches = [a, b];
+        break;
+      }
+    }
+    for (const batch of batches.filter((b) => b.length > 0)) {
+      const collected = batch.reduce((sum, p) => sum + p.collectedAmount, 0);
+      const net = batch.reduce((sum, p) => sum + merchantNet(p), 0);
+      const payoutId = await ctx.db.insert("payouts", {
+        merchantId,
+        amount: net,
+        parcelCount: batch.length,
+        collected,
+        charges: collected - net,
+        method: m.payoutMethod,
+        payoutAccount: m.payoutAccount || undefined,
+        reference: m.payoutMethod === "cash" ? undefined : "DEMO-TX-" + randomHex(3).toUpperCase(),
+        note: payoutIds.length % 3 === 0 ? "Demo payout" : undefined,
+        createdBy: payer,
+        createdAt: Math.max(...batch.map((p) => p.finalAt ?? 0)) + DAY,
+      });
+      payoutIds.push(payoutId);
+      for (const p of batch) await ctx.db.patch("parcels", p._id, { payoutId });
+    }
   }
 
-  // One merchant asking to be paid, so the payout-request flow has an example.
-  const asker = activeMerchants[1];
-  const askerUnpaid = await ctx.db
-    .query("parcels")
-    .withIndex("by_merchantId_and_settlement", (q) => q.eq("merchantId", asker).eq("settlement", "unpaid"))
-    .take(500);
-  const askerBalance = askerUnpaid.reduce((s, p) => s + merchantNet(p), 0);
-  if (askerBalance > 0) {
-    const m = await ctx.db.get("users", asker);
+  /* ---- payout requests: open, paid, rejected and cancelled (12 in all) */
+  let requests = 0;
+  const request = async (
+    merchantIndex: number,
+    amount: number,
+    status: Doc<"payoutRequests">["status"],
+    createdAt: number,
+    extra: Partial<Doc<"payoutRequests">> = {},
+  ) => {
+    const m = MERCHANTS[merchantIndex];
     await ctx.db.insert("payoutRequests", {
-      merchantId: asker,
-      amount: askerBalance,
-      method: m?.payoutMethod ?? "bkash",
-      account: m?.payoutAccount ?? "",
-      note: "Please send today if possible",
-      status: "open",
-      createdAt: now - 2 * 3600_000,
+      merchantId: merchantIds[merchantIndex],
+      amount,
+      method: m.payoutMethod,
+      account: m.payoutAccount || "Cash at office",
+      status,
+      createdAt,
+      ...extra,
+    });
+    requests++;
+  };
+  // Open: every sender still owed money, up to 4.
+  let open = 0;
+  for (const sender of SENDERS) {
+    if (open >= 4) break;
+    const balance = finished
+      .filter((p) => p.merchantId === merchantIds[sender.index] && p.settlement === "unpaid")
+      .reduce((sum, p) => sum + merchantNet(p), 0);
+    if (balance > 0) {
+      await request(sender.index, balance, "open", now - (2 + open * 5) * HOUR, {
+        note: ["Please send today if possible", undefined, "Need it for stock purchase", undefined][open],
+      });
+      open++;
+    }
+  }
+  // Paid: the request behind each of the first payouts.
+  for (const payoutId of payoutIds.slice(0, 5)) {
+    const po = await ctx.db.get("payouts", payoutId);
+    if (!po) continue;
+    const idx = merchantIds.indexOf(po.merchantId);
+    await request(idx, po.amount, "paid", po.createdAt - 6 * HOUR, { payoutId, decidedAt: po.createdAt });
+  }
+  await request(0, 2500, "rejected", now - 20 * DAY, {
+    reason: "The bKash number does not match the one on file.",
+    decidedAt: now - 19 * DAY,
+  });
+  await request(3, 1800, "rejected", now - 14 * DAY, {
+    reason: "Some parcels were still being returned. Please ask again next week.",
+    decidedAt: now - 13 * DAY,
+  });
+  while (requests < 12) {
+    await request(SENDERS[requests % SENDERS.length].index, 1000 + requests * 150, "cancelled", now - (10 + requests) * DAY, {
+      decidedAt: now - (10 + requests) * DAY + HOUR,
     });
   }
 
-  for (const [riderId, c] of cashByRider) {
-    await ctx.db.insert("cashDeposits", { riderId, amount: c.amount, parcelCount: c.count, receivedBy: payer, createdAt: now - 3 * DAY });
+  /* ---- cash hand-overs: deposited COD grouped by rider, split to 12 */
+  const byRider = new Map<Id<"users">, Doc<"parcels">[]>();
+  for (const p of finished) {
+    if (p.cashState !== "deposited" || !p.deliveryRiderId) continue;
+    byRider.set(p.deliveryRiderId, [...(byRider.get(p.deliveryRiderId) ?? []), p]);
+  }
+  const groups = [...byRider.entries()].map(([riderId, list]) => ({ riderId, list }));
+  while (groups.length < 12) {
+    groups.sort((a, b) => b.list.length - a.list.length);
+    const big = groups[0];
+    if (big.list.length < 2) break;
+    const half = Math.ceil(big.list.length / 2);
+    groups.push({ riderId: big.riderId, list: big.list.slice(half) });
+    big.list = big.list.slice(0, half);
+  }
+  for (const g of groups) {
+    await ctx.db.insert("cashDeposits", {
+      riderId: g.riderId,
+      amount: g.list.reduce((sum, p) => sum + p.collectedAmount, 0),
+      parcelCount: g.list.length,
+      receivedBy: payer,
+      createdAt: Math.max(...g.list.map((p) => p.finalAt ?? 0)) + 6 * HOUR,
+    });
   }
 
-  return { merchants: merchantIds.length, riders: riderIds.length, parcels: PLAN.length };
+  return {
+    merchants: merchantIds.length,
+    riders: riderIds.length,
+    applications: APPLICANTS.length,
+    parcels: plan.length,
+    payouts: payoutIds.length,
+    payoutRequests: requests,
+    cashDeposits: groups.length,
+  };
 }
 
 async function clear(ctx: MutationCtx) {
@@ -420,6 +708,14 @@ async function clear(ctx: MutationCtx) {
     await ctx.db.delete("users", u._id);
   }
 
+  for (const st of ["new", "interview", "hired", "rejected"] as const) {
+    const apps = await ctx.db
+      .query("riderApplications")
+      .withIndex("by_status_and_createdAt", (q) => q.eq("status", st))
+      .take(1000);
+    for (const a of apps.filter((x) => x.demo)) await ctx.db.delete("riderApplications", a._id);
+  }
+
   for (const [key, n] of lost) {
     const [scope, status] = key.split("|") as [string, Status];
     if (scope !== "all") continue; // per-merchant rows were deleted above
@@ -445,31 +741,115 @@ export const status = query({
   },
 });
 
-export const load = mutation({
+/*
+  Loading runs as an action because the sample verification documents are
+  real files in storage, and only actions can create files. The action makes
+  the files, then one mutation writes everything else; if that fails the files
+  are deleted again.
+*/
+export const load = action({
   args: { token: v.string() },
-  handler: async (ctx, args) => {
-    const admin = await requireUser(ctx, args.token, ["admin"]);
-    return await seed(ctx, admin._id);
+  handler: async (ctx, args): Promise<SeedResult> => {
+    await ctx.runQuery(internal.demo.canLoad, { token: args.token });
+    return await loadWith(ctx, args.token);
   },
 });
+
+/** CLI: npx convex run --prod demo:loadInternal */
+export const loadInternal = internalAction({
+  args: {},
+  handler: async (ctx): Promise<SeedResult> => {
+    await ctx.runQuery(internal.demo.canLoad, {});
+    return await loadWith(ctx, undefined);
+  },
+});
+
+type SeedResult = Awaited<ReturnType<typeof seed>>;
+
+async function loadWith(ctx: ActionCtx, token: string | undefined): Promise<SeedResult> {
+  const files: DemoFiles[] = [];
+  const stored: Id<"_storage">[] = [];
+  const store = async (title: string, lines: string[]) => {
+    const id = await ctx.storage.store(samplePdf(title, lines));
+    stored.push(id);
+    return id;
+  };
+  try {
+    for (const [i, m] of MERCHANTS.entries()) {
+      if (!m.verification) continue;
+      const who = [`Name: ${m.name}`, `Business: ${m.businessName}`, `NID: ${1980000000000 + i * 7654321}`];
+      files.push({
+        phone: merchantPhone(i),
+        nidFront: await store("NID card - front (SAMPLE)", who),
+        nidBack: await store("NID card - back (SAMPLE)", [...who, "Address: Dhaka"]),
+        tinFile: i % 2 === 0 ? await store("TIN certificate (SAMPLE)", [`Taxpayer: ${m.name}`, `TIN: ${100000000000 + i * 1234567}`]) : undefined,
+        tradeLicenseFile:
+          i % 3 !== 2 ? await store("Trade licence (SAMPLE)", [`Business: ${m.businessName}`, m.pickupAddress, "Valid until June 2027"]) : undefined,
+        otherFiles: i === 0 ? [await store("Shop photo (SAMPLE)", [m.businessName, m.pickupAddress])] : [],
+      });
+    }
+    return await ctx.runMutation(internal.demo.seedInternal, { token, files });
+  } catch (e) {
+    for (const id of stored) await ctx.storage.delete(id);
+    throw e;
+  }
+}
+
+export const canLoad = internalQuery({
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (args.token !== undefined) await requireUser(ctx, args.token, ["admin"]);
+    if ((await demoUsers(ctx)).length > 0) throw new ConvexError("Demo data is already loaded.");
+    return null;
+  },
+});
+
+export const seedInternal = internalMutation({
+  args: { token: v.optional(v.string()), files: v.array(demoFiles) },
+  handler: async (ctx, args) => {
+    const admin =
+      args.token !== undefined
+        ? await requireUser(ctx, args.token, ["admin"])
+        : await ctx.db
+            .query("users")
+            .withIndex("by_role_and_status", (q) => q.eq("role", "admin").eq("status", "active"))
+            .first();
+    return await seed(ctx, admin?._id, args.files);
+  },
+});
+
+/** A one-page PDF with a title and a few lines, clearly marked as a sample. */
+function samplePdf(title: string, lines: string[]) {
+  const esc = (t: string) => t.replace(/[^\x20-\x7e]/g, "?").replace(/[\\()]/g, (m) => "\\" + m);
+  let content = "0.96 0.45 0.1 RG 4 w 30 30 535 782 re S\n";
+  content += `BT /F1 24 Tf 50 770 Td (${esc(title)}) Tj ET\n`;
+  lines.forEach((l, i) => (content += `BT /F1 14 Tf 50 ${725 - i * 24} Td (${esc(l)}) Tj ET\n`));
+  content += "BT /F1 40 Tf 0.85 g 120 380 Td (DEMO - NOT REAL) Tj ET\n";
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${content.length} >>\nstream\n${content}endstream`,
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objects.forEach((o, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  out += offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("");
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return new Blob([out], { type: "application/pdf" });
+}
 
 export const remove = mutation({
   args: { token: v.string() },
   handler: async (ctx, args) => {
     await requireUser(ctx, args.token, ["admin"]);
     return await clear(ctx);
-  },
-});
-
-/** CLI: npx convex run --prod demo:loadInternal */
-export const loadInternal = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_role_and_status", (q) => q.eq("role", "admin").eq("status", "active"))
-      .first();
-    return await seed(ctx, admin?._id);
   },
 });
 

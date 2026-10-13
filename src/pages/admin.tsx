@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import {
   Banknote,
   Bike,
@@ -134,7 +134,7 @@ function DemoCard() {
   const { token } = useAuthed();
   const toast = useToast();
   const demo = useQuery(api.demo.status, { token });
-  const load = useMutation(api.demo.load);
+  const load = useAction(api.demo.load);
   const remove = useMutation(api.demo.remove);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
