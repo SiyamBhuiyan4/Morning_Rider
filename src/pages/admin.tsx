@@ -41,6 +41,7 @@ import { t } from "../lib/prefs";
 import { VerificationBadge, VerificationQueue, VerificationReviewModal } from "./adminVerify";
 import { RiderProfileModal } from "./riderProfile";
 import { MerchantProfileModal } from "./merchantProfile";
+import { LiveBadge, LiveFeed, RidersOnRoad, Ticker } from "../components/Live";
 
 /* -------------------------------------------------------------- dashboard */
 
@@ -50,47 +51,50 @@ export function AdminDashboard() {
   const d = useQuery(api.dashboard.admin, { token, dayStart });
   if (!d) return <Spinner />;
   const c = (s: keyof typeof STATUS) => d.counts[s] ?? 0;
+  const pipelineMax = Math.max(1, ...Object.values(d.counts).map((n) => n ?? 0));
 
   return (
     <>
       <PageHeader
         title={t(new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening")}
         subtitle={t("Here's what's moving at Morning Rider today.")}
-        actions={<Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>{t("New parcel")}</Button>}
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <LiveBadge />
+            <Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>{t("New parcel")}</Button>
+          </div>
+        }
       />
       <DemoCard />
-      {d.openPayoutRequests > 0 && (
-        <button
-          onClick={() => navigate("/app/payouts")}
-          className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-brand-50 px-5 py-3.5 text-left text-sm font-semibold text-brand-700 ring-1 ring-brand/40 hover:bg-brand-100"
-        >
-          <HandCoins className="size-5" />
-          {t("{n} merchant(s) asked to be paid →", { n: d.openPayoutRequests })}
-        </button>
-      )}
-      {d.pendingMerchants > 0 && (
-        <button
-          onClick={() => navigate("/app/merchants")}
-          className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-sun-100 px-5 py-3.5 text-left text-sm font-semibold text-amber-900 ring-1 ring-sun/50 hover:bg-sun/30"
-        >
-          <Store className="size-5" />
-          {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
-        </button>
-      )}
-      {d.pendingVerifications > 0 && (
-        <button
-          onClick={() => navigate("/app/merchants")}
-          className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-sun-100 px-5 py-3.5 text-left text-sm font-semibold text-amber-900 ring-1 ring-sun/50 hover:bg-sun/30"
-        >
-          <ShieldCheck className="size-5" />
-          {t("{n} business(es) waiting for verification →", { n: d.pendingVerifications })}
-        </button>
+      {(d.openPayoutRequests > 0 || d.pendingMerchants > 0 || d.pendingVerifications > 0) && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {d.openPayoutRequests > 0 && (
+            <AlertChip icon={HandCoins} tone="brand" onClick={() => navigate("/app/payouts")}>
+              {t("{n} merchant(s) asked to be paid →", { n: d.openPayoutRequests })}
+            </AlertChip>
+          )}
+          {d.pendingMerchants > 0 && (
+            <AlertChip icon={Store} tone="sun" onClick={() => navigate("/app/merchants")}>
+              {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
+            </AlertChip>
+          )}
+          {d.pendingVerifications > 0 && (
+            <AlertChip icon={ShieldCheck} tone="sun" onClick={() => navigate("/app/merchants")}>
+              {t("{n} business(es) waiting for verification →", { n: d.pendingVerifications })}
+            </AlertChip>
+          )}
+        </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("Booked today")} value={num(d.todayCreated)} icon={Package} hint={`COD ${tk(d.todayCod)}`} />
-        <StatCard label={t("Revenue today")} value={tk(d.todayRevenue)} icon={TrendingUp} accent="green" hint={t("Delivery + COD charges")} />
-        <StatCard label={t("Cash with riders")} value={tk(d.cashWithRiders)} icon={Banknote} accent="sun" hint={t("Collect from riders")} />
-        <StatCard label={t("Payable to merchants")} value={tk(d.payableToMerchants)} icon={Wallet} accent="brand" hint={t("Unpaid balance")} />
+        <StatCard label={t("Booked today")} value={<Ticker value={d.todayCreated} />} icon={Package} hint={<>COD <Ticker value={d.todayCod} format={tk} /></>} />
+        <StatCard label={t("Revenue today")} value={<Ticker value={d.todayRevenue} format={tk} />} icon={TrendingUp} accent="green" hint={t("Delivery + COD charges")} />
+        <StatCard label={t("Cash with riders")} value={<Ticker value={d.cashWithRiders} format={tk} />} icon={Banknote} accent="sun" hint={t("Collect from riders")} />
+        <StatCard label={t("Payable to merchants")} value={<Ticker value={d.payableToMerchants} format={tk} />} icon={Wallet} accent="brand" hint={t("Unpaid balance")} />
+      </div>
+
+      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <LiveFeed />
+        <RidersOnRoad dayStart={dayStart} />
       </div>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -119,14 +123,54 @@ export function AdminDashboard() {
                 <span className={`grid size-8 place-items-center rounded-lg ${STATUS[s as keyof typeof STATUS].tone}`}>
                   <Icon className="size-4" />
                 </span>
-                <span className="flex-1 text-sm font-semibold">{STATUS[s as keyof typeof STATUS].label}</span>
-                <span className="font-bold">{num(c(s as keyof typeof STATUS))}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold">{STATUS[s as keyof typeof STATUS].label}</span>
+                  <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-page">
+                    <span
+                      className={`block h-full rounded-full transition-[width] duration-1000 ease-out ${STATUS[s as keyof typeof STATUS].dot}`}
+                      style={{ width: `${(c(s as keyof typeof STATUS) / pipelineMax) * 100}%` }}
+                    />
+                  </span>
+                </span>
+                <span className="w-10 text-right font-bold">
+                  <Ticker value={c(s as keyof typeof STATUS)} />
+                </span>
               </button>
             ))}
           </div>
         </Card>
       </div>
     </>
+  );
+}
+
+/** A small "needs your attention" button with a pulsing dot. */
+function AlertChip({
+  icon: Icon,
+  tone,
+  onClick,
+  children,
+}: {
+  icon: typeof Store;
+  tone: "brand" | "sun";
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cx(
+        "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ring-1 transition hover:-translate-y-0.5",
+        tone === "brand" ? "bg-brand-50 text-brand-700 ring-brand/40 hover:bg-brand-100" : "bg-sun-100 text-amber-900 ring-sun/50 hover:bg-sun/30",
+      )}
+    >
+      <span className="relative flex size-2">
+        <span className={cx("absolute inline-flex size-full animate-ping rounded-full opacity-75", tone === "brand" ? "bg-brand" : "bg-amber-500")} />
+        <span className={cx("relative inline-flex size-2 rounded-full", tone === "brand" ? "bg-brand" : "bg-amber-500")} />
+      </span>
+      <Icon className="size-4" />
+      {children}
+    </button>
   );
 }
 

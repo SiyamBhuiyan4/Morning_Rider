@@ -13,7 +13,8 @@ import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { randomHex, hashPassword, requireUser } from "./lib/auth";
 import { removeVerification } from "./verification";
-import { codCharge, computeCharges, getRates, merchantNet, type Status } from "./lib/parcel";
+import { changeStatus, codCharge, computeCharges, getRates, merchantNet, type Status } from "./lib/parcel";
+import { insertParcel } from "./parcels";
 
 /*
   Sample data so every admin page has something on it while Siyam learns the
@@ -858,3 +859,112 @@ export const removeInternal = internalMutation({
   args: {},
   handler: async (ctx) => await clear(ctx),
 });
+
+/*
+  Keeps the demo alive: every minute (see crons.ts) one or two demo parcels
+  take their next step — picked up, at the hub, out for delivery, delivered,
+  sometimes held or returned — and now and then a new demo order comes in.
+  Moves go through changeStatus, exactly like a rider or the office pressing
+  the button, so the money side stays right. Only demo parcels (those of demo
+  merchants) are ever touched, and nothing runs when no demo data is loaded.
+*/
+const MOVING: Status[] = ["pending", "picked_up", "at_hub", "out_for_delivery", "hold", "returning"];
+
+export const tick = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await demoUsers(ctx);
+    if (users.length === 0) return null;
+    const merchants = users.filter((u) => u.role === "merchant" && u.status === "active" && u.verification === "approved");
+    const riders = users.filter((u) => u.role === "rider" && u.status === "active");
+    const demoMerchant = new Set<string>(merchants.map((m) => m._id));
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_role_and_status", (q) => q.eq("role", "admin").eq("status", "active"))
+      .first();
+    if (!admin || riders.length === 0 || merchants.length === 0) return null;
+
+    const moving: Doc<"parcels">[] = [];
+    for (const status of MOVING) {
+      const rows = await ctx.db
+        .query("parcels")
+        .withIndex("by_status_and_createdAt", (q) => q.eq("status", status))
+        .order("asc")
+        .take(200);
+      moving.push(...rows.filter((p) => demoMerchant.has(p.merchantId)));
+    }
+
+    const pick = <T>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
+    const steps = 1 + (Math.random() < 0.5 ? 1 : 0);
+    for (let n = 0; n < steps && moving.length > 0; n++) {
+      // Pick a stage (deliveries a bit more often), then one of its oldest parcels.
+      const weight: Partial<Record<Status, number>> = { out_for_delivery: 3, at_hub: 2, picked_up: 2, pending: 2, hold: 1, returning: 1 };
+      const stages = MOVING.filter((st) => moving.some((x) => x.status === st));
+      const total = stages.reduce((sum, st) => sum + (weight[st] ?? 1), 0);
+      let r = Math.random() * total;
+      const stage = stages.find((st) => (r -= weight[st] ?? 1) < 0) ?? stages[0];
+      const inStage = moving.filter((x) => x.status === stage);
+      const p = inStage[Math.floor(Math.random() * Math.min(inStage.length, 4))];
+      moving.splice(moving.indexOf(p), 1);
+      const pickupRider = riders.find((r) => r._id === p.pickupRiderId) ?? pick(riders);
+      const deliveryRider = riders.find((r) => r._id === p.deliveryRiderId) ?? pick(riders);
+      const roll = Math.random();
+      try {
+        if (p.status === "pending") {
+          if (p.pickupRiderId !== pickupRider._id) await ctx.db.patch("parcels", p._id, { pickupRiderId: pickupRider._id });
+          await changeStatus(ctx, { ...p, pickupRiderId: pickupRider._id }, pickupRider, "picked_up");
+        } else if (p.status === "picked_up") {
+          await changeStatus(ctx, p, admin, "at_hub");
+        } else if (p.status === "at_hub") {
+          await changeStatus(ctx, p, admin, "out_for_delivery", { deliveryRiderId: deliveryRider._id });
+        } else if (p.status === "out_for_delivery") {
+          if (!p.deliveryRiderId) continue;
+          const rider = riders.find((r) => r._id === p.deliveryRiderId);
+          if (!rider) continue;
+          if (roll < 0.7) await changeStatus(ctx, p, rider, "delivered");
+          else if (roll < 0.78 && p.codAmount > 1) {
+            await changeStatus(ctx, p, rider, "partial_delivered", {
+              collectedAmount: Math.floor(p.codAmount / 2 / 10) * 10,
+              note: "Customer kept only part of the order",
+            });
+          } else if (roll < 0.9) await changeStatus(ctx, p, rider, "hold", { note: pick(HOLD_REASONS) });
+          else await changeStatus(ctx, p, rider, "returning", { note: pick(RETURN_REASONS) });
+        } else if (p.status === "hold") {
+          const rider = riders.find((r) => r._id === p.deliveryRiderId);
+          if (rider) await changeStatus(ctx, p, rider, "out_for_delivery");
+        } else if (p.status === "returning") {
+          await changeStatus(ctx, p, admin, "returned");
+        }
+      } catch {
+        // A rule said no (e.g. rider changed); try another parcel next minute.
+      }
+    }
+
+    // A new order now and then, while the pipeline isn't overflowing.
+    if (Math.random() < 0.4 && moving.length < 70) {
+      const sender = pick(SENDERS);
+      const merchant = merchants.find((m) => m.phone === merchantPhone(sender.index));
+      if (merchant) {
+        const regular = Math.random() < 0.3 ? pick(REPEAT_CUSTOMERS) : undefined;
+        const k = Math.floor(Math.random() * 1000);
+        const [address, district, zone] = PLACES[regular ? regular.place : k % PLACES.length];
+        const { id } = await insertParcel(ctx, await getRates(ctx), merchant, merchant, {
+          invoice: `INV-${3000 + k}`,
+          recipientName: regular?.name ?? `${pick(FIRST)} ${pick(LAST)}`,
+          recipientPhone: regular?.phone ?? "017" + String(30000000 + k * 61 + Math.floor(Math.random() * 50)).padStart(8, "0"),
+          recipientAddress: address,
+          district,
+          zone,
+          category: pick(sender.categories),
+          weightKg: pick(WEIGHTS),
+          codAmount: pick(COD),
+          itemDescription: pick(sender.items),
+          note: pick(NOTES),
+        });
+        await ctx.db.patch("parcels", id, { pickupRiderId: pick(riders)._id });
+      }
+    }
+    return null;
+  },
+});
+

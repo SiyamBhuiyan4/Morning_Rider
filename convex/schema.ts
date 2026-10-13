@@ -204,7 +204,9 @@ export default defineSchema({
     byUserId: v.optional(v.id("users")),
     byRole: v.optional(role),
     at: v.number(),
-  }).index("by_parcelId_and_at", ["parcelId", "at"]),
+  })
+    .index("by_parcelId_and_at", ["parcelId", "at"])
+    .index("by_at", ["at"]),
 
   /* Running per-status counts, so the dashboards never scan parcels. */
   statusCounts: defineTable({

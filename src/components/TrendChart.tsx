@@ -34,12 +34,12 @@ export function TrendChart({ data }: { data: Point[] }) {
           >
             <div className="flex h-full items-end justify-center gap-[3px]">
               <div
-                className="w-full max-w-3 rounded-t-[4px] bg-navy-800 transition-opacity group-hover:opacity-80"
-                style={{ height: `${(d.created / max) * 100}%`, minHeight: d.created ? 3 : 0 }}
+                className="animate-grow w-full max-w-3 rounded-t-[4px] bg-navy-800 transition-[height,opacity] duration-700 group-hover:opacity-80"
+                style={{ animationDelay: `${i * 40}ms`, height: `${(d.created / max) * 100}%`, minHeight: d.created ? 3 : 0 }}
               />
               <div
-                className="w-full max-w-3 rounded-t-[4px] bg-brand transition-opacity group-hover:opacity-80"
-                style={{ height: `${(d.delivered / max) * 100}%`, minHeight: d.delivered ? 3 : 0 }}
+                className="animate-grow w-full max-w-3 rounded-t-[4px] bg-brand transition-[height,opacity] duration-700 group-hover:opacity-80"
+                style={{ animationDelay: `${i * 40 + 20}ms`, height: `${(d.delivered / max) * 100}%`, minHeight: d.delivered ? 3 : 0 }}
               />
             </div>
           </div>

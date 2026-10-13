@@ -58,7 +58,7 @@ function searchTextOf(p: { trackingCode: string; invoice?: string; recipientName
   return [p.trackingCode, p.invoice ?? "", p.recipientName, p.recipientPhone].join(" ");
 }
 
-async function insertParcel(
+export async function insertParcel(
   ctx: MutationCtx,
   rates: Rates,
   merchant: Doc<"users">,

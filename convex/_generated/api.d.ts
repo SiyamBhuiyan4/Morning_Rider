@@ -9,10 +9,12 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as demo from "../demo.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_parcel from "../lib/parcel.js";
+import type * as live from "../live.js";
 import type * as merchantProfile from "../merchantProfile.js";
 import type * as migrations from "../migrations.js";
 import type * as money from "../money.js";
@@ -33,10 +35,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  crons: typeof crons;
   dashboard: typeof dashboard;
   demo: typeof demo;
   "lib/auth": typeof lib_auth;
   "lib/parcel": typeof lib_parcel;
+  live: typeof live;
   merchantProfile: typeof merchantProfile;
   migrations: typeof migrations;
   money: typeof money;

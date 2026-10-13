@@ -164,6 +164,85 @@ body {
   animation: slide-in 0.22s ease-out both;
 }
 
+/* ---- live dashboard ---- */
+
+/* New line in the live feed: drops in and glows for a moment. */
+@keyframes feed-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+    background: rgb(245 122 16 / 0.18);
+  }
+  40% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    background: transparent;
+  }
+}
+.animate-feed-in {
+  animation: feed-in 2.4s ease-out both;
+}
+
+/* A rider riding along their little road, again and again. */
+@keyframes ride {
+  0% {
+    left: -1.5rem;
+  }
+  100% {
+    left: calc(100% + 0.25rem);
+  }
+}
+.ride {
+  animation: ride 8s linear infinite;
+}
+.ride svg {
+  animation: bounce-ride 0.5s ease-in-out infinite alternate;
+}
+@keyframes bounce-ride {
+  to {
+    transform: translateY(-1.5px);
+  }
+}
+
+/* Dashed centre line that drifts, so the road looks like it's moving. */
+.road-lines {
+  height: 2px;
+  background-image: repeating-linear-gradient(90deg, rgb(148 163 184 / 0.55) 0 10px, transparent 10px 22px);
+  background-size: 22px 2px;
+  animation: road 0.9s linear infinite;
+}
+@keyframes road {
+  to {
+    background-position: -22px 0;
+  }
+}
+
+/* Bars that grow up into place. */
+@keyframes grow-up {
+  from {
+    transform: scaleY(0);
+  }
+}
+.animate-grow {
+  transform-origin: bottom;
+  animation: grow-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ride,
+  .ride svg,
+  .road-lines,
+  .animate-grow,
+  .animate-feed-in {
+    animation: none !important;
+  }
+  .ride {
+    left: 45%;
+  }
+}
+
 /* Printing: only the label sheet / invoice is printed. */
 @media print {
   @page {
