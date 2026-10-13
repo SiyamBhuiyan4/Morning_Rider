@@ -651,8 +651,8 @@ export function RiderLogin() {
 
 export function Register() {
   const register = useMutation(api.auth.registerMerchant);
-  const toast = useToast();
-  const [done, setDone] = useState(false);
+  const { signIn } = useSession();
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [f, setF] = useState({
     name: "",
@@ -671,32 +671,18 @@ export function Register() {
     e.preventDefault();
     if (f.password !== f.confirm) return;
     setBusy(true);
+    setError("");
     try {
       const { confirm: _c, ...rest } = f;
-      await register({ ...rest, email: rest.email || undefined });
-      setDone(true);
+      // No approval step: the account opens and the merchant is signed in.
+      const session = await register({ ...rest, email: rest.email || undefined });
+      signIn(session.token, session.expiresAt);
+      navigate("/app", { replace: true });
     } catch (err) {
-      toast.error(err);
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
-  }
-
-  if (done) {
-    return (
-      <AuthLayout title={t("Application received")} subtitle={t("Thank you for choosing Morning Rider.")}>
-        <Card className="p-6">
-          <CheckCircle2 className="size-10 text-emerald-500" />
-          <p className="mt-4 font-semibold">{t("Your merchant account is waiting for approval.")}</p>
-          <p className="mt-1 text-sm text-ink-2">
-            {t("Our team will verify your details and activate your account. You can sign in as soon as it is approved.")}
-          </p>
-          <Button className="mt-6" onClick={() => navigate("/login")}>
-            {t("Go to login")}
-          </Button>
-        </Card>
-      </AuthLayout>
-    );
   }
 
   const mismatch = f.confirm.length > 0 && f.password !== f.confirm;
@@ -734,6 +720,16 @@ export function Register() {
         <Field label={t("Confirm password")} hint={mismatch ? <span className="text-red-600">{t("Passwords do not match.")}</span> : undefined}>
           {(id) => <Input id={id} type="password" autoComplete="new-password" value={f.confirm} onChange={set("confirm")} required />}
         </Field>
+        {error && (
+          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700 sm:col-span-2">
+            {error}{" "}
+            {error === t("This phone number already has an account. Please log in.") ? (
+              <Link href="/login" className="font-bold underline">
+                {t("Log in")}
+              </Link>
+            ) : null}
+          </p>
+        )}
         <Button type="submit" size="lg" loading={busy} disabled={mismatch} className="sm:col-span-2">
           {t("Create merchant account")}
         </Button>

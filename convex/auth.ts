@@ -248,7 +248,11 @@ export const me = query({
   },
 });
 
-/** Public merchant sign-up. The account stays `pending` until an admin approves it. */
+/**
+ * Public merchant sign-up. The account is active straight away (Siyam's
+ * rule: no approval for merchants) and the new merchant is signed in. A phone
+ * number can hold only one account.
+ */
 export const registerMerchant = mutation({
   args: {
     name: v.string(),
@@ -266,14 +270,14 @@ export const registerMerchant = mutation({
       .query("users")
       .withIndex("by_phone", (q) => q.eq("phone", phone))
       .unique();
-    if (existing) throw new ConvexError("An account with this phone number already exists.");
+    if (existing) throw new ConvexError("This phone number already has an account. Please log in.");
 
     const hourAgo = Date.now() - 60 * 60 * 1000;
     const recentSignups = await ctx.db
       .query("users")
-      .withIndex("by_role_and_status", (q) => q.eq("role", "merchant").eq("status", "pending"))
+      .withIndex("by_role_and_status", (q) => q.eq("role", "merchant").eq("status", "active"))
       .order("desc")
-      .take(MAX_SIGNUPS_PER_HOUR * 2);
+      .take(MAX_SIGNUPS_PER_HOUR * 4);
     if (recentSignups.filter((u) => u.createdAt > hourAgo).length >= MAX_SIGNUPS_PER_HOUR) {
       throw new ConvexError("Too many sign-ups right now. Please try again in an hour.");
     }
@@ -283,7 +287,7 @@ export const registerMerchant = mutation({
       throw new ConvexError("Enter a valid email address.");
     }
 
-    await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       name: required(args.name, 80, "Name"),
       businessName: required(args.businessName, 100, "Business name"),
       phone,
@@ -292,11 +296,11 @@ export const registerMerchant = mutation({
       payoutMethod: args.payoutMethod,
       payoutAccount: required(args.payoutAccount, 100, "Payment account"),
       role: "merchant",
-      status: "pending",
+      status: "active",
       ...(await hashPassword(args.password)),
       createdAt: Date.now(),
     });
-    return null;
+    return await issueSession(ctx, userId);
   },
 });
 

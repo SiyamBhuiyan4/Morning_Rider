@@ -668,4 +668,6 @@ export const BN: Record<string, string> = {
   "Anything else? (optional)": "আর কিছু বলতে চান? (ঐচ্ছিক)",
   "Send application": "আবেদন পাঠান",
   "You can only track parcels that belong to you or are assigned to you.": "শুধু আপনার নিজের বা আপনাকে দেওয়া পার্সেলই ট্র্যাক করতে পারবেন।",
+  "This phone number already has an account. Please log in.": "এই ফোন নম্বরে ইতিমধ্যে অ্যাকাউন্ট আছে। লগইন করুন।",
+  "Log in": "লগইন",
 };
