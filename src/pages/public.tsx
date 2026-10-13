@@ -26,12 +26,12 @@ import { api } from "../../convex/_generated/api";
 import { Link, navigate } from "../lib/router";
 import { useSession } from "../lib/session";
 import { errorText, useToast } from "../lib/toast";
-import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, dateTime, tk, type Category } from "../lib/format";
+import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, dateTime, num, tk, type Category } from "../lib/format";
 import { CONTACT } from "../lib/contact";
 import { Button, Card, Field, Input, Logo, Select, StatusBadge, Textarea, Wordmark, cx } from "../components/ui";
 import { IS_ADMIN_PORTAL } from "../lib/portal";
 import { Prefs } from "../components/Prefs";
-import { getLang, t, translateServer } from "../lib/prefs";
+import { t, translateServer } from "../lib/prefs";
 
 /** Only same-site paths may be used as a post-login destination. */
 export function safeNext(raw: string | null) {
@@ -157,7 +157,6 @@ function SectionTitle({ kicker, title, text }: { kicker: string; title: string; 
 
 export function Home() {
   const rates = useQuery(api.settings.publicRates);
-  const bn = getLang() === "bn";
 
   return (
     <div className="min-h-full bg-page">
@@ -169,21 +168,11 @@ export function Home() {
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-sun ring-1 ring-white/15">
               <Zap className="size-3.5" /> {t("FAST • SAFE • ON TIME")}
             </span>
-            <h1 className="mt-5 text-4xl font-extrabold italic leading-[1.08] tracking-tight text-white sm:text-6xl">
-              {bn ? (
-                <>
-                  ডেলিভারি নিয়ে
-                  <br />
-                  আর <span className="text-brand">টেনশন নেই!</span>
-                </>
-              ) : (
-                <>
-                  Your parcel,
-                  <br />
-                  <span className="text-brand">delivered</span> by morning.
-                </>
-              )}
+            {/* The brand is the headline, the same in both languages. */}
+            <h1 className="mt-5 text-5xl font-extrabold italic leading-[1.02] tracking-tight text-white sm:text-7xl">
+              MORNING <span className="text-brand">RIDER</span>
             </h1>
+            <p className="mt-3 text-2xl font-bold tracking-tight text-sun sm:text-3xl">{t("No more delivery worries!")}</p>
             <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-white/70">
               {t(
                 "Morning Rider delivers parcels, food, medicine, frozen items and more across Dhaka, Gazipur and Narayanganj — 7 days a week, starting at 6 AM.",
@@ -218,7 +207,7 @@ export function Home() {
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-white">{f.title}</p>
-                <p className="truncate text-xs text-white/60">{f.text}</p>
+                <p className="text-xs leading-snug text-white/60">{f.text}</p>
               </div>
             </div>
           ))}
@@ -383,7 +372,7 @@ export function Home() {
               { icon: Wallet, title: t("You get paid"), text: t("Collected cash is paid to your bKash, Nagad or bank.") },
             ].map((s, i) => (
               <div key={s.title} className="relative rounded-2xl border border-line p-6">
-                <span className="absolute right-5 top-5 text-4xl font-extrabold text-navy-50 dark:text-white/5">{i + 1}</span>
+                <span className="absolute right-5 top-5 text-4xl font-extrabold text-navy-50 dark:text-white/5">{num(i + 1)}</span>
                 <div className="grid size-11 place-items-center rounded-xl bg-[#0b1b38] text-sun">
                   <s.icon className="size-5" />
                 </div>
@@ -404,7 +393,7 @@ export function Home() {
             <div className="mt-6 flex flex-wrap gap-2">
               {COVERAGE.map((a) => (
                 <span key={a} className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-sm font-semibold ring-1 ring-line">
-                  <MapPin className="size-3.5 text-brand" /> {a}
+                  <MapPin className="size-3.5 text-brand" /> {t(a)}
                 </span>
               ))}
               <span className="rounded-full px-3.5 py-2 text-sm font-semibold text-ink-3">{t("and many more areas")}</span>
@@ -467,7 +456,7 @@ export function Home() {
             <h3 className="text-2xl font-extrabold tracking-tight">{t("Order today, relax!")}</h3>
             <p className="mt-2 text-ink-2">{t("Call or WhatsApp us — we'll pick up your product and deliver it safely.")}</p>
             <p className="mt-4 flex items-start gap-2 text-sm text-ink-2">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-brand" /> {t("Office")}: {CONTACT.address}
+              <MapPin className="mt-0.5 size-4 shrink-0 text-brand" /> {t("Office")}: {t(CONTACT.address)}
             </p>
           </div>
           <div className="grid gap-3">
@@ -958,7 +947,7 @@ function JourneyBar({ status }: { status: keyof typeof STATUS }) {
                 i <= step ? "bg-brand text-white" : "bg-navy-50 text-ink-3",
               )}
             >
-              {i + 1}
+              {num(i + 1)}
             </div>
             {i < JOURNEY.length - 1 && <div className={cx("mx-1 h-1 flex-1 rounded", i < step ? "bg-brand" : "bg-navy-50")} />}
           </div>

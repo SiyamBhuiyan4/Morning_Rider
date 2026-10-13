@@ -6,7 +6,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
-import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, date, dateTime, num, startOfToday, tk, zoneFor, type Category, type Zone } from "../lib/format";
+import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, date, dateTime, dec, num, startOfToday, tk, zoneFor, type Category, type Zone } from "../lib/format";
 import { parseCsv } from "../lib/csv";
 import { Badge, Button, Card, Empty, Input, PageHeader, Spinner, StatCard } from "../components/ui";
 import { TrendChart } from "../components/TrendChart";
@@ -62,7 +62,7 @@ export function MerchantDashboard() {
         </div>
       </Card>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("Total parcels")} value={num(total)} icon={Package} hint={`${d.todayCreated} today`} />
+        <StatCard label={t("Total parcels")} value={num(total)} icon={Package} hint={t("{n} today", { n: d.todayCreated })} />
         <StatCard label={t("In progress")} value={num(c("pending", "picked_up", "at_hub", "out_for_delivery", "hold"))} icon={Truck} accent="brand" />
         <StatCard label={t("Delivered")} value={num(delivered)} icon={PackageCheck} accent="green" hint={rate !== null ? t("{rate}% success rate", { rate }) : undefined} />
         <StatCard label={t("Returned")} value={num(c("returned", "returning"))} icon={RotateCcw} accent="red" />
@@ -79,7 +79,7 @@ export function MerchantDashboard() {
               <button key={s} onClick={() => navigate(`/app/parcels?status=${s}`)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-page">
                 <span className={`size-2.5 rounded-full ${STATUS[s].dot}`} />
                 <span className="flex-1 font-semibold">{STATUS[s].label}</span>
-                <span className="font-bold">{d.counts[s]}</span>
+                <span className="font-bold">{num(d.counts[s] ?? 0)}</span>
               </button>
             ))}
             {total === 0 && <p className="py-6 text-center text-sm text-ink-3">{t("No parcels yet — create your first one!")}</p>}
@@ -161,7 +161,7 @@ function PayoutRequestCard({ balance }: { balance: number | undefined }) {
           <p className="font-bold">{t("Withdraw your balance")}</p>
           <p className="text-sm text-ink-2">
             {me.payoutMethod
-              ? t("Paid to {method} {account}", { method: PAYOUT_METHOD[me.payoutMethod], account: me.payoutAccount ?? "" })
+              ? t("Will be paid to {method} {account}", { method: PAYOUT_METHOD[me.payoutMethod], account: me.payoutAccount ?? "" })
               : t("Add your payment method in Account first.")}
           </p>
         </div>
@@ -361,7 +361,7 @@ export function BulkUpload() {
         <label className="flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-line px-6 py-12 text-center transition hover:border-brand hover:bg-brand-50/40">
           <FileSpreadsheet className="size-10 text-brand" />
           <span className="mt-3 font-bold">{t("Choose a CSV file")}</span>
-          <span className="mt-1 text-sm text-ink-3">Columns: {TEMPLATE_HEADER.replaceAll(",", ", ")}</span>
+          <span className="mt-1 text-sm text-ink-3">{t("Columns")}: {TEMPLATE_HEADER.replaceAll(",", ", ")}</span>
           <input
             type="file"
             accept=".csv,text/csv"
@@ -401,14 +401,14 @@ export function BulkUpload() {
                 <tbody>
                   {rows.map((r, i) => (
                     <tr key={i} className="border-t border-line">
-                      <td className="px-3 py-2 text-ink-3">{i + 1}</td>
+                      <td className="px-3 py-2 text-ink-3">{num(i + 1)}</td>
                       <td className="px-3 py-2">
                         <p className="font-semibold">{r.recipientName}</p>
                         <p className="text-xs text-ink-3">{r.recipientPhone}</p>
                       </td>
                       <td className="px-3 py-2 text-ink-2">{r.recipientAddress}, {r.district}</td>
                       <td className="px-3 py-2 text-ink-2">{ZONE[r.zone]}</td>
-                      <td className="px-3 py-2 text-right">{r.weightKg}</td>
+                      <td className="px-3 py-2 text-right">{dec(r.weightKg)}</td>
                       <td className="px-3 py-2 text-right font-semibold">{tk(r.codAmount)}</td>
                     </tr>
                   ))}

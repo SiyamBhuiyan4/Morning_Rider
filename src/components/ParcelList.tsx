@@ -194,7 +194,7 @@ export function ParcelList() {
                     className={cx("cursor-pointer border-b border-line/70 transition last:border-0 hover:bg-brand-50/40", selected.has(p._id) && "bg-brand-50/60")}
                   >
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" className="size-4 accent-[var(--color-brand)]" checked={selected.has(p._id)} onChange={() => toggle(p._id)} aria-label={`Select ${p.trackingCode}`} />
+                      <input type="checkbox" className="size-4 accent-[var(--color-brand)]" checked={selected.has(p._id)} onChange={() => toggle(p._id)} aria-label={t("Select {code}", { code: p.trackingCode })} />
                     </td>
                     <td className="px-3 py-3">
                       <p className="font-mono font-bold">{p.trackingCode}</p>

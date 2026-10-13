@@ -6,7 +6,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
-import { CATEGORY, STATUS, ZONE, dateTime, tk, type Status } from "../lib/format";
+import { CATEGORY, STATUS, ZONE, dateTime, dec, tk, type Status } from "../lib/format";
 import { Button, Field, Input, Modal, Select, Spinner, StatusBadge, cx } from "./ui";
 import { t } from "../lib/prefs";
 
@@ -130,9 +130,9 @@ export function StatusActions({
               />
             )}
           </Field>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={confirm} loading={busy} variant={move === "cancelled" ? "danger" : "primary"}>
-              {t("Confirm")}: {STATUS[move].label}
+              {t("Confirm: {status}", { status: STATUS[move].label })}
             </Button>
             <Button variant="ghost" onClick={() => setMove(null)}>
               {t("Back")}
@@ -163,7 +163,7 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
             <div>
               <p className="font-mono text-xl font-bold">{data.parcel.trackingCode}</p>
               <p className="text-sm text-ink-3">
-                {t("Created")} {dateTime(data.parcel.createdAt)}
+                {t("Created {date}", { date: dateTime(data.parcel.createdAt) })}
                 {data.parcel.invoice && ` · ${t("Invoice")} ${data.parcel.invoice}`}
               </p>
             </div>
@@ -208,7 +208,7 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
           </div>
           <p className="-mt-3 text-xs text-ink-3">
             {data.parcel.category && `${CATEGORY[data.parcel.category].emoji} ${CATEGORY[data.parcel.category].label} · `}
-            {data.parcel.weightKg} {t("kg")}{data.parcel.itemDescription && ` · ${data.parcel.itemDescription}`}
+            {dec(data.parcel.weightKg)} {t("kg")}{data.parcel.itemDescription && ` · ${data.parcel.itemDescription}`}
             {data.parcel.note && ` · ${t("Note")}: ${data.parcel.note}`}
             {data.parcel.settlement === "paid" && ` · ${t("Paid to merchant")}`}
           </p>
@@ -228,6 +228,7 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
                     <RiderSelect value={pickupRider} onChange={setPickupRider} />
                   </div>
                   <Button
+                    className="shrink-0 whitespace-nowrap"
                     disabled={!pickupRider}
                     onClick={async () => {
                       try {

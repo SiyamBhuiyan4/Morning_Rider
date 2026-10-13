@@ -97,6 +97,15 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px -6px rgb(0 0 0 / 0.45);
 }
 
+/*
+  Letter-spacing pulls Bangla conjuncts and vowel signs apart, so in Bangla
+  mode every tracking-* utility is reset — except brand/codes marked
+  .keep-tracking, which stay Latin.
+*/
+:lang(bn) [class*="tracking-"]:not(.keep-tracking) {
+  letter-spacing: normal;
+}
+
 html,
 body,
 #root {

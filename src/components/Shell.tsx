@@ -21,7 +21,7 @@ import { Link, useLocation } from "../lib/router";
 import { useAuthed, useSession } from "../lib/session";
 import { Logo, Wordmark, cx } from "./ui";
 import { Prefs } from "./Prefs";
-import { t } from "../lib/prefs";
+import { getLang, t } from "../lib/prefs";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -89,7 +89,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <Wordmark dark />
       </div>
       {me.role === "admin" && (
-        <p className="-mt-3 mb-4 px-5 text-[11px] font-bold tracking-[0.2em] text-sun">{t("ADMIN PANEL")}</p>
+        <p className={cx("-mt-3 mb-4 px-5 text-[11px] font-bold text-sun", getLang() !== "bn" && "tracking-[0.2em]")}>{t("ADMIN PANEL")}</p>
       )}
       {nav}
       <Prefs onDark className="mx-5 mt-4" />

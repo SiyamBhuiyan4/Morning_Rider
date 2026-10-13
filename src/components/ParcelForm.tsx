@@ -112,7 +112,7 @@ export function ParcelForm({
             <Field label={t("Full address")} className="sm:col-span-2">
               {(id) => <Textarea id={id} value={f.recipientAddress} onChange={set("recipientAddress")} required maxLength={300} placeholder={t("House, road, area, thana")} />}
             </Field>
-            <Field label={t("Area")} hint={t("Type or pick, e.g. Uttara Sector 7, Mirpur 10")}>
+            <Field label={t("Area")} hint={t("Type or pick (in English or Bangla), e.g. Uttara Sector 7, Mirpur 10")}>
               {(id) => (
                 <>
                   <Input

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { t } from "../lib/prefs";
+import { shortDate } from "../lib/format";
 
 type Point = { day: number; created: number; delivered: number };
 
@@ -7,7 +8,7 @@ type Point = { day: number; created: number; delivered: number };
 export function TrendChart({ data }: { data: Point[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...data.flatMap((d) => [d.created, d.delivered]));
-  const label = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const label = shortDate;
 
   return (
     <div>
@@ -20,7 +21,7 @@ export function TrendChart({ data }: { data: Point[] }) {
         </span>
         {hover !== null && (
           <span className="ml-auto text-ink">
-            {label(data[hover].day)}: {data[hover].created} {t("Booked")} · {data[hover].delivered} {t("Delivered")}
+            {label(data[hover].day)}: {t("{booked} booked · {delivered} delivered", { booked: data[hover].created, delivered: data[hover].delivered })}
           </span>
         )}
       </div>

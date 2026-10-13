@@ -109,7 +109,7 @@ export function EditParcel({ id }: { id: Id<"parcels"> }) {
   };
   return (
     <>
-      <PageHeader title={`Edit ${p.trackingCode}`} />
+      <PageHeader title={t("Edit {code}", { code: p.trackingCode })} />
       <ParcelForm
         initial={initial}
         submitLabel={t("Save changes")}
@@ -247,7 +247,7 @@ export function Account() {
                       </Select>
                     )}
                   </Field>
-                  <Field label={t("Account")}>{(id) => <Input id={id} value={p.payoutAccount} onChange={set("payoutAccount")} />}</Field>
+                  <Field label={t("Account number")}>{(id) => <Input id={id} value={p.payoutAccount} onChange={set("payoutAccount")} />}</Field>
                 </div>
                 {payoutChanged && (
                   <Field label={t("Current password")} hint={t("Needed to change where your payments are sent.")}>

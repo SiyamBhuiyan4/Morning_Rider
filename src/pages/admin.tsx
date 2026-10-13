@@ -31,7 +31,7 @@ import { CONTACT } from "../lib/contact";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
-import { PAYOUT_METHOD, STATUS, date, dateTime, num, startOfToday, tk } from "../lib/format";
+import { PAYOUT_METHOD, STATUS, date, dateTime, longDateTime, num, startOfToday, tk } from "../lib/format";
 import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner, StatCard, StatusBadge, cx } from "../components/ui";
 import { TrendChart } from "../components/TrendChart";
 import { t } from "../lib/prefs";
@@ -224,7 +224,7 @@ export function Merchants() {
         {(["active", "pending", "suspended"] as const).map((k) => (
           <Button key={k} size="sm" variant={tab === k ? "dark" : "outline"} onClick={() => setTab(k)}>
             {k === "pending"
-              ? `${t("Waiting approval")}${pending?.length ? ` (${pending.length})` : ""}`
+              ? `${t("Waiting approval")}${pending?.length ? ` (${num(pending.length)})` : ""}`
               : k === "active"
                 ? t("Active")
                 : t("Suspended")}
@@ -253,7 +253,7 @@ export function Merchants() {
                     {m.email && ` · ${m.email}`}
                   </p>
                   <p className="text-xs text-ink-3">
-                    {m.pickupAddress} · {m.payoutMethod ? PAYOUT_METHOD[m.payoutMethod] : ""} {m.payoutAccount} · {t("joined")} {date(m.createdAt)}
+                    {m.pickupAddress} · {m.payoutMethod ? PAYOUT_METHOD[m.payoutMethod] : ""} {m.payoutAccount} · {t("joined {date}", { date: date(m.createdAt) })}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -342,7 +342,7 @@ function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider"; 
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`Add ${role}`}>
+    <Modal open={open} onClose={onClose} title={role === "merchant" ? t("Add merchant") : t("Add rider")}>
       <form onSubmit={submit} className="space-y-4">
         <Field label={t("Full name")}>{(id) => <Input id={id} value={f.name} onChange={set("name")} required />}</Field>
         <Field label={t("Phone number (login)")}>{(id) => <Input id={id} type="tel" placeholder="01XXXXXXXXX" value={f.phone} onChange={set("phone")} required />}</Field>
@@ -411,7 +411,7 @@ export function Riders() {
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-page p-3">
                   <p className="text-xs text-ink-3">{t("Active tasks")}</p>
-                  <p className="font-bold">{r.activeTasks}</p>
+                  <p className="font-bold">{num(r.activeTasks)}</p>
                 </div>
                 <div className="rounded-xl bg-sun-100/70 p-3">
                   <p className="text-xs text-amber-800">{t("Cash in hand")}</p>
@@ -481,7 +481,7 @@ function RiderApplications() {
     <div className="mb-8">
       <h2 className="mb-3 flex items-center gap-2 font-bold">
         <UserPlus className="size-5 text-brand" /> {t("Rider applications")}
-        <Badge tone="brand">{apps.length}</Badge>
+        <Badge tone="brand">{num(apps.length)}</Badge>
       </h2>
       <div className="grid gap-3 lg:grid-cols-2">
         {apps.map((a) => (
@@ -494,7 +494,7 @@ function RiderApplications() {
                   {a.email && ` · ${a.email}`}
                 </p>
                 <p className="text-xs text-ink-3">
-                  {a.area} · {t("applied")} {date(a.createdAt)}
+                  {a.area} · {t("applied {date}", { date: date(a.createdAt) })}
                 </p>
               </div>
               {a.status === "interview" ? (
@@ -558,15 +558,13 @@ function InviteModal({ app, onClose }: { app: Doc<"riderApplications"> | null; o
   if (!app) return null;
 
   const at = when ? new Date(when) : null;
-  const whenText = at ? at.toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" }) : "";
-  const subject = "Morning Rider — rider interview invitation";
-  const message =
-    `Dear ${app.name},\n\n` +
-    `Thank you for applying to be a Morning Rider delivery rider. We would like to invite you for an interview.\n\n` +
-    `When: ${whenText}\nWhere: ${place}\n\n` +
-    `Please bring your NID, driving licence and motorcycle papers.\n` +
-    `If you cannot come at this time, call or WhatsApp us at ${CONTACT.phone}.\n\n` +
-    `Morning Rider — Fast • Safe • On Time`;
+  // The invitation goes out in whichever language the admin is using.
+  const whenText = at ? longDateTime(at.getTime()) : "";
+  const subject = t("Morning Rider — rider interview invitation");
+  const message = t(
+    "Dear {name},\n\nThank you for applying to be a Morning Rider delivery rider. We would like to invite you for an interview.\n\nWhen: {when}\nWhere: {place}\n\nPlease bring your NID, driving licence and motorcycle papers.\nIf you cannot come at this time, call or WhatsApp us at {phone}.\n\nMorning Rider — Fast • Safe • On Time",
+    { name: app.name, when: whenText, place: place === CONTACT.address ? t(CONTACT.address) : place, phone: CONTACT.phone },
+  );
   const waNumber = "88" + app.phone;
 
   async function record() {
@@ -741,7 +739,7 @@ function PayoutRequests({ onPay }: { onPay: (merchantId: Id<"users">) => void })
     <Card className="mb-6 overflow-hidden ring-2 ring-brand/40">
       <div className="flex items-center gap-2 border-b border-line bg-brand-50 px-5 py-4 font-bold text-brand-700">
         <HandCoins className="size-5" /> {t("Payout requests")}
-        <Badge tone="brand">{rows.length}</Badge>
+        <Badge tone="brand">{num(rows.length)}</Badge>
       </div>
       <div className="divide-y divide-line">
         {rows.map((r) => (
@@ -749,7 +747,7 @@ function PayoutRequests({ onPay }: { onPay: (merchantId: Id<"users">) => void })
             <div className="min-w-56 flex-1">
               <p className="font-bold">{r.merchantName}</p>
               <p className="text-xs text-ink-3">
-                {r.merchantPhone} · {PAYOUT_METHOD[r.method]} {r.account} · {t("requested")} {dateTime(r.createdAt)}
+                {r.merchantPhone} · {PAYOUT_METHOD[r.method]} {r.account} · {t("requested {date}", { date: dateTime(r.createdAt) })}
               </p>
               {r.note && <p className="mt-1 text-sm text-ink-2">“{r.note}”</p>}
             </div>
@@ -828,10 +826,10 @@ export function PayoutHistory({
                 <Wallet className="size-5" />
               </div>
               <div className="min-w-40 flex-1">
-                <p className="font-semibold">{showMerchant ? p.merchantName : `${PAYOUT_METHOD[p.method]} ${t("payment")}`}</p>
+                <p className="font-semibold">{showMerchant ? p.merchantName : t("{method} payment", { method: PAYOUT_METHOD[p.method] })}</p>
                 <p className="text-xs text-ink-3">
                   {dateTime(p.createdAt)} · {t("{n} parcels", { n: p.parcelCount })} · {PAYOUT_METHOD[p.method]}
-                  {p.reference && ` · ${t("Ref")} ${p.reference}`}
+                  {p.reference && ` · ${t("Ref {ref}", { ref: p.reference })}`}
                 </p>
               </div>
               <p className="font-extrabold">{tk(p.amount)}</p>
@@ -903,7 +901,7 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
               <p className="font-bold">− {tk(st.charges)}</p>
             </div>
             <div className="rounded-2xl bg-brand-50 p-3">
-              <p className="text-xs text-brand-700">{t("Pay")}</p>
+              <p className="text-xs text-brand-700">{t("To pay")}</p>
               <p className="font-extrabold text-brand-700">{tk(st.net)}</p>
             </div>
           </div>
@@ -919,7 +917,7 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
               )}
             </Field>
             <Field label={t("Transaction ID / reference")}>
-              {(id) => <Input id={id} value={reference} onChange={(e) => setReference(e.target.value)} placeholder={info?.payoutAccount ? `${t("To")} ${info.payoutAccount}` : ""} />}
+              {(id) => <Input id={id} value={reference} onChange={(e) => setReference(e.target.value)} placeholder={info?.payoutAccount ? t("To {account}", { account: info.payoutAccount }) : ""} />}
             </Field>
           </div>
           <StatementTable rows={st.parcels} />

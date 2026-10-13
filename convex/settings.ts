@@ -48,7 +48,7 @@ export const updateRates = mutation({
     const { token: _t, ...rates } = args;
     for (const [k, val] of Object.entries(rates)) {
       const max = k.endsWith("Percent") ? 100 : 5000;
-      if (!Number.isFinite(val) || val < 0 || val > max) throw new ConvexError(`${k} must be between 0 and ${max}.`);
+      if (!Number.isFinite(val) || val < 0 || val > max) throw new ConvexError(`Each rate must be between 0 and ${max}.`);
     }
     const existing = await ctx.db.query("rates").first();
     const doc = { ...rates, updatedAt: Date.now() };

@@ -4,7 +4,7 @@ import { Banknote, MapPin, Package, PackageCheck, Phone, Store, Truck } from "lu
 import { api } from "../../convex/_generated/api";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
-import { CATEGORY, dateTime, tk } from "../lib/format";
+import { CATEGORY, dateTime, num, tk } from "../lib/format";
 import { Button, Card, Empty, PageHeader, Spinner, StatusBadge, cx } from "../components/ui";
 import { StatusActions } from "../components/ParcelDetail";
 import { t } from "../lib/prefs";
@@ -44,13 +44,13 @@ export function RiderTasks() {
             key={x.key}
             onClick={() => setTab(x.key)}
             className={cx(
-              "flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition",
+              "flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl py-2 text-[13px] leading-tight font-bold whitespace-nowrap transition sm:flex-row sm:gap-2 sm:text-sm",
               tab === x.key ? "bg-navy-900 text-white" : "text-ink-2 hover:bg-page",
             )}
           >
             <x.icon className="size-4" />
             {x.label}
-            <span className={cx("rounded-full px-1.5 text-xs", tab === x.key ? "bg-brand" : "bg-page")}>{x.count}</span>
+            <span className={cx("rounded-full px-1.5 text-xs", tab === x.key ? "bg-brand" : "bg-page")}>{num(x.count)}</span>
           </button>
         ))}
       </div>
@@ -107,7 +107,7 @@ export function RiderTasks() {
       {tab !== "pickup" &&
         ((tab === "deliver" ? tasks.deliveries : tasks.onHold).length === 0 ? (
           <Card>
-            <Empty icon={PackageCheck} title={tab === "deliver" ? "No deliveries right now" : "Nothing on hold"} text={t("New parcels assigned to you will appear here.")} />
+            <Empty icon={PackageCheck} title={tab === "deliver" ? t("No deliveries right now") : t("Nothing on hold")} text={t("New parcels assigned to you will appear here.")} />
           </Card>
         ) : (
           <div className="space-y-4">

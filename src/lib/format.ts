@@ -1,17 +1,37 @@
 import type { Doc } from "../../convex/_generated/dataModel";
-import { t } from "./prefs";
+import { getLang, t } from "./prefs";
 
 export type Status = Doc<"parcels">["status"];
 export type Zone = Doc<"parcels">["zone"];
 
-const taka = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
-export const tk = (n: number) => `৳${taka.format(n)}`;
-export const num = (n: number) => taka.format(n);
+/*
+  Numbers and dates follow the chosen language: Bangla mode shows Bangla
+  digits and month names everywhere, so a sentence never mixes "১৪ দিন" with
+  "13 Oct". (The app re-mounts on a language switch, so these re-run.)
+*/
+const locale = () => (getLang() === "bn" ? "bn-BD" : "en-GB");
+const numberLocale = () => (getLang() === "bn" ? "bn-BD" : "en-IN");
 
-export const dateTime = (t: number) =>
-  new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-export const date = (t: number) =>
-  new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+export const num = (n: number) => new Intl.NumberFormat(numberLocale(), { maximumFractionDigits: 0 }).format(n);
+export const tk = (n: number) => `৳${num(n)}`;
+/** Up to one decimal place, e.g. weights like 2.5 kg. */
+export const dec = (n: number) => new Intl.NumberFormat(numberLocale(), { maximumFractionDigits: 1 }).format(n);
+
+// Bangla mode uses 24-hour time: browsers print "PM" in Latin letters for bn-BD.
+const hour12 = () => getLang() !== "bn";
+
+export const dateTime = (ms: number) =>
+  new Date(ms).toLocaleString(locale(), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: hour12() });
+export const date = (ms: number) =>
+  new Date(ms).toLocaleDateString(locale(), { day: "numeric", month: "short", year: "numeric" });
+export const shortDate = (ms: number) => new Date(ms).toLocaleDateString(locale(), { day: "numeric", month: "short" });
+// Date and time formatted separately: bn-BD otherwise inserts a stray "এ" between them.
+export const longDateTime = (ms: number) => {
+  const d = new Date(ms);
+  const day = d.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" });
+  const time = d.toLocaleTimeString(locale(), { hour: "numeric", minute: "2-digit", hour12: hour12() });
+  return `${day}, ${time}`;
+};
 
 export function startOfToday() {
   const d = new Date();
@@ -109,10 +129,12 @@ export const AREAS = [
 
 /** Best guess of the zone from the area; the sender can still change it. */
 export function zoneFor(area: string): (typeof ZONES)[number] {
-  const a = area.toLowerCase();
-  if (/uttara|diabari|abdullahpur/.test(a)) return "uttara";
-  if (/gazipur|tongi|joydebpur|board bazar|konabari|kashimpur/.test(a)) return "gazipur_city";
-  if (/narayanganj|chashara|fatullah|siddhirganj/.test(a)) return "narayanganj_city";
+  // English or Bangla spellings of the area both work.
+  // NFC so য়/ড় typed either way (one code point or two) still match.
+  const a = area.normalize("NFC").toLowerCase();
+  if (/uttara|diabari|abdullahpur|উত্তরা|দিয়াবাড়ি|আব্দুল্লাহপুর/.test(a)) return "uttara";
+  if (/gazipur|tongi|joydebpur|board bazar|konabari|kashimpur|গাজীপুর|টঙ্গী|জয়দেবপুর|বোর্ড বাজার|কোনাবাড়ি|কাশিমপুর/.test(a)) return "gazipur_city";
+  if (/narayanganj|chashara|fatullah|siddhirganj|নারায়ণগঞ্জ|চাষাড়া|ফতুল্লা|সিদ্ধিরগঞ্জ/.test(a)) return "narayanganj_city";
   return "dhaka_city";
 }
 

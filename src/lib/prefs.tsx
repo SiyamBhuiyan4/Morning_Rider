@@ -61,8 +61,18 @@ export const getLang = () => lang;
  */
 export function t(en: string, vars?: Record<string, string | number>): string {
   let out = lang === "bn" ? (BN[en] ?? en) : en;
-  if (vars) for (const [k, v] of Object.entries(vars)) out = out.replaceAll(`{${k}}`, String(v));
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) {
+      // Plain numbers follow the language; strings (codes, phones, names) stay as given.
+      out = out.replaceAll(`{${k}}`, typeof v === "number" && lang === "bn" ? bnDigits(String(v)) : String(v));
+    }
+  }
   return out;
+}
+
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+export function bnDigits(s: string) {
+  return s.replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
 }
 
 /*
@@ -77,6 +87,12 @@ const SERVER_PATTERNS: [RegExp, string][] = [
   [/^The balance changed to (.+)\. Review it and confirm again\.$/, "The balance changed to {1}. Review it and confirm again."],
   [/^The amount changed to (.+)\. Review it and confirm again\.$/, "The amount changed to {1}. Review it and confirm again."],
   [/^Collected amount must be between 0 and (\d+) for a partial delivery\.$/, "Collected amount must be between 0 and {1} for a partial delivery."],
+  [/^Password must be at least (\d+) characters\.$/, "Password must be at least {1} characters."],
+  [/^(.+) is too long \(max (\d+) characters\)\.$/, "{1} is too long (max {2} characters)."],
+  [/^(.+) is required\.$/, "{1} is required."],
+  [/^Phone (\S+) is already used by a real account\.$/, "Phone {1} is already used by a real account."],
+  [/^Real parcel (\S+) is assigned to (.+)\. Give it to a real rider first, then clear the demo data\.$/, "Real parcel {1} is assigned to {2}. Give it to a real rider first, then clear the demo data."],
+  [/^Each rate must be between 0 and (\d+)\.$/, "Each rate must be between 0 and {1}."],
 ];
 
 export function translateServer(msg: string): string {
@@ -86,9 +102,31 @@ export function translateServer(msg: string): string {
     const m = msg.match(re);
     if (m) {
       let out = BN[key] ?? key;
-      m.slice(1).forEach((g, i) => (out = out.replace(`{${i + 1}}`, translateServer(g))));
+      m.slice(1).forEach((g, i) => {
+        out = out.replace(`{${i + 1}}`, serverValue(g));
+      });
       return out;
     }
   }
   return msg;
+}
+
+/* Field names the server puts into "… is required." style messages. */
+const FIELD_LABELS = new Set([
+  "Address", "Area", "Business name", "Customer name", "Email", "Interview place", "Invoice",
+  "Item description", "Name", "Note", "Payment account", "Pickup address", "Reason", "Reference",
+]);
+
+/**
+ * One captured value inside a server message. Amounts and counts get Bangla
+ * digits; field names and nested messages ("Row 3: <message>") are
+ * translated; anything else — a phone number, tracking code or person's
+ * name — is shown exactly as given, so a rider called "Cash" stays "Cash".
+ */
+function serverValue(g: string) {
+  if (/^0\d{10}$/.test(g)) return g; // phone number
+  if (/^৳?[\d,.]+$/.test(g)) return bnDigits(g); // amount or count
+  if (FIELD_LABELS.has(g)) return BN[g] ?? g;
+  if (/[.!?]$/.test(g)) return translateServer(g); // a whole nested message
+  return g;
 }

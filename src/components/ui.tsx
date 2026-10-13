@@ -35,10 +35,10 @@ export function Button({
     <button
       disabled={disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
-        size === "sm" && "h-8 px-3 text-[13px]",
-        size === "md" && "h-10 px-4 text-sm",
-        size === "lg" && "h-12 px-6 text-[15px]",
+        "inline-flex items-center justify-center gap-2 rounded-xl text-center leading-tight font-semibold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+        size === "sm" && "min-h-8 px-3 py-1 text-[13px]",
+        size === "md" && "min-h-10 px-4 py-1.5 text-sm",
+        size === "lg" && "min-h-12 px-6 py-2 text-[15px]",
         variant === "primary" && "bg-brand text-white shadow-sm shadow-brand/30 hover:bg-brand-600",
         variant === "dark" && "bg-navy-900 text-white hover:bg-navy-800 dark:bg-navy-600 dark:hover:bg-navy-800",
         variant === "outline" && "border border-line bg-surface text-ink hover:border-navy-100 hover:bg-navy-50",
@@ -278,10 +278,10 @@ export function Wordmark({ dark }: { dark?: boolean }) {
   return (
     <div className="leading-none">
       <div className={cx("text-[17px] font-extrabold italic tracking-tight", dark ? "text-white" : "text-navy-900 dark:text-white")}>
-        MORNING <span className="text-brand">{t("RIDER")}</span>
+        MORNING <span className="text-brand">RIDER</span>
       </div>
-      <div className={cx("mt-1 text-[10px] font-semibold tracking-[0.2em]", dark ? "text-white/60" : "text-ink-3")}>
-        {t("COURIER SERVICE")}
+      <div className={cx("keep-tracking mt-1 text-[10px] font-semibold tracking-[0.2em]", dark ? "text-white/60" : "text-ink-3")}>
+        COURIER SERVICE
       </div>
     </div>
   );

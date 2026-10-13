@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { useAuthed } from "../lib/session";
-import { date } from "../lib/format";
+import { date, num } from "../lib/format";
 import { cx } from "./ui";
 import { t } from "../lib/prefs";
 
@@ -37,7 +37,7 @@ export function FraudSummary({ phone, compact }: { phone: string; compact?: bool
           {r.successRate !== null && (
             <p className="text-sm opacity-80">
               {t("{rate}% success · {n} parcels", { rate: r.successRate, n: r.total })}
-              {r.lastOrderAt && ` · ${t("last")} ${date(r.lastOrderAt)}`}
+              {r.lastOrderAt && ` · ${t("last order {date}", { date: date(r.lastOrderAt) })}`}
             </p>
           )}
         </div>
@@ -51,8 +51,8 @@ export function FraudSummary({ phone, compact }: { phone: string; compact?: bool
             ["Cancelled", r.cancelled],
           ].map(([l, n]) => (
             <div key={l} className="rounded-xl bg-white/70 py-3 dark:bg-white/5">
-              <p className="text-xl font-extrabold">{n}</p>
-              <p className="text-xs font-medium opacity-70">{t(String(l))}</p>
+              <p className="text-xl font-extrabold">{num(Number(n))}</p>
+              <p className="text-[11px] leading-tight font-medium opacity-70">{t(String(l))}</p>
             </div>
           ))}
         </div>

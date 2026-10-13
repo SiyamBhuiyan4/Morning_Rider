@@ -5,7 +5,7 @@ import { Printer } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
-import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, date, dateTime, tk } from "../lib/format";
+import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, date, dateTime, dec, tk } from "../lib/format";
 import { Button, Spinner } from "../components/ui";
 import { t } from "../lib/prefs";
 
@@ -56,9 +56,9 @@ export function PrintLabels({ ids }: { ids: Id<"parcels">[] }) {
                   <img src="/brand/logo-192.png" alt="" className="size-9 rounded-full" />
                   <div>
                     <p className="text-[13px] font-extrabold italic">
-                      MORNING <span className="text-brand">{t("RIDER")}</span>
+                      MORNING <span className="text-brand">RIDER</span>
                     </p>
-                    <p className="text-[9px] tracking-widest">{t("COURIER SERVICE")}</p>
+                    <p className="keep-tracking text-[9px] tracking-widest">COURIER SERVICE</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -68,7 +68,7 @@ export function PrintLabels({ ids }: { ids: Id<"parcels">[] }) {
               </div>
               <div className="flex flex-col items-center py-2">
                 <Barcode value={p.trackingCode} />
-                <p className="mt-1 font-mono text-sm font-bold tracking-[0.2em]">{p.trackingCode}</p>
+                <p className="mt-1 keep-tracking font-mono text-sm font-bold tracking-[0.2em]">{p.trackingCode}</p>
               </div>
               <div className="grid grid-cols-2 gap-2 border-t border-dashed border-black/40 pt-2">
                 <div>
@@ -83,7 +83,7 @@ export function PrintLabels({ ids }: { ids: Id<"parcels">[] }) {
                   <p className="font-bold">{p.merchantName}</p>
                   <p>{p.merchantPhone}</p>
                   {p.invoice && <p>{t("Invoice")}: {p.invoice}</p>}
-                  <p>{p.weightKg} {t("kg")} · {date(p.createdAt)}</p>
+                  <p>{dec(p.weightKg)} {t("kg")} · {date(p.createdAt)}</p>
                   {p.itemDescription && <p>{p.itemDescription}</p>}
                 </div>
               </div>
@@ -119,9 +119,9 @@ export function PrintPayout({ id }: { id: Id<"payouts"> }) {
               <img src="/brand/logo-192.png" alt="" className="size-16 rounded-full" />
               <div>
                 <p className="text-2xl font-extrabold italic text-navy-900">
-                  MORNING <span className="text-brand">{t("RIDER")}</span>
+                  MORNING <span className="text-brand">RIDER</span>
                 </p>
-                <p className="text-xs tracking-widest">{t("COURIER SERVICE · FAST • SAFE • ON TIME")}</p>
+                <p className="keep-tracking text-xs tracking-widest">COURIER SERVICE · FAST • SAFE • ON TIME</p>
               </div>
             </div>
             <div className="text-right">
@@ -139,7 +139,7 @@ export function PrintPayout({ id }: { id: Id<"payouts"> }) {
             <div className="text-right">
               <p className="text-xs font-bold text-ink-3 uppercase">{t("Method")}</p>
               <p className="font-bold">{PAYOUT_METHOD[data.payout.method]}</p>
-              {data.payout.reference && <p>Ref: {data.payout.reference}</p>}
+              {data.payout.reference && <p>{t("Reference")}: {data.payout.reference}</p>}
             </div>
           </div>
           <table className="mt-6 w-full">
