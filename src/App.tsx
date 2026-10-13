@@ -97,6 +97,7 @@ function route(path: string, role: "admin" | "merchant" | "rider"): ReactNode {
   if (path === "/app/payouts") return <Payouts />;
   if (path === "/app/cash") return <RiderCashAdmin />;
   if (path === "/app/settings") return <RateSettings />;
-  if (path === "/app/messages") return <Messages />;
+  if (path === "/app/messages") return <Messages key="merchant" role="merchant" />;
+  if (path === "/app/rider-messages") return <Messages key="rider" role="rider" />;
   return <Redirect to="/app" />;
 }

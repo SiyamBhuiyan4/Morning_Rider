@@ -349,28 +349,30 @@ export default defineSchema({
   }).index("by_riderId", ["riderId"]),
 
   /*
-    Office <-> merchant chat. One thread per merchant. A merchant may send at
-    most 5 messages in a row: the counter resets when the office replies or
-    presses "Seen, allow 5 more".
+    Office chat with merchants and with riders: one thread per person. Each
+    side may send a limited number of messages in a row (merchants 5, riders
+    100): the counter resets when the office replies or presses "Seen, allow
+    more". See convex/chat.ts.
   */
   chatThreads: defineTable({
-    merchantId: v.id("users"),
+    userId: v.id("users"),
+    role: v.union(v.literal("merchant"), v.literal("rider")),
     lastMessageAt: v.number(),
     lastBody: v.string(), // short preview for the list
-    lastFrom: v.union(v.literal("admin"), v.literal("merchant")),
+    lastFrom: v.union(v.literal("admin"), v.literal("user")),
     adminUnread: v.number(),
-    merchantUnread: v.number(),
-    merchantSent: v.number(), // messages since the last reset, max 5
+    userUnread: v.number(),
+    userSent: v.number(), // messages since the last reset
     adminSeenAt: v.optional(v.number()),
-    merchantSeenAt: v.optional(v.number()),
+    userSeenAt: v.optional(v.number()),
   })
-    .index("by_merchantId", ["merchantId"])
-    .index("by_lastMessageAt", ["lastMessageAt"]),
+    .index("by_userId", ["userId"])
+    .index("by_role_and_lastMessageAt", ["role", "lastMessageAt"]),
 
   chatMessages: defineTable({
-    merchantId: v.id("users"),
-    from: v.union(v.literal("admin"), v.literal("merchant")),
+    userId: v.id("users"),
+    from: v.union(v.literal("admin"), v.literal("user")),
     body: v.string(),
     createdAt: v.number(),
-  }).index("by_merchantId_and_createdAt", ["merchantId", "createdAt"]),
+  }).index("by_userId_and_createdAt", ["userId", "createdAt"]),
 });

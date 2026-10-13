@@ -17,11 +17,12 @@ import {
   ClipboardList,
   BadgeCheck,
   MessageCircle,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { MerchantChatButton } from "./Chat";
+import { OfficeChatButton } from "./Chat";
 import { Link, useLocation } from "../lib/router";
 import { useAuthed, useSession } from "../lib/session";
 import { Logo, Wordmark, cx } from "./ui";
@@ -39,7 +40,8 @@ const NAV: Record<"admin" | "merchant" | "rider", NavItem[]> = {
     { href: "/app/riders", label: "Riders", icon: Bike },
     { href: "/app/payouts", label: "Merchant payouts", icon: Wallet },
     { href: "/app/cash", label: "Rider cash", icon: Banknote },
-    { href: "/app/messages", label: "Messages", icon: MessageCircle },
+    { href: "/app/messages", label: "Merchant messages", icon: MessageCircle },
+    { href: "/app/rider-messages", label: "Rider messages", icon: MessagesSquare },
     { href: "/app/fraud", label: "Fraud check", icon: ShieldCheck },
     { href: "/app/settings", label: "Delivery rates", icon: Settings },
   ],
@@ -58,10 +60,11 @@ const NAV: Record<"admin" | "merchant" | "rider", NavItem[]> = {
   ],
 };
 
-/** Red dot with a count on the admin's Messages menu item. */
-function UnreadDot() {
+/** Red dot with a count on the admin's message menu items. */
+function UnreadDot({ role }: { role: "merchant" | "rider" }) {
   const { token } = useAuthed();
-  const n = useQuery(api.chat.unreadCount, { token });
+  const counts = useQuery(api.chat.unreadCount, { token });
+  const n = counts?.[role] ?? 0;
   if (!n) return null;
   return (
     <span className="relative ml-auto flex size-5">
@@ -94,7 +97,8 @@ export function Shell({ children }: { children: ReactNode }) {
           >
             <it.icon className={cx("size-[18px]", active ? "text-white" : "text-white/50 group-hover:text-sun")} />
             {t(it.label)}
-            {it.href === "/app/messages" && <UnreadDot />}
+            {it.href === "/app/messages" && <UnreadDot role="merchant" />}
+            {it.href === "/app/rider-messages" && <UnreadDot role="rider" />}
           </Link>
         );
       })}
@@ -148,7 +152,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <Logo size={32} />
         <Wordmark />
         <Prefs className="ml-auto" />
-        {me.role === "merchant" && <MerchantChatButton className="relative" />}
+        {me.role !== "admin" && <OfficeChatButton className="relative" />}
       </header>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -166,8 +170,8 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      {me.role === "merchant" && <MerchantChatButton className="fixed top-5 right-6 z-40 hidden lg:block" />}
-      <main className={cx("mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8", me.role === "merchant" && "lg:pt-20")}>{children}</main>
+      {me.role !== "admin" && <OfficeChatButton className="fixed top-5 right-6 z-40 hidden lg:block" />}
+      <main className={cx("mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8", me.role !== "admin" && "lg:pt-20")}>{children}</main>
     </div>
   );
 }

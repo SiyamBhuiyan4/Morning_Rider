@@ -13,6 +13,7 @@ import {
   temporaryPassword,
 } from "./lib/auth";
 import { payoutMethod, role, userStatus } from "./schema";
+import { removeChat } from "./chat";
 
 /** Everything about a user except the password fields. */
 function publicUser(u: Doc<"users">) {
@@ -196,6 +197,7 @@ export const removeRider = mutation({
       .withIndex("by_riderId", (q) => q.eq("riderId", user._id))
       .unique();
     if (profile) await ctx.db.delete("riderProfiles", profile._id);
+    await removeChat(ctx, user._id);
     await ctx.db.delete("users", user._id);
     return null;
   },

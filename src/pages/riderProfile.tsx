@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Bike, ExternalLink, Pencil, Phone } from "lucide-react";
+import { Bike, ExternalLink, MessageCircle, Pencil, Phone } from "lucide-react";
+import { navigate } from "../lib/router";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
@@ -76,7 +77,14 @@ export function RiderProfileModal({ riderId, onClose }: { riderId: Id<"users"> |
       ) : editing ? (
         <ProfileForm data={data} onDone={() => setEditing(false)} />
       ) : (
-        <ProfileView data={data} onEdit={() => setEditing(true)} />
+        <ProfileView
+          data={data}
+          onEdit={() => setEditing(true)}
+          onMessage={() => {
+            close();
+            navigate(`/app/rider-messages?rider=${data.rider._id}`);
+          }}
+        />
       )}
     </Modal>
   );
@@ -84,7 +92,7 @@ export function RiderProfileModal({ riderId, onClose }: { riderId: Id<"users"> |
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.riderProfiles.get>>>;
 
-function ProfileView({ data, onEdit }: { data: Data; onEdit: () => void }) {
+function ProfileView({ data, onEdit, onMessage }: { data: Data; onEdit: () => void; onMessage: () => void }) {
   const { rider, profile: p, stats } = data;
   const empty = <span className="text-ink-3">—</span>;
   const tel = (v?: string) =>
@@ -119,6 +127,9 @@ function ProfileView({ data, onEdit }: { data: Data; onEdit: () => void }) {
               {t("Call")}
             </Button>
           </a>
+          <Button variant="outline" size="sm" icon={MessageCircle} onClick={onMessage}>
+            {t("Message")}
+          </Button>
           <Button size="sm" icon={Pencil} onClick={onEdit}>
             {t("Edit profile")}
           </Button>

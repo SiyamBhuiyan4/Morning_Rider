@@ -622,77 +622,115 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined, files: D
 
   /* ---- chats with the office: unread, answered, limit reached, settled */
   const MIN = 60_000;
-  const CHATS: { m: number; msgs: [("a" | "m"), string, number][] }[] = [
+  const CHATS: { user: Id<"users">; role: "merchant" | "rider"; settled?: boolean; msgs: ["a" | "u", string, number][] }[] = [
     {
-      m: 0,
+      user: merchantIds[0],
+      role: "merchant",
       msgs: [
-        ["m", "Assalamu alaikum. Can you pick up 15 parcels from Dhanmondi before 11 AM tomorrow?", 95],
-        ["m", "Most of them are for Uttara and Mirpur.", 93],
+        ["u", "Assalamu alaikum. Can you pick up 15 parcels from Dhanmondi before 11 AM tomorrow?", 95],
+        ["u", "Most of them are for Uttara and Mirpur.", 93],
       ],
     },
     {
-      m: 1,
+      user: merchantIds[1],
+      role: "merchant",
       msgs: [
-        ["m", "My payout request is pending since morning. When will I get it?", 300],
+        ["u", "My payout request is pending since morning. When will I get it?", 300],
         ["a", "Hi Nusrat apu, we checked it. It will be sent to your Nagad today before 6 PM.", 240],
       ],
     },
     {
-      m: 3,
+      user: merchantIds[3],
+      role: "merchant",
       msgs: [
-        ["m", "One of my parcels was returned, but the customer says nobody called her.", 70],
-        ["m", "Please check with the rider.", 66],
-        ["m", "Hello?", 50],
-        ["m", "I need an answer today, it's a regular customer.", 30],
-        ["m", "Please reply.", 12],
+        ["u", "One of my parcels was returned, but the customer says nobody called her.", 70],
+        ["u", "Please check with the rider.", 66],
+        ["u", "Hello?", 50],
+        ["u", "I need an answer today, it's a regular customer.", 30],
+        ["u", "Please reply.", 12],
       ],
     },
     {
-      m: 5,
+      user: merchantIds[5],
+      role: "merchant",
+      settled: true,
       msgs: [
-        ["m", "Can you deliver cakes in Uttara within 3 hours?", 3 * 1440],
+        ["u", "Can you deliver cakes in Uttara within 3 hours?", 3 * 1440],
         ["a", "Yes! Uttara express is 3 hours if you book between 6 AM and 12 noon.", 3 * 1440 - 20],
-        ["m", "Perfect, thank you.", 3 * 1440 - 25],
+        ["u", "Perfect, thank you.", 3 * 1440 - 25],
         ["a", "You're welcome. Mark cakes as Bakery so riders keep them upright.", 3 * 1440 - 30],
       ],
     },
     {
-      m: 9,
-      msgs: [["m", "What documents do I need for business verification? I only have NID.", 180]],
+      user: merchantIds[9],
+      role: "merchant",
+      msgs: [["u", "What documents do I need for business verification? I only have NID.", 180]],
+    },
+    {
+      user: riderIds[0],
+      role: "rider",
+      msgs: [
+        ["u", "Bhai, customer in Mirpur 10 is not picking up. Should I wait or go to the next one?", 25],
+        ["u", "I'm waiting at the gate.", 22],
+        ["u", "10 minutes done.", 15],
+      ],
+    },
+    {
+      user: riderIds[2],
+      role: "rider",
+      msgs: [
+        ["a", "Jamal, please collect 3 cakes from Home Bakers at Sector 13 before 11 AM.", 200],
+        ["u", "OK bhai, on my way.", 195],
+        ["a", "Keep them upright, thanks.", 194],
+      ],
+    },
+    {
+      user: riderIds[4],
+      role: "rider",
+      msgs: [["u", "Bike puncture at Tongi bridge. I'll be 30 minutes late for the pickups.", 40]],
+    },
+    {
+      user: riderIds[1],
+      role: "rider",
+      settled: true,
+      msgs: [
+        ["u", "Can I hand over today's cash tomorrow morning? Office will be closed when I'm back.", 2 * 1440],
+        ["a", "Yes, bring it by 10 AM tomorrow.", 2 * 1440 - 15],
+        ["u", "Thank you bhai.", 2 * 1440 - 16],
+      ],
     },
   ];
   for (const c of CHATS) {
-    const merchantId = merchantIds[c.m];
     let sentInRow = 0;
     let adminUnread = 0;
-    let merchantUnread = 0;
+    let userUnread = 0;
     // Oldest first.
-    const ordered = [...c.msgs].sort((a, b) => b[2] - a[2]);
+    const ordered = [...c.msgs].sort((x, y) => y[2] - x[2]);
     for (const [who, body, minsAgo] of ordered) {
-      await ctx.db.insert("chatMessages", { merchantId, from: who === "a" ? "admin" : "merchant", body, createdAt: now - minsAgo * MIN });
-      if (who === "m") {
+      await ctx.db.insert("chatMessages", { userId: c.user, from: who === "a" ? "admin" : "user", body, createdAt: now - minsAgo * MIN });
+      if (who === "u") {
         sentInRow++;
         adminUnread++;
-        merchantUnread = 0;
+        userUnread = 0;
       } else {
         sentInRow = 0;
         adminUnread = 0;
-        merchantUnread++;
+        userUnread++;
       }
     }
     const lastMsg = ordered[ordered.length - 1];
-    // The settled chat has been read on both sides.
-    const settled = c.m === 5;
+    const lastAt = now - lastMsg[2] * MIN;
     await ctx.db.insert("chatThreads", {
-      merchantId,
-      lastMessageAt: now - lastMsg[2] * MIN,
+      userId: c.user,
+      role: c.role,
+      lastMessageAt: lastAt,
       lastBody: lastMsg[1].length > 90 ? lastMsg[1].slice(0, 90) + "…" : lastMsg[1],
-      lastFrom: lastMsg[0] === "a" ? "admin" : "merchant",
-      adminUnread: settled ? 0 : adminUnread,
-      merchantUnread: settled ? 0 : merchantUnread,
-      merchantSent: sentInRow,
-      adminSeenAt: settled ? now - lastMsg[2] * MIN : undefined,
-      merchantSeenAt: settled ? now - lastMsg[2] * MIN : undefined,
+      lastFrom: lastMsg[0] === "a" ? "admin" : "user",
+      adminUnread: c.settled ? 0 : adminUnread,
+      userUnread: c.settled ? 0 : userUnread,
+      userSent: sentInRow,
+      adminSeenAt: c.settled ? lastAt : undefined,
+      userSeenAt: c.settled ? lastAt : undefined,
     });
   }
 
@@ -778,6 +816,7 @@ async function clear(ctx: MutationCtx) {
         .withIndex("by_riderId", (q) => q.eq("riderId", u._id))
         .unique();
       if (profile) await ctx.db.delete("riderProfiles", profile._id);
+      await removeChat(ctx, u._id);
     }
     const sessions = await ctx.db
       .query("sessions")

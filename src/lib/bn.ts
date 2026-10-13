@@ -1056,4 +1056,12 @@ export const BN: Record<string, string> = {
   "No conversation with this merchant yet.": "এই মার্চেন্টের সাথে এখনো কোনো কথোপকথন নেই।",
   "You can send {1} messages until Morning Rider replies.": "Morning Rider উত্তর না দেওয়া পর্যন্ত আপনি {1}টি মেসেজ পাঠাতে পারবেন।",
   "A message can have at most {1} words.": "একটি মেসেজে সর্বোচ্চ {1}টি শব্দ থাকতে পারে।",
+  "Rider messages": "রাইডার মেসেজ",
+  "Merchant messages": "মার্চেন্ট মেসেজ",
+  "Chat with your riders.": "রাইডারদের সাথে চ্যাট করুন।",
+  "Search riders…": "রাইডার খুঁজুন…",
+  "Choose a rider…": "একজন রাইডার বেছে নিন…",
+  "Riders' messages show up here the moment they're sent.": "রাইডাররা মেসেজ পাঠানোর সাথে সাথেই এখানে দেখা যাবে।",
+  "Not found.": "পাওয়া যায়নি।",
+  "No conversation with this person yet.": "এই ব্যক্তির সাথে এখনো কোনো কথোপকথন নেই।",
 };

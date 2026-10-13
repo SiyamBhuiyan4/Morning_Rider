@@ -8,7 +8,7 @@ import { date, num } from "../lib/format";
 import { getLang, t } from "../lib/prefs";
 import { Logo, cx } from "./ui";
 
-type Msg = { _id: string; from: "admin" | "merchant"; body: string; createdAt: number };
+type Msg = { _id: string; from: "admin" | "user"; body: string; createdAt: number };
 
 const wordsIn = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 const time = (ms: number) =>
@@ -22,7 +22,7 @@ export function ChatMessages({
   empty,
 }: {
   messages: Msg[];
-  me: "admin" | "merchant";
+  me: "admin" | "user";
   seenAt: number | null;
   empty: string;
 }) {
@@ -146,10 +146,10 @@ export function ChatComposer({
 }
 
 /**
- * The merchant's chat with the office: a round button that always sits at the
- * top right, with a red dot when the office has written something new.
+ * A merchant's or rider's chat with the office: a round button that always
+ * sits at the top right, with a red dot when the office has written something new.
  */
-export function MerchantChatButton({ className }: { className?: string }) {
+export function OfficeChatButton({ className }: { className?: string }) {
   const { token } = useAuthed();
   const data = useQuery(api.chat.mine, { token });
   const send = useMutation(api.chat.send);
@@ -205,7 +205,7 @@ export function MerchantChatButton({ className }: { className?: string }) {
             {data ? (
               <ChatMessages
                 messages={data.messages}
-                me="merchant"
+                me="user"
                 seenAt={data.officeSeenAt}
                 empty={t("Ask us anything about pickups, deliveries or payments.")}
               />
