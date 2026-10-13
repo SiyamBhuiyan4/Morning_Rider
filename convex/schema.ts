@@ -114,6 +114,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_phone", ["phone"])
+    .index("by_email", ["email"])
     .index("by_role_and_status", ["role", "status"]),
 
   sessions: defineTable({
@@ -378,4 +379,30 @@ export default defineSchema({
     body: v.string(),
     createdAt: v.number(),
   }).index("by_userId_and_createdAt", ["userId", "createdAt"]),
+
+  /*
+    "Forgot password" requests from merchants. One open request per
+    merchant; the office sets a new password, which is emailed to them.
+  */
+  passwordRequests: defineTable({
+    userId: v.id("users"),
+    status: v.union(v.literal("open"), v.literal("done"), v.literal("dismissed")),
+    createdAt: v.number(),
+    doneAt: v.optional(v.number()),
+  })
+    .index("by_status_and_createdAt", ["status", "createdAt"])
+    .index("by_userId_and_status", ["userId", "status"]),
+
+  /* Every email the system sends, so the office can see whether it arrived at the mail server. */
+  emailLog: defineTable({
+    userId: v.id("users"),
+    to: v.string(),
+    kind: v.literal("password"),
+    status: v.union(v.literal("queued"), v.literal("sent"), v.literal("failed")),
+    error: v.optional(v.string()),
+    at: v.number(),
+  }).index("by_userId_and_at", ["userId", "at"]),
+
+  /* Rate limit for the public "find my account" form. */
+  supportLookups: defineTable({ at: v.number() }).index("by_at", ["at"]),
 });

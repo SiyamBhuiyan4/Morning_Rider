@@ -1,7 +1,6 @@
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import {
-  clean,
   currentUser,
   derive,
   hashPassword,
@@ -18,6 +17,7 @@ import {
   type Role,
 } from "./lib/auth";
 import { payoutMethod } from "./schema";
+import { assertEmailFree, cleanEmail } from "./lib/email";
 
 /*
   Brute-force throttle, per phone number. Five wrong passwords inside the
@@ -319,7 +319,7 @@ export const registerMerchant = mutation({
     name: v.string(),
     businessName: v.string(),
     phone: v.string(),
-    email: v.optional(v.string()),
+    email: v.string(),
     pickupAddress: v.string(),
     payoutMethod,
     payoutAccount: v.string(),
@@ -343,16 +343,15 @@ export const registerMerchant = mutation({
       throw new ConvexError("Too many sign-ups right now. Please try again in an hour.");
     }
 
-    const email = clean(args.email, 120, "Email");
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new ConvexError("Enter a valid email address.");
-    }
+    // Required: a forgotten password is emailed here (support.ts).
+    const email = cleanEmail(args.email, true);
+    await assertEmailFree(ctx, email);
 
     const userId = await ctx.db.insert("users", {
       name: required(args.name, 80, "Name"),
       businessName: required(args.businessName, 100, "Business name"),
       phone,
-      email: email || undefined,
+      email,
       pickupAddress: required(args.pickupAddress, 300, "Pickup address"),
       payoutMethod: args.payoutMethod,
       payoutAccount: required(args.payoutAccount, 100, "Payment account"),

@@ -40,6 +40,7 @@ import { TrendChart } from "../components/TrendChart";
 import { t } from "../lib/prefs";
 import { VerificationBadge, VerificationQueue, VerificationReviewModal } from "./adminVerify";
 import { AddRiderModal, RiderProfileModal } from "./riderProfile";
+import { LoginDetailsModal, SetPasswordModal, type GivenLogin, type Person } from "../components/PasswordTools";
 import { generatePassword } from "../lib/password";
 import { MerchantProfileModal } from "./merchantProfile";
 import { LiveBadge, LiveFeed, RidersOnRoad, Ticker } from "../components/Live";
@@ -78,7 +79,7 @@ export function AdminDashboard() {
         <RangePills value={range} onChange={setRange} />
         <span className="text-xs font-semibold text-ink-3">{t("Cash with riders and payable are always as of now.")}</span>
       </div>
-      {(d.openPayoutRequests > 0 || d.pendingMerchants > 0 || d.pendingVerifications > 0 || d.lockedRiders > 0) && (
+      {(d.openPayoutRequests > 0 || d.pendingMerchants > 0 || d.pendingVerifications > 0 || d.lockedRiders > 0 || d.passwordRequests > 0) && (
         <div className="mb-4 flex flex-wrap gap-2">
           {d.openPayoutRequests > 0 && (
             <AlertChip icon={HandCoins} tone="brand" onClick={() => navigate("/app/payouts")}>
@@ -88,6 +89,11 @@ export function AdminDashboard() {
           {d.pendingMerchants > 0 && (
             <AlertChip icon={Store} tone="sun" onClick={() => navigate("/app/merchants")}>
               {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
+            </AlertChip>
+          )}
+          {d.passwordRequests > 0 && (
+            <AlertChip icon={KeyRound} tone="brand" onClick={() => navigate("/app/merchants")}>
+              {t("{n} merchant(s) forgot their password →", { n: d.passwordRequests })}
             </AlertChip>
           )}
           {d.lockedRiders > 0 && (
@@ -282,6 +288,76 @@ function DemoCard() {
   );
 }
 
+/** Merchants who used "Forgot password" on the login page. */
+function PasswordRequests() {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const rows = useQuery(api.support.openRequests, { token });
+  const dismiss = useMutation(api.support.dismiss);
+  const [handling, setHandling] = useState<(NonNullable<typeof rows>)[number] | null>(null);
+  const [given, setGiven] = useState<GivenLogin | null>(null);
+  if (!rows || rows.length === 0) return <LoginDetailsModal value={given} onClose={() => setGiven(null)} />;
+
+  return (
+    <div className="mb-6">
+      <h2 className="mb-3 flex items-center gap-2 font-bold">
+        <KeyRound className="size-5 text-brand" /> {t("Forgot-password requests")}
+        <Badge tone="red">{num(rows.length)}</Badge>
+      </h2>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {rows.map((r) => (
+          <Card key={r._id} className="flex flex-wrap items-center gap-3 p-4">
+            <div className="min-w-0 flex-1">
+              <p className="font-bold">{r.name}</p>
+              <p className="text-sm text-ink-2">
+                {r.owner} · {r.phone}
+              </p>
+              <p className="text-xs text-ink-3">
+                {r.email ?? t("No email on file")} · {t("asked {date}", { date: dateTime(r.createdAt) })}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <a href={`tel:${r.phone}`}>
+                <Button size="sm" variant="ghost" type="button">
+                  {t("Call")}
+                </Button>
+              </a>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    await dismiss({ token, requestId: r._id });
+                  } catch (e) {
+                    toast.error(e);
+                  }
+                }}
+              >
+                {t("Dismiss")}
+              </Button>
+              <Button size="sm" icon={KeyRound} onClick={() => setHandling(r)}>
+                {t("Set new password")}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <SetPasswordModal
+        key={handling?._id}
+        person={handling ? { _id: handling.userId, name: handling.name, phone: handling.phone, role: "merchant" } : null}
+        email={handling?.email}
+        requestId={handling?._id}
+        onClose={() => setHandling(null)}
+        onDone={(v) => {
+          setHandling(null);
+          setGiven(v);
+        }}
+      />
+      <LoginDetailsModal value={given} onClose={() => setGiven(null)} />
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------- merchants */
 
 export function Merchants() {
@@ -292,10 +368,10 @@ export function Merchants() {
   const pending = useQuery(api.users.list, { token, role: "merchant", status: "pending" });
   const setStatus = useMutation(api.users.setStatus);
   const [creating, setCreating] = useState(false);
-  const [reset, setReset] = useState<{ name: string; password: string } | null>(null);
+  const [settingPw, setSettingPw] = useState<{ person: Person; email: string | null } | null>(null);
+  const [given, setGiven] = useState<GivenLogin | null>(null);
   const [docsFor, setDocsFor] = useState<Id<"users"> | null>(null);
   const [viewing, setViewing] = useState<Id<"users"> | null>(null);
-  const resetPassword = useMutation(api.users.resetPassword);
 
   async function act(userId: Id<"users">, status: "active" | "suspended", msg: string) {
     try {
@@ -309,6 +385,7 @@ export function Merchants() {
   return (
     <>
       <PageHeader title={t("Merchants")} subtitle={t("Businesses that send parcels with Morning Rider.")} actions={<Button icon={Plus} onClick={() => setCreating(true)}>{t("Add merchant")}</Button>} />
+      <PasswordRequests />
       <VerificationQueue />
       <div className="mb-4 flex flex-wrap gap-2">
         {(["active", "pending", "suspended"] as const).map((k) => (
@@ -389,16 +466,14 @@ export function Merchants() {
                         size="sm"
                         variant="ghost"
                         icon={KeyRound}
-                        onClick={async () => {
-                          try {
-                            const r = await resetPassword({ token, userId: m._id });
-                            setReset({ name: m.businessName ?? m.name, password: r.password });
-                          } catch (e) {
-                            toast.error(e);
-                          }
-                        }}
+                        onClick={() =>
+                          setSettingPw({
+                            person: { _id: m._id, name: m.businessName ?? m.name, phone: m.phone, role: "merchant" },
+                            email: m.email ?? null,
+                          })
+                        }
                       >
-                        {t("Reset password")}
+                        {t("Set password")}
                       </Button>
                     </>
                   )}
@@ -414,7 +489,17 @@ export function Merchants() {
         )}
       </Card>
       <CreateUserModal role="merchant" open={creating} onClose={() => setCreating(false)} />
-      <TempPasswordModal value={reset} onClose={() => setReset(null)} />
+      <SetPasswordModal
+        key={settingPw?.person._id}
+        person={settingPw?.person ?? null}
+        email={settingPw?.email}
+        onClose={() => setSettingPw(null)}
+        onDone={(v) => {
+          setSettingPw(null);
+          setGiven(v);
+        }}
+      />
+      <LoginDetailsModal value={given} onClose={() => setGiven(null)} />
       {docsFor && <VerificationReviewModal merchantId={docsFor} onClose={() => setDocsFor(null)} />}
       <MerchantProfileModal merchantId={viewing} onClose={() => setViewing(null)} />
     </>
@@ -453,74 +538,13 @@ function RiderPasswordModal({ value, onClose }: { value: { name: string; phone: 
   );
 }
 
-/** Office sets (or changes) a rider's permanent password. */
-function SetRiderPasswordModal({
-  rider,
-  onClose,
-  onDone,
-}: {
-  rider: { _id: Id<"users">; name: string; phone: string } | null;
-  onClose: () => void;
-  onDone: (v: { name: string; phone: string; password: string }) => void;
-}) {
-  const { token } = useAuthed();
-  const toast = useToast();
-  const setPassword = useMutation(api.users.setPassword);
-  const [password, setPw] = useState(() => generatePassword());
-  const [busy, setBusy] = useState(false);
-  if (!rider) return null;
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={t("Set password for {name}", { name: rider.name })}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>{t("Back")}</Button>
-          <Button
-            loading={busy}
-            icon={KeyRound}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await setPassword({ token, userId: rider._id, password });
-                toast.ok(t("Password saved."));
-                onDone({ name: rider.name, phone: rider.phone, password });
-              } catch (e) {
-                toast.error(e);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {t("Save password")}
-          </Button>
-        </>
-      }
-    >
-      <RiderPasswordField value={password} onChange={setPw} />
-      <p className="mt-3 text-xs text-ink-3">{t("The rider is signed out on every phone and must use the new password.")}</p>
-    </Modal>
-  );
-}
 
-function TempPasswordModal({ value, onClose }: { value: { name: string; password: string } | null; onClose: () => void }) {
-  return (
-    <Modal open={!!value} onClose={onClose} title={t("Temporary password")} footer={<Button onClick={onClose}>{t("Done")}</Button>}>
-      <p className="text-sm text-ink-2">
-        {t("Give this password to {name}. They have been signed out everywhere and should change it after signing in.", { name: value?.name ?? "" })}
-      </p>
-      <p className="mt-4 rounded-2xl bg-navy-50 py-4 text-center font-mono text-2xl font-bold tracking-wider select-all">{value?.password}</p>
-      <p className="mt-3 text-xs text-ink-3">{t("This is shown only once.")}</p>
-    </Modal>
-  );
-}
 
 function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider"; open: boolean; onClose: () => void }) {
   const { token } = useAuthed();
   const toast = useToast();
   const create = useMutation(api.users.create);
-  const [f, setF] = useState({ name: "", phone: "", password: "", businessName: "", pickupAddress: "", riderArea: "" });
+  const [f, setF] = useState({ name: "", phone: "", email: "", password: "", businessName: "", pickupAddress: "", riderArea: "" });
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
 
@@ -530,7 +554,7 @@ function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider"; 
     try {
       await create({ token, role, ...f });
       toast.ok(t("{name} added.", { name: f.name }));
-      setF({ name: "", phone: "", password: "", businessName: "", pickupAddress: "", riderArea: "" });
+      setF({ name: "", phone: "", email: "", password: "", businessName: "", pickupAddress: "", riderArea: "" });
       onClose();
     } catch (err) {
       toast.error(err);
@@ -547,6 +571,9 @@ function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider"; 
         {role === "merchant" && (
           <>
             <Field label={t("Business name")}>{(id) => <Input id={id} value={f.businessName} onChange={set("businessName")} required />}</Field>
+            <Field label={t("Email")} hint={t("New passwords are emailed here.")}>
+              {(id) => <Input id={id} type="email" value={f.email} onChange={set("email")} required />}
+            </Field>
             <Field label={t("Pickup address")}>{(id) => <Input id={id} value={f.pickupAddress} onChange={set("pickupAddress")} />}</Field>
           </>
         )}
@@ -572,8 +599,8 @@ export function Riders() {
   const rows = useQuery(api.users.list, { token, role: "rider" });
   const setStatus = useMutation(api.users.setStatus);
   const [creating, setCreating] = useState(false);
-  const [settingPw, setSettingPw] = useState<{ _id: Id<"users">; name: string; phone: string } | null>(null);
-  const [given, setGiven] = useState<{ name: string; phone: string; password: string } | null>(null);
+  const [settingPw, setSettingPw] = useState<{ person: Person; email: string | null } | null>(null);
+  const [given, setGiven] = useState<GivenLogin | null>(null);
   const [deleting, setDeleting] = useState<{ _id: Id<"users">; name: string; phone: string } | null>(null);
   const [viewing, setViewing] = useState<Id<"users"> | null>(null);
 
@@ -641,7 +668,7 @@ export function Riders() {
                 {r.cashInHand > 0 && (
                   <Button size="sm" variant="dark" onClick={() => navigate(`/app/cash?rider=${r._id}`)}>{t("Receive cash")}</Button>
                 )}
-                <Button size="sm" variant="ghost" icon={KeyRound} onClick={() => setSettingPw({ _id: r._id, name: r.name, phone: r.phone })}>
+                <Button size="sm" variant="ghost" icon={KeyRound} onClick={() => setSettingPw({ person: { _id: r._id, name: r.name, phone: r.phone, role: "rider" }, email: r.email ?? null })}>
                   {t("Set password")}
                 </Button>
                 <Button
@@ -680,19 +707,20 @@ export function Riders() {
         onClose={() => setCreating(false)}
         onCreated={(v) => {
           setCreating(false);
-          setGiven(v);
+          setGiven({ ...v, role: "rider" });
         }}
       />
-      <SetRiderPasswordModal
-        key={settingPw?._id}
-        rider={settingPw}
+      <SetPasswordModal
+        key={settingPw?.person._id}
+        person={settingPw?.person ?? null}
+        email={settingPw?.email}
         onClose={() => setSettingPw(null)}
         onDone={(v) => {
           setSettingPw(null);
           setGiven(v);
         }}
       />
-      <RiderPasswordModal value={given} onClose={() => setGiven(null)} />
+      <LoginDetailsModal value={given} onClose={() => setGiven(null)} />
       <DeleteRiderModal rider={deleting} onClose={() => setDeleting(null)} />
       <RiderProfileModal riderId={viewing} onClose={() => setViewing(null)} />
     </>

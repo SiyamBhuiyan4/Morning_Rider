@@ -16,6 +16,7 @@ import { removeVerification } from "./verification";
 import { changeStatus, codCharge, computeCharges, getRates, merchantNet, type Status } from "./lib/parcel";
 import { insertParcel } from "./parcels";
 import { removeChat } from "./chat";
+import { removeSupportRecords } from "./lib/email";
 
 /*
   Sample data so every admin page has something on it while Siyam learns the
@@ -314,7 +315,7 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined, files: D
       name: m.name,
       businessName: m.businessName,
       phone,
-      email: m.email,
+      email: m.email ?? `${m.businessName.toLowerCase().replace(/[^a-z]+/g, ".").replace(/^\.|\.$/g, "")}@example.com`,
       pickupAddress: m.pickupAddress,
       payoutMethod: m.payoutMethod,
       payoutAccount: m.payoutAccount || undefined,
@@ -620,6 +621,10 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined, files: D
     });
   }
 
+  /* ---- two merchants who forgot their password and asked the office */
+  await ctx.db.insert("passwordRequests", { userId: merchantIds[6], status: "open", createdAt: now - 35 * 60_000 });
+  await ctx.db.insert("passwordRequests", { userId: merchantIds[2], status: "open", createdAt: now - 5 * 3_600_000 });
+
   /* ---- chats with the office: unread, answered, limit reached, settled */
   const MIN = 60_000;
   const CHATS: { user: Id<"users">; role: "merchant" | "rider"; settled?: boolean; msgs: ["a" | "u", string, number][] }[] = [
@@ -805,6 +810,7 @@ async function clear(ctx: MutationCtx) {
       for (const c of counters) await ctx.db.delete("statusCounts", c._id);
       await removeVerification(ctx, u._id);
       await removeChat(ctx, u._id);
+      await removeSupportRecords(ctx, u._id);
     } else {
       const deposits = await ctx.db
         .query("cashDeposits")
@@ -817,6 +823,7 @@ async function clear(ctx: MutationCtx) {
         .unique();
       if (profile) await ctx.db.delete("riderProfiles", profile._id);
       await removeChat(ctx, u._id);
+      await removeSupportRecords(ctx, u._id);
     }
     const sessions = await ctx.db
       .query("sessions")

@@ -14,6 +14,7 @@ import {
 } from "./lib/auth";
 import { payoutMethod, role, userStatus } from "./schema";
 import { removeChat } from "./chat";
+import { assertEmailFree, cleanEmail, removeSupportRecords, setPasswordAndEmail } from "./lib/email";
 
 /** Everything about a user except the password fields. */
 function publicUser(u: Doc<"users">) {
@@ -128,6 +129,7 @@ export const create = mutation({
     role: v.union(v.literal("merchant"), v.literal("rider")),
     name: v.string(),
     phone: v.string(),
+    email: v.optional(v.string()),
     password: v.string(),
     businessName: v.optional(v.string()),
     pickupAddress: v.optional(v.string()),
@@ -141,9 +143,12 @@ export const create = mutation({
       .withIndex("by_phone", (q) => q.eq("phone", phone))
       .unique();
     if (clash) throw new ConvexError("An account with this phone number already exists.");
+    const email = cleanEmail(args.email, args.role === "merchant");
+    await assertEmailFree(ctx, email);
     await ctx.db.insert("users", {
       name: required(args.name, 80, "Name"),
       phone,
+      email: email || undefined,
       role: args.role,
       status: "active",
       businessName:
@@ -169,9 +174,9 @@ export const setPassword = mutation({
     if (admin._id === args.userId) throw new ConvexError("Use Account → Change password for yourself.");
     const user = await ctx.db.get("users", args.userId);
     if (!user || user.role === "admin") throw new ConvexError("User not found.");
-    await ctx.db.patch("users", user._id, { ...(await hashPassword(args.password.trim())), failedLogins: 0 });
-    await revokeSessions(ctx, user._id);
-    return null;
+    // Emails the new password when they have an email address (see lib/email.ts).
+    const logId = await setPasswordAndEmail(ctx, user, args.password);
+    return { logId, email: user.email ?? null };
   },
 });
 
@@ -203,6 +208,7 @@ export const removeRider = mutation({
       .unique();
     if (profile) await ctx.db.delete("riderProfiles", profile._id);
     await removeChat(ctx, user._id);
+    await removeSupportRecords(ctx, user._id);
     await ctx.db.delete("users", user._id);
     return null;
   },
@@ -236,8 +242,8 @@ const profileFields = {
 const profileArgs = v.object(profileFields);
 
 function profilePatch(user: Doc<"users">, args: typeof profileArgs.type) {
-  const email = clean(args.email, 120, "Email");
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ConvexError("Enter a valid email address.");
+  // Merchants must keep an email: forgotten passwords are sent there.
+  const email = cleanEmail(args.email, user.role === "merchant");
   const patch: Partial<Doc<"users">> = { name: required(args.name, 80, "Name"), email: email || undefined };
   if (user.role === "merchant") {
     patch.businessName = required(args.businessName, 100, "Business name");
@@ -259,13 +265,17 @@ export const updateProfile = mutation({
       for: change it and the next payout lands in someone else's wallet. So it
       needs the account password, not just a live session.
     */
+    await assertEmailFree(ctx, patch.email ?? "", user._id);
+    // The email is where a reset password goes, so changing it is guarded like payout details.
     const payoutChanged =
       user.role === "merchant" &&
-      (patch.payoutMethod !== user.payoutMethod || patch.payoutAccount !== user.payoutAccount);
+      (patch.payoutMethod !== user.payoutMethod ||
+        patch.payoutAccount !== user.payoutAccount ||
+        (patch.email ?? undefined) !== (user.email ?? undefined));
     if (payoutChanged) {
       const candidate = await derive((args.currentPassword ?? "").slice(0, 128), user.passwordSalt, user.passwordIterations);
       if (!timingSafeEqual(candidate, user.passwordHash)) {
-        throw new ConvexError("Enter your current password to change payment details.");
+        throw new ConvexError("Enter your current password to change payment details or email.");
       }
     }
     await ctx.db.patch("users", user._id, patch);
@@ -279,7 +289,9 @@ export const adminUpdate = mutation({
     await requireUser(ctx, args.token, ["admin"]);
     const user = await ctx.db.get("users", args.userId);
     if (!user) throw new ConvexError("User not found.");
-    await ctx.db.patch("users", user._id, profilePatch(user, args));
+    const patch = profilePatch(user, args);
+    await assertEmailFree(ctx, patch.email ?? "", user._id);
+    await ctx.db.patch("users", user._id, patch);
     return null;
   },
 });

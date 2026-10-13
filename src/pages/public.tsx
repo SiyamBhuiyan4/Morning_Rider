@@ -633,7 +633,11 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
               {t("Rider login")}
             </Link>
           </p>
-          <p className="mt-2 text-center text-xs text-ink-3">{t("Forgot your password? Contact Morning Rider to reset it.")}</p>
+          <p className="mt-2 text-center text-sm">
+            <Link href="/forgot" className="font-semibold text-brand hover:underline">
+              {t("Forgot password?")}
+            </Link>
+          </p>
         </>
       )}
       {door === "rider" && (
@@ -664,6 +668,123 @@ export function RiderLogin() {
   return <SignIn door="rider" />;
 }
 
+/**
+ * Merchant forgot their password: find the account by phone or email, then
+ * send one request to the office. The office sets a new password, which is
+ * emailed to the address on the account.
+ */
+export function ForgotPassword() {
+  const find = useMutation(api.support.findAccount);
+  const request = useMutation(api.support.requestReset);
+  const [q, setQ] = useState("");
+  const [found, setFound] = useState<
+    | null
+    | { found: false }
+    | { found: true; name: string; phone: string; email: string | null; alreadyRequested: boolean }
+  >(null);
+  const [sent, setSent] = useState<null | "sent" | "already">(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function search(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setFound(null);
+    setSent(null);
+    try {
+      setFound(await find({ query: q }));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function send() {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await request({ query: q });
+      setSent(r.alreadyRequested ? "already" : "sent");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <AuthLayout title={t("Forgot password")} subtitle={t("Find your merchant account and ask Morning Rider for a new password.")}>
+      <form onSubmit={search} className="space-y-4">
+        <Field label={t("Phone number or email")} hint={t("The one you signed up with.")}>
+          {(id) => (
+            <Input
+              id={id}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setFound(null);
+                setSent(null);
+              }}
+              placeholder={t("01XXXXXXXXX or you@example.com")}
+              autoComplete="username"
+              required
+            />
+          )}
+        </Field>
+        <Button type="submit" size="lg" loading={busy && !found} className="w-full">
+          {t("Find my account")}
+        </Button>
+      </form>
+
+      {error && <p className="mt-4 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">{error}</p>}
+
+      {found && !found.found && (
+        <p className="mt-4 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+          {t("No merchant account found with that phone number or email.")}
+        </p>
+      )}
+
+      {found && found.found && (
+        <div className="animate-rise mt-5 rounded-2xl border border-line bg-page p-4">
+          <p className="text-xs font-semibold text-ink-3">{t("Account found")}</p>
+          <p className="mt-1 text-lg font-bold">{found.name}</p>
+          <p className="font-mono text-sm text-ink-2">{found.phone}</p>
+          {found.email && <p className="font-mono text-sm text-ink-2">{found.email}</p>}
+
+          {sent === "sent" ? (
+            <p className="mt-4 rounded-xl bg-emerald-50 px-3.5 py-3 text-sm font-semibold text-emerald-700">
+              {t("Request sent! Morning Rider will set a new password and email it to you.")}
+            </p>
+          ) : sent === "already" || found.alreadyRequested ? (
+            <p className="mt-4 rounded-xl bg-amber-50 px-3.5 py-3 text-sm font-semibold text-amber-800">
+              {t("You've already asked. Morning Rider will email your new password soon. You can ask again after the office handles it.")}
+            </p>
+          ) : (
+            <>
+              <p className="mt-3 text-sm text-ink-2">
+                {found.email
+                  ? t("Morning Rider will set a new password and email it to this address.")
+                  : t("This account has no email. Morning Rider will call you with the new password.")}
+              </p>
+              <Button size="lg" className="mt-4 w-full" loading={busy} onClick={send}>
+                {t("Send request to Morning Rider")}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+
+      <p className="mt-6 text-center text-sm text-ink-2">
+        <Link href="/login" className="font-semibold text-brand hover:underline">
+          ← {t("Back to login")}
+        </Link>
+      </p>
+    </AuthLayout>
+  );
+}
+
 export function Register() {
   const register = useMutation(api.auth.registerMerchant);
   const { signIn } = useSession();
@@ -690,7 +811,7 @@ export function Register() {
     try {
       const { confirm: _c, ...rest } = f;
       // No approval step: the account opens and the merchant is signed in.
-      const session = await register({ ...rest, email: rest.email || undefined });
+      const session = await register(rest);
       signIn(session.token, session.expiresAt);
       navigate("/app", { replace: true });
     } catch (err) {
@@ -711,7 +832,9 @@ export function Register() {
         <Field label={t("Phone number")}>
           {(id) => <Input id={id} type="tel" placeholder="01XXXXXXXXX" value={f.phone} onChange={set("phone")} required />}
         </Field>
-        <Field label={t("Email (optional)")}>{(id) => <Input id={id} type="email" value={f.email} onChange={set("email")} />}</Field>
+        <Field label={t("Email")} hint={t("Needed to get a new password if you ever forget it.")}>
+          {(id) => <Input id={id} type="email" autoComplete="email" value={f.email} onChange={set("email")} required />}
+        </Field>
         <Field label={t("Pickup address")} className="sm:col-span-2">
           {(id) => <Input id={id} value={f.pickupAddress} onChange={set("pickupAddress")} required maxLength={300} placeholder={t("House, road, area, city")} />}
         </Field>

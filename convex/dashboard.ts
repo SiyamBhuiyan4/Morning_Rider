@@ -126,7 +126,12 @@ export const admin = query({
       .query("users")
       .withIndex("by_role_and_status", (q) => q.eq("role", "rider").eq("status", "suspended"))
       .take(200);
+    const passwordRequests = await ctx.db
+      .query("passwordRequests")
+      .withIndex("by_status_and_createdAt", (q) => q.eq("status", "open"))
+      .take(100);
     return {
+      passwordRequests: passwordRequests.length,
       lockedRiders: suspendedRiders.filter((u) => u.lockedByLogin).length,
       openPayoutRequests: payoutRequests.length,
       pendingVerifications: pendingVerifications.length,

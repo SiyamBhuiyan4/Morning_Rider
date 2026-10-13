@@ -4,7 +4,7 @@ import { navigate, useLocation } from "./lib/router";
 import { useSession } from "./lib/session";
 import { Shell } from "./components/Shell";
 import { Spinner } from "./components/ui";
-import { Home, Join, Login, Register, RiderLogin, Track } from "./pages/public";
+import { Home, Join, Login, Register, RiderLogin, Track, ForgotPassword } from "./pages/public";
 import { AdminDashboard, Merchants, Payouts, RateSettings, RiderCashAdmin, Riders } from "./pages/admin";
 import { Messages } from "./pages/messages";
 import { BulkUpload, MerchantDashboard, MerchantPayments } from "./pages/merchant";
@@ -37,6 +37,7 @@ export default function App() {
     return <Track code={decodeURIComponent(path.slice(7)) || undefined} />;
   }
   if (path === "/join") return <Join />;
+  if (path === "/forgot" && !IS_ADMIN_PORTAL) return <ForgotPassword />;
   if (path === "/login" || path === "/register" || path === "/rider") {
     if (me === undefined) return <Spinner className="h-full items-center" />;
     if (me) return <Redirect to="/app" />;

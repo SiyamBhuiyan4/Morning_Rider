@@ -180,9 +180,12 @@ export function Account() {
     riderArea: me.riderArea ?? "",
     currentPassword: "",
   });
+  // Payment details and the email (where reset passwords go) need the current password to change.
   const payoutChanged =
     me.role === "merchant" &&
-    (p.payoutMethod !== (me.payoutMethod ?? "bkash") || p.payoutAccount !== (me.payoutAccount ?? ""));
+    (p.payoutMethod !== (me.payoutMethod ?? "bkash") ||
+      p.payoutAccount !== (me.payoutAccount ?? "") ||
+      p.email.trim().toLowerCase() !== (me.email ?? ""));
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const isAdmin = me.role === "admin";
   const [busy, setBusy] = useState<"profile" | "pw" | null>(null);
@@ -236,7 +239,9 @@ export function Account() {
           <h2 className="mb-4 font-bold">{t("Profile")}</h2>
           <form onSubmit={saveProfile} className="space-y-4">
             <Field label={t("Name")}>{(id) => <Input id={id} value={p.name} onChange={set("name")} required />}</Field>
-            <Field label={t("Email (optional)")}>{(id) => <Input id={id} type="email" value={p.email} onChange={set("email")} />}</Field>
+            <Field label={me.role === "merchant" ? t("Email") : t("Email (optional)")} hint={me.role === "merchant" ? t("Needed to get a new password if you ever forget it.") : undefined}>
+              {(id) => <Input id={id} type="email" value={p.email} onChange={set("email")} required={me.role === "merchant"} />}
+            </Field>
             {me.role === "merchant" && (
               <>
                 <Field label={t("Business name")}>{(id) => <Input id={id} value={p.businessName} onChange={set("businessName")} required />}</Field>
@@ -254,7 +259,7 @@ export function Account() {
                   <Field label={t("Account number")}>{(id) => <Input id={id} value={p.payoutAccount} onChange={set("payoutAccount")} />}</Field>
                 </div>
                 {payoutChanged && (
-                  <Field label={t("Current password")} hint={t("Needed to change where your payments are sent.")}>
+                  <Field label={t("Current password")} hint={t("Needed to change your payment details or email.")}>
                     {(id) => (
                       <Input id={id} type="password" autoComplete="current-password" value={p.currentPassword} onChange={set("currentPassword")} required />
                     )}
