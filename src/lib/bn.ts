@@ -698,4 +698,15 @@ export const BN: Record<string, string> = {
   "You already have a payout request waiting.": "আপনার একটি পেমেন্ট রিকোয়েস্ট ইতিমধ্যে অপেক্ষায় আছে।",
   "You have no balance to withdraw yet.": "তোলার মতো ব্যালেন্স এখনো নেই।",
   "Request not found.": "রিকোয়েস্ট পাওয়া যায়নি।",
+
+  // ---- pricing (two-tier)
+  "Each extra kg — Uttara & Dhaka": "প্রতি অতিরিক্ত কেজি — উত্তরা ও ঢাকা",
+  "Each extra kg — Gazipur & Narayanganj": "প্রতি অতিরিক্ত কেজি — গাজীপুর ও নারায়ণগঞ্জ",
+  "COD charge — Uttara & Dhaka": "COD চার্জ — উত্তরা ও ঢাকা",
+  "COD charge — Gazipur & Narayanganj": "COD চার্জ — গাজীপুর ও নারায়ণগঞ্জ",
+  "{inside} in Dhaka · {outside} in Gazipur & Narayanganj": "ঢাকায় {inside} · গাজীপুর ও নারায়ণগঞ্জে {outside}",
+  "Free inside Dhaka · {pct}% in Gazipur & Narayanganj": "ঢাকার ভিতরে ফ্রি · গাজীপুর ও নারায়ণগঞ্জে {pct}%",
+  "{inside}% in Dhaka · {outside}% in Gazipur & Narayanganj": "ঢাকায় {inside}% · গাজীপুর ও নারায়ণগঞ্জে {outside}%",
+  Return: "রিটার্ন",
+  "{pct}% of the delivery charge": "ডেলিভারি চার্জের {pct}%",
 };

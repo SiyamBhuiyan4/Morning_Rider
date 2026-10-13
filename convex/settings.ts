@@ -22,7 +22,10 @@ export const publicRates = query({
       gazipurCity: r.gazipurCity,
       narayanganjCity: r.narayanganjCity,
       extraPerKg: r.extraPerKg,
+      extraPerKgOutside: r.extraPerKgOutside,
       codPercent: r.codPercent,
+      codPercentOutside: r.codPercentOutside,
+      returnPercent: r.returnPercent,
     };
   },
 });
@@ -35,7 +38,9 @@ export const updateRates = mutation({
     gazipurCity: v.number(),
     narayanganjCity: v.number(),
     extraPerKg: v.number(),
+    extraPerKgOutside: v.number(),
     codPercent: v.number(),
+    codPercentOutside: v.number(),
     returnPercent: v.number(),
   },
   handler: async (ctx, args) => {

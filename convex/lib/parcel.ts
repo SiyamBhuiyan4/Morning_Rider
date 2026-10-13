@@ -7,17 +7,31 @@ export type Status = Doc<"parcels">["status"];
 export type Zone = Doc<"parcels">["zone"];
 export type Rates = Omit<Doc<"rates">, "_id" | "_creationTime">;
 
-/* Starting prices until the admin sets real ones in Delivery rates. */
+/*
+  Default prices, set against the Dhaka market in October 2026 (Steadfast
+  ~৳55–70 and Pathao ৳60–70 inside Dhaka at 24 h; ৳100–115 for Gazipur and
+  Narayanganj at 48–72 h; Paperfly and RedX charge no COD inside Dhaka).
+  Morning Rider is same-day everywhere and 3-hour in Uttara, so inside Dhaka
+  sits at the market rate and the outer cities a little under it. The admin
+  can change every number in Delivery rates.
+*/
 export const DEFAULT_RATES: Rates = {
   uttara: 60,
   dhakaCity: 70,
-  gazipurCity: 80,
-  narayanganjCity: 90,
+  gazipurCity: 90,
+  narayanganjCity: 110,
   extraPerKg: 15,
-  codPercent: 1,
+  extraPerKgOutside: 20,
+  codPercent: 0,
+  codPercentOutside: 1,
   returnPercent: 50,
   updatedAt: 0,
 };
+
+/** Uttara and Dhaka city are "inside"; Gazipur and Narayanganj are the outer cities. */
+export function isOuterZone(zone: Zone) {
+  return zone === "gazipur_city" || zone === "narayanganj_city";
+}
 
 export function zoneBase(rates: Rates, zone: Zone) {
   switch (zone) {
@@ -40,16 +54,18 @@ export async function getRates(ctx: QueryCtx | MutationCtx): Promise<Rates> {
 /** All money is whole taka. */
 export function computeCharges(rates: Rates, zone: Zone, weightKg: number, codAmount: number) {
   const extraKg = Math.max(0, Math.ceil(weightKg - 1));
-  const deliveryCharge = zoneBase(rates, zone) + extraKg * rates.extraPerKg;
+  const perKg = isOuterZone(zone) ? rates.extraPerKgOutside : rates.extraPerKg;
+  const deliveryCharge = zoneBase(rates, zone) + extraKg * perKg;
   return {
     deliveryCharge,
-    codCharge: codCharge(rates, codAmount),
+    codCharge: codCharge(rates, zone, codAmount),
     returnCharge: Math.round((deliveryCharge * rates.returnPercent) / 100),
   };
 }
 
-export function codCharge(rates: Rates, amount: number) {
-  return Math.round((amount * rates.codPercent) / 100);
+export function codCharge(rates: Rates, zone: Zone, amount: number) {
+  const pct = isOuterZone(zone) ? rates.codPercentOutside : rates.codPercent;
+  return Math.round((amount * pct) / 100);
 }
 
 /** What the merchant is owed (positive) or owes (negative) for a final parcel. */
@@ -167,7 +183,7 @@ export async function changeStatus(
       }
     }
     patch.collectedAmount = collected;
-    patch.codCharge = codCharge(rates, collected);
+    patch.codCharge = codCharge(rates, p.zone, collected);
     patch.cashState = collected > 0 ? "with_rider" : "none";
     if (!p.deliveryRiderId && user.role === "rider") patch.deliveryRiderId = user._id;
     if (collected > 0 && !(patch.deliveryRiderId ?? p.deliveryRiderId)) {

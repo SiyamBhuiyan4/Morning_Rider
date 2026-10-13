@@ -107,8 +107,10 @@ export default defineSchema({
     dhakaCity: v.number(),
     gazipurCity: v.number(),
     narayanganjCity: v.number(),
-    extraPerKg: v.number(),
-    codPercent: v.number(), // % of collected COD
+    extraPerKg: v.number(), // each kg above 1 — Uttara and Dhaka city
+    extraPerKgOutside: v.number(), // each kg above 1 — Gazipur and Narayanganj
+    codPercent: v.number(), // % of collected COD — Uttara and Dhaka city
+    codPercentOutside: v.number(), // % of collected COD — Gazipur and Narayanganj
     returnPercent: v.number(), // % of delivery charge billed on a returned parcel
     updatedAt: v.number(),
   }),

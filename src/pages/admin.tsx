@@ -1078,7 +1078,9 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
     gazipurCity: String(initial.gazipurCity),
     narayanganjCity: String(initial.narayanganjCity),
     extraPerKg: String(initial.extraPerKg),
+    extraPerKgOutside: String(initial.extraPerKgOutside),
     codPercent: String(initial.codPercent),
+    codPercentOutside: String(initial.codPercentOutside),
     returnPercent: String(initial.returnPercent),
   }));
   const [busy, setBusy] = useState(false);
@@ -1087,8 +1089,10 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
     ["dhakaCity", "Dhaka City (up to 1 kg)", "৳"],
     ["gazipurCity", "Gazipur City (up to 1 kg)", "৳"],
     ["narayanganjCity", "Narayanganj City (up to 1 kg)", "৳"],
-    ["extraPerKg", "Each extra kg", "৳"],
-    ["codPercent", "COD charge", "%"],
+    ["extraPerKg", "Each extra kg — Uttara & Dhaka", "৳"],
+    ["extraPerKgOutside", "Each extra kg — Gazipur & Narayanganj", "৳"],
+    ["codPercent", "COD charge — Uttara & Dhaka", "%"],
+    ["codPercentOutside", "COD charge — Gazipur & Narayanganj", "%"],
     ["returnPercent", "Return charge (of delivery charge)", "%"],
   ];
 

@@ -347,9 +347,27 @@ export function Home() {
           ))}
         </div>
         {rates && (
-          <p className="mt-6 text-center text-sm text-ink-3">
-            {t("Each extra kg {kg} · COD charge {pct}% of the collected amount.", { kg: tk(rates.extraPerKg), pct: rates.codPercent })}
-          </p>
+          <div className="mx-auto mt-8 grid max-w-3xl gap-3 text-sm sm:grid-cols-3">
+            {[
+              {
+                title: t("Each extra kg"),
+                text: t("{inside} in Dhaka · {outside} in Gazipur & Narayanganj", { inside: tk(rates.extraPerKg), outside: tk(rates.extraPerKgOutside) }),
+              },
+              {
+                title: t("COD charge"),
+                text:
+                  rates.codPercent === 0
+                    ? t("Free inside Dhaka · {pct}% in Gazipur & Narayanganj", { pct: rates.codPercentOutside })
+                    : t("{inside}% in Dhaka · {outside}% in Gazipur & Narayanganj", { inside: rates.codPercent, outside: rates.codPercentOutside }),
+              },
+              { title: t("Return"), text: t("{pct}% of the delivery charge", { pct: rates.returnPercent }) },
+            ].map((x) => (
+              <div key={x.title} className="rounded-2xl bg-surface p-4 text-center ring-1 ring-line">
+                <p className="font-bold">{x.title}</p>
+                <p className="mt-1 text-ink-3">{x.text}</p>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

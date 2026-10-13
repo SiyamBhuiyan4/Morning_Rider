@@ -189,7 +189,7 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
       itemDescription: ITEMS[i % ITEMS.length],
       note: i % 4 === 0 ? "Call before delivery" : undefined,
       deliveryCharge: charges.deliveryCharge,
-      codCharge: delivered ? codCharge(rates, collected) : charges.codCharge,
+      codCharge: delivered ? codCharge(rates, zone, collected) : charges.codCharge,
       returnCharge: charges.returnCharge,
       status: plan.status,
       pickupRiderId: plan.status === "cancelled" ? undefined : pickupRiderId,
