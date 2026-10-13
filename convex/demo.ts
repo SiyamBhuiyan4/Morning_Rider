@@ -263,6 +263,26 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
     for (const p of parcels) await ctx.db.patch("parcels", p._id, { payoutId });
   }
 
+  // One merchant asking to be paid, so the payout-request flow has an example.
+  const asker = activeMerchants[1];
+  const askerUnpaid = await ctx.db
+    .query("parcels")
+    .withIndex("by_merchantId_and_settlement", (q) => q.eq("merchantId", asker).eq("settlement", "unpaid"))
+    .take(500);
+  const askerBalance = askerUnpaid.reduce((s, p) => s + merchantNet(p), 0);
+  if (askerBalance > 0) {
+    const m = await ctx.db.get("users", asker);
+    await ctx.db.insert("payoutRequests", {
+      merchantId: asker,
+      amount: askerBalance,
+      method: m?.payoutMethod ?? "bkash",
+      account: m?.payoutAccount ?? "",
+      note: "Please send today if possible",
+      status: "open",
+      createdAt: now - 2 * 3600_000,
+    });
+  }
+
   for (const [riderId, c] of cashByRider) {
     await ctx.db.insert("cashDeposits", { riderId, amount: c.amount, parcelCount: c.count, receivedBy: payer, createdAt: now - 3 * DAY });
   }
@@ -318,6 +338,11 @@ async function clear(ctx: MutationCtx) {
         .withIndex("by_merchantId_and_createdAt", (q) => q.eq("merchantId", u._id))
         .take(500);
       for (const p of payouts) await ctx.db.delete("payouts", p._id);
+      const requests = await ctx.db
+        .query("payoutRequests")
+        .withIndex("by_merchantId_and_createdAt", (q) => q.eq("merchantId", u._id))
+        .take(500);
+      for (const r of requests) await ctx.db.delete("payoutRequests", r._id);
       const counters = await ctx.db
         .query("statusCounts")
         .withIndex("by_scope_and_status", (q) => q.eq("scope", u._id))

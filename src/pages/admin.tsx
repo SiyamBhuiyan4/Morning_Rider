@@ -18,6 +18,7 @@ import {
   Wallet,
   TrendingUp,
   FlaskConical,
+  HandCoins,
   UserPlus,
   CalendarClock,
   Mail,
@@ -52,6 +53,15 @@ export function AdminDashboard() {
         actions={<Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>{t("New parcel")}</Button>}
       />
       <DemoCard />
+      {d.openPayoutRequests > 0 && (
+        <button
+          onClick={() => navigate("/app/payouts")}
+          className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-brand-50 px-5 py-3.5 text-left text-sm font-semibold text-brand-700 ring-1 ring-brand/40 hover:bg-brand-100"
+        >
+          <HandCoins className="size-5" />
+          {t("{n} merchant(s) asked to be paid →", { n: d.openPayoutRequests })}
+        </button>
+      )}
       {d.pendingMerchants > 0 && (
         <button
           onClick={() => navigate("/app/merchants")}
@@ -681,6 +691,7 @@ export function Payouts() {
   return (
     <>
       <PageHeader title={t("Merchant payouts")} subtitle={t("Pay merchants their collected COD minus Morning Rider charges.")} />
+      <PayoutRequests onPay={setPaying} />
       <Card className="overflow-hidden">
         <div className="border-b border-line px-5 py-4 font-bold">{t("Unpaid balances")}</div>
         {!balances ? (
@@ -712,6 +723,87 @@ export function Payouts() {
       <PayoutHistory rows={history} showMerchant />
       <PayModal merchantId={paying} onClose={() => setPaying(null)} />
     </>
+  );
+}
+
+/** Merchants who pressed "Request payout". Paying them closes the request. */
+function PayoutRequests({ onPay }: { onPay: (merchantId: Id<"users">) => void }) {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const rows = useQuery(api.money.openPayoutRequests, { token });
+  const reject = useMutation(api.money.rejectPayoutRequest);
+  const [rejecting, setRejecting] = useState<Id<"payoutRequests"> | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!rows || rows.length === 0) return null;
+
+  return (
+    <Card className="mb-6 overflow-hidden ring-2 ring-brand/40">
+      <div className="flex items-center gap-2 border-b border-line bg-brand-50 px-5 py-4 font-bold text-brand-700">
+        <HandCoins className="size-5" /> {t("Payout requests")}
+        <Badge tone="brand">{rows.length}</Badge>
+      </div>
+      <div className="divide-y divide-line">
+        {rows.map((r) => (
+          <div key={r._id} className="flex flex-wrap items-center gap-4 p-4">
+            <div className="min-w-56 flex-1">
+              <p className="font-bold">{r.merchantName}</p>
+              <p className="text-xs text-ink-3">
+                {r.merchantPhone} · {PAYOUT_METHOD[r.method]} {r.account} · {t("requested")} {dateTime(r.createdAt)}
+              </p>
+              {r.note && <p className="mt-1 text-sm text-ink-2">“{r.note}”</p>}
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-extrabold">{tk(r.balanceNow)}</p>
+              {r.balanceNow !== r.amount && (
+                <p className="text-xs text-ink-3">{t("asked for {amount}", { amount: tk(r.amount) })}</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => onPay(r.merchantId)} disabled={r.balanceNow <= 0}>
+                {t("Pay now")}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setRejecting(r._id)}>
+                {t("Reject")}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Modal
+        open={!!rejecting}
+        onClose={() => setRejecting(null)}
+        title={t("Reject payout request")}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRejecting(null)}>{t("Back")}</Button>
+            <Button
+              variant="danger"
+              loading={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await reject({ token, id: rejecting!, reason });
+                  toast.ok(t("Request rejected."));
+                  setRejecting(null);
+                  setReason("");
+                } catch (e) {
+                  toast.error(e);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t("Reject")}
+            </Button>
+          </>
+        }
+      >
+        <Field label={t("Reason (the merchant will see this)")}>
+          {(id) => <Input id={id} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={t("e.g. Payment day is Sunday")} />}
+        </Field>
+      </Modal>
+    </Card>
   );
 }
 

@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Download, FileSpreadsheet, Package, PackageCheck, Plus, RotateCcw, Truck, Upload, Clock } from "lucide-react";
+import { HandCoins, Download, FileSpreadsheet, Package, PackageCheck, Plus, RotateCcw, Truck, Upload, Clock } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
-import { CATEGORY, STATUS, ZONE, date, num, startOfToday, tk, zoneFor, type Category, type Zone } from "../lib/format";
+import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, date, dateTime, num, startOfToday, tk, zoneFor, type Category, type Zone } from "../lib/format";
 import { parseCsv } from "../lib/csv";
-import { Button, Card, Empty, PageHeader, Spinner, StatCard } from "../components/ui";
+import { Badge, Button, Card, Empty, Input, PageHeader, Spinner, StatCard } from "../components/ui";
 import { TrendChart } from "../components/TrendChart";
 import { PayoutHistory, StatementTable } from "./admin";
 import { MerchantPicker } from "../components/ParcelForm";
@@ -43,6 +43,11 @@ export function MerchantDashboard() {
             <p className="text-sm font-semibold text-white/70">{t("Current balance")}</p>
             <p className="mt-1 text-4xl font-extrabold tracking-tight">{tk(d.balance)}</p>
             <p className="mt-1 text-sm text-white/60">{t("Will be paid in your next payout")}</p>
+            {d.balance > 0 && (
+              <Button size="sm" className="mt-4" icon={HandCoins} onClick={() => navigate("/app/payments")}>
+                {t("Request payout")}
+              </Button>
+            )}
           </div>
           <div className="flex gap-8 text-sm">
             <div>
@@ -92,6 +97,7 @@ export function MerchantPayments() {
   return (
     <>
       <PageHeader title={t("Payments")} subtitle={t("Your balance and payout history.")} />
+      <PayoutRequestCard balance={st?.net} />
       <Card className="mb-8 p-6">
         {!st ? (
           <Spinner />
@@ -118,6 +124,119 @@ export function MerchantPayments() {
       <h2 className="mb-3 font-bold">{t("Payout history")}</h2>
       <PayoutHistory rows={history} />
     </>
+  );
+}
+
+/**
+ * Ask Morning Rider to pay out the balance. One open request at a time; it
+ * closes by itself when the admin pays, or shows the admin's reason if
+ * rejected.
+ */
+function PayoutRequestCard({ balance }: { balance: number | undefined }) {
+  const { token, me } = useAuthed();
+  const toast = useToast();
+  const requests = useQuery(api.money.myPayoutRequests, { token });
+  const request = useMutation(api.money.requestPayout);
+  const cancel = useMutation(api.money.cancelPayoutRequest);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!requests || balance === undefined) return null;
+
+  const open = requests.find((r) => r.status === "open");
+  const recent = requests.filter((r) => r.status !== "open").slice(0, 5);
+  const STATE = {
+    paid: { label: t("Paid"), tone: "green" as const },
+    rejected: { label: t("Rejected"), tone: "red" as const },
+    cancelled: { label: t("Cancelled"), tone: "slate" as const },
+    open: { label: t("Waiting"), tone: "amber" as const },
+  };
+
+  return (
+    <Card className="mb-6 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-4 p-6">
+        <div className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand">
+          <HandCoins className="size-6" />
+        </div>
+        <div className="min-w-48 flex-1">
+          <p className="font-bold">{t("Withdraw your balance")}</p>
+          <p className="text-sm text-ink-2">
+            {me.payoutMethod
+              ? t("Paid to {method} {account}", { method: PAYOUT_METHOD[me.payoutMethod], account: me.payoutAccount ?? "" })
+              : t("Add your payment method in Account first.")}
+          </p>
+        </div>
+        <p className="text-2xl font-extrabold">{tk(balance)}</p>
+      </div>
+
+      <div className="border-t border-line bg-page/60 p-6">
+        {open ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone="amber">{t("Waiting")}</Badge>
+            <p className="flex-1 text-sm text-ink-2">
+              {t("You asked for {amount} on {date}. Morning Rider will send it soon.", { amount: tk(open.amount), date: dateTime(open.createdAt) })}
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                try {
+                  await cancel({ token, id: open._id });
+                  toast.ok(t("Request cancelled."));
+                } catch (e) {
+                  toast.error(e);
+                }
+              }}
+            >
+              {t("Cancel request")}
+            </Button>
+          </div>
+        ) : balance > 0 ? (
+          <form
+            className="flex flex-wrap gap-2"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              try {
+                await request({ token, note: note || undefined });
+                setNote("");
+                toast.ok(t("Payout requested. We'll let you know when it's sent."));
+              } catch (err) {
+                toast.error(err);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={300}
+              placeholder={t("Note for Morning Rider (optional)")}
+              className="min-w-60 flex-1"
+            />
+            <Button type="submit" icon={HandCoins} loading={busy} disabled={!me.payoutMethod}>
+              {t("Request payout of {amount}", { amount: tk(balance) })}
+            </Button>
+          </form>
+        ) : (
+          <p className="text-sm text-ink-3">{t("You can request a payout once you have a balance from delivered parcels.")}</p>
+        )}
+
+        {recent.length > 0 && (
+          <div className="mt-5 space-y-2">
+            <p className="text-xs font-bold tracking-wide text-ink-3 uppercase">{t("Recent requests")}</p>
+            {recent.map((r) => (
+              <div key={r._id} className="flex flex-wrap items-center gap-2 text-sm">
+                <Badge tone={STATE[r.status].tone}>{STATE[r.status].label}</Badge>
+                <span className="font-semibold">{tk(r.amount)}</span>
+                <span className="text-ink-3">{dateTime(r.createdAt)}</span>
+                {r.status === "rejected" && r.reason && <span className="text-red-600">— {r.reason}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 

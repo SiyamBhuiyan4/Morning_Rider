@@ -199,6 +199,26 @@ export default defineSchema({
     .index("by_merchantId_and_createdAt", ["merchantId", "createdAt"]),
 
   /*
+    A merchant asking to be paid their balance. The admin either pays it
+    (through the normal payout, which closes the request) or rejects it.
+  */
+  payoutRequests: defineTable({
+    merchantId: v.id("users"),
+    amount: v.number(), // balance when requested; the payout pays the balance at payment time
+    method: payoutMethod,
+    account: v.string(),
+    note: v.optional(v.string()),
+    status: v.union(v.literal("open"), v.literal("paid"), v.literal("rejected"), v.literal("cancelled")),
+    payoutId: v.optional(v.id("payouts")),
+    reason: v.optional(v.string()), // why it was rejected
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_status_and_createdAt", ["status", "createdAt"])
+    .index("by_merchantId_and_status", ["merchantId", "status"])
+    .index("by_merchantId_and_createdAt", ["merchantId", "createdAt"]),
+
+  /*
     People applying to be riders from the public website. An application is
     never an account: the admin reviews it, invites the person for an
     interview, and creates the rider account only when hiring them.

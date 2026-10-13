@@ -130,6 +130,14 @@ export const createPayout = mutation({
       createdAt: Date.now(),
     });
     for (const p of list) await ctx.db.patch("parcels", p._id, { settlement: "paid", payoutId });
+    // Paying a merchant answers their open payout request, if they made one.
+    const open = await ctx.db
+      .query("payoutRequests")
+      .withIndex("by_merchantId_and_status", (q) => q.eq("merchantId", merchant._id).eq("status", "open"))
+      .take(10);
+    for (const r of open) {
+      await ctx.db.patch("payoutRequests", r._id, { status: "paid", payoutId, decidedAt: Date.now() });
+    }
     return payoutId;
   },
 });
@@ -187,6 +195,96 @@ export const payout = query({
         net: merchantNet(p),
       })),
     };
+  },
+});
+
+/* --------------------------------------------------------- payout requests */
+
+/** Merchant: ask the admin to pay out the current balance. */
+export const requestPayout = mutation({
+  args: { token: v.string(), note: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const merchant = await requireUser(ctx, args.token, ["merchant"]);
+    const open = await ctx.db
+      .query("payoutRequests")
+      .withIndex("by_merchantId_and_status", (q) => q.eq("merchantId", merchant._id).eq("status", "open"))
+      .first();
+    if (open) throw new ConvexError("You already have a payout request waiting.");
+    const { net } = totals(await unpaidFor(ctx, merchant._id));
+    if (net <= 0) throw new ConvexError("You have no balance to withdraw yet.");
+    if (!merchant.payoutMethod || !merchant.payoutAccount) {
+      throw new ConvexError("Add your payment method and account in Account first.");
+    }
+    await ctx.db.insert("payoutRequests", {
+      merchantId: merchant._id,
+      amount: net,
+      method: merchant.payoutMethod,
+      account: merchant.payoutAccount,
+      note: clean(args.note, 300, "Note") || undefined,
+      status: "open",
+      createdAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/** Merchant: withdraw a request that has not been handled yet. */
+export const cancelPayoutRequest = mutation({
+  args: { token: v.string(), id: v.id("payoutRequests") },
+  handler: async (ctx, args) => {
+    const merchant = await requireUser(ctx, args.token, ["merchant"]);
+    const r = await ctx.db.get("payoutRequests", args.id);
+    if (!r || r.merchantId !== merchant._id || r.status !== "open") throw new ConvexError("Request not found.");
+    await ctx.db.patch("payoutRequests", r._id, { status: "cancelled", decidedAt: Date.now() });
+    return null;
+  },
+});
+
+/** Merchant: their own requests, newest first. */
+export const myPayoutRequests = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const merchant = await requireUser(ctx, args.token, ["merchant"]);
+    return await ctx.db
+      .query("payoutRequests")
+      .withIndex("by_merchantId_and_createdAt", (q) => q.eq("merchantId", merchant._id))
+      .order("desc")
+      .take(30);
+  },
+});
+
+/** Admin: requests waiting to be paid, with each merchant's balance right now. */
+export const openPayoutRequests = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const rows = await ctx.db
+      .query("payoutRequests")
+      .withIndex("by_status_and_createdAt", (q) => q.eq("status", "open"))
+      .order("asc")
+      .take(200);
+    return await Promise.all(
+      rows.map(async (r) => {
+        const m = await ctx.db.get("users", r.merchantId);
+        const { net } = totals(await unpaidFor(ctx, r.merchantId));
+        return { ...r, merchantName: m?.businessName ?? m?.name ?? "—", merchantPhone: m?.phone ?? "", balanceNow: net };
+      }),
+    );
+  },
+});
+
+export const rejectPayoutRequest = mutation({
+  args: { token: v.string(), id: v.id("payoutRequests"), reason: v.string() },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const r = await ctx.db.get("payoutRequests", args.id);
+    if (!r || r.status !== "open") throw new ConvexError("Request not found.");
+    await ctx.db.patch("payoutRequests", r._id, {
+      status: "rejected",
+      reason: clean(args.reason, 300, "Reason") || undefined,
+      decidedAt: Date.now(),
+    });
+    return null;
   },
 });
 

@@ -67,7 +67,12 @@ export const admin = query({
       .take(8000);
     const revenue = closedToday.reduce((s, p) => s + (p.collectedAmount - merchantNet(p)), 0);
 
+    const payoutRequests = await ctx.db
+      .query("payoutRequests")
+      .withIndex("by_status_and_createdAt", (q) => q.eq("status", "open"))
+      .take(100);
     return {
+      openPayoutRequests: payoutRequests.length,
       counts: await statusCounts(ctx, "all"),
       todayCreated: today.length,
       todayCod: today.reduce((s, p) => s + p.codAmount, 0),
