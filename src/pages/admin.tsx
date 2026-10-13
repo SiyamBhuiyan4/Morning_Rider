@@ -27,6 +27,8 @@ import {
   ShieldCheck,
   FileSearch,
   Trash2,
+  Search,
+  X,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -358,13 +360,50 @@ function PasswordRequests() {
   );
 }
 
+/** Name, business, phone (any format), email or area contains the search text. */
+function matchesPerson(
+  u: { name: string; businessName?: string; phone: string; email?: string; riderArea?: string },
+  q: string,
+) {
+  const digits = q.replace(/\D/g, "");
+  const local = digits.startsWith("880") ? "0" + digits.slice(3) : digits;
+  return (
+    [u.name, u.businessName, u.email, u.riderArea].some((v) => v?.toLowerCase().includes(q)) ||
+    (local.length >= 3 && u.phone.includes(local))
+  );
+}
+
+function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="relative mb-4 max-w-xl">
+      <Search className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-3" />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="pr-10 pl-10" />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-lg text-ink-3 hover:bg-page hover:text-ink"
+          aria-label={t("Clear search")}
+        >
+          <X className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------- merchants */
 
 export function Merchants() {
   const { token } = useAuthed();
   const toast = useToast();
   const [tab, setTab] = useState<"pending" | "active" | "suspended">("active");
-  const rows = useQuery(api.users.list, { token, role: "merchant", status: tab });
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  // While searching, look through every merchant (all tabs), not just the open tab.
+  const tabRows = useQuery(api.users.list, { token, role: "merchant", status: tab });
+  const allRows = useQuery(api.users.list, q ? { token, role: "merchant" } : "skip");
+  const rows = q ? allRows?.filter((m) => matchesPerson(m, q)) : tabRows;
   const pending = useQuery(api.users.list, { token, role: "merchant", status: "pending" });
   const setStatus = useMutation(api.users.setStatus);
   const [creating, setCreating] = useState(false);
@@ -382,7 +421,8 @@ export function Merchants() {
       <PageHeader title={t("Merchants")} subtitle={t("Businesses that send parcels with Morning Rider.")} actions={<Button icon={Plus} onClick={() => setCreating(true)}>{t("Add merchant")}</Button>} />
       <PasswordRequests />
       <VerificationQueue />
-      <div className="mb-4 flex flex-wrap gap-2">
+      <SearchBox value={search} onChange={setSearch} placeholder={t("Search merchants: business, owner, phone or email…")} />
+      <div className={cx("mb-4 flex flex-wrap gap-2", q && "pointer-events-none opacity-40")}>
         {(["active", "pending", "suspended"] as const).map((k) => (
           <Button key={k} size="sm" variant={tab === k ? "dark" : "outline"} onClick={() => setTab(k)}>
             {k === "pending"
@@ -397,7 +437,7 @@ export function Merchants() {
         {!rows ? (
           <Spinner />
         ) : rows.length === 0 ? (
-          <Empty icon={Store} title={t("No merchants here")} />
+          <Empty icon={Store} title={q ? t("No merchant matches “{q}”", { q: search.trim() }) : t("No merchants here")} />
         ) : (
           <div className="divide-y divide-line">
             {rows.map((m) => (
@@ -427,6 +467,7 @@ export function Merchants() {
                     {m.businessName}
                     {m.demo && <Badge tone="brand">{t("Demo")}</Badge>}
                     <VerificationBadge status={m.verification} />
+                    {m.status !== "active" && <Badge tone="red">{m.status === "pending" ? t("Waiting approval") : t("Suspended")}</Badge>}
                   </p>
                   <p className="text-sm text-ink-2">
                     {m.name} · {m.phone}
@@ -592,7 +633,10 @@ export function Riders() {
   const { token } = useAuthed();
   const toast = useToast();
   const pendingKeys = usePendingKeys();
-  const rows = useQuery(api.users.list, { token, role: "rider" });
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const allRiders = useQuery(api.users.list, { token, role: "rider" });
+  const rows = q ? allRiders?.filter((r) => matchesPerson(r, q)) : allRiders;
   const setStatus = useMutation(api.users.setStatus);
   const [creating, setCreating] = useState(false);
   const [settingPw, setSettingPw] = useState<{ person: Person; email: string | null } | null>(null);
@@ -608,11 +652,16 @@ export function Riders() {
         actions={<Button icon={Plus} onClick={() => setCreating(true)}>{t("Add rider")}</Button>}
       />
       <RiderApplications />
+      <SearchBox value={search} onChange={setSearch} placeholder={t("Search riders: name, phone, area or email…")} />
       {!rows ? (
         <Spinner />
       ) : rows.length === 0 ? (
         <Card>
-          <Empty icon={Bike} title={t("No riders yet")} text={t("Add your first rider so you can assign pickups and deliveries.")} />
+          q ? (
+            <Empty icon={Bike} title={t("No rider matches “{q}”", { q: search.trim() })} />
+          ) : (
+            <Empty icon={Bike} title={t("No riders yet")} text={t("Add your first rider so you can assign pickups and deliveries.")} />
+          )
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

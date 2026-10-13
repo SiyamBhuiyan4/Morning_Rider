@@ -1123,4 +1123,9 @@ export const BN: Record<string, string> = {
   "Request dismissed.": "অনুরোধ বাতিল করা হয়েছে।",
   "{name} suspended.": "{name} স্থগিত করা হয়েছে।",
   "{name} activated.": "{name} চালু করা হয়েছে।",
+  "Search merchants: business, owner, phone or email…": "মার্চেন্ট খুঁজুন: ব্যবসা, মালিক, ফোন বা ইমেইল…",
+  "Search riders: name, phone, area or email…": "রাইডার খুঁজুন: নাম, ফোন, এলাকা বা ইমেইল…",
+  "Clear search": "খোঁজা মুছুন",
+  "No merchant matches “{q}”": "“{q}”-এর সাথে কোনো মার্চেন্ট মেলেনি",
+  "No rider matches “{q}”": "“{q}”-এর সাথে কোনো রাইডার মেলেনি",
 };
