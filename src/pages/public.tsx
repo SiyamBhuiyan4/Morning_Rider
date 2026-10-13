@@ -169,7 +169,7 @@ export function Home() {
               <Zap className="size-3.5" /> {t("FAST • SAFE • ON TIME")}
             </span>
             {/* The brand is the headline, the same in both languages. */}
-            <h1 className="mt-5 text-5xl font-extrabold italic leading-[1.02] tracking-tight text-white sm:text-7xl">
+            <h1 className="keep-tracking mt-5 text-5xl font-extrabold italic leading-[1.02] tracking-tight text-white sm:text-7xl">
               MORNING <span className="text-brand">RIDER</span>
             </h1>
             <p className="mt-3 text-2xl font-bold tracking-tight text-sun sm:text-3xl">{t("No more delivery worries!")}</p>
