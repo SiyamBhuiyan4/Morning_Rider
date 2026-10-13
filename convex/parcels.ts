@@ -1,0 +1,407 @@
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { clean, normalisePhone, required, requireUser } from "./lib/auth";
+import {
+  allowedMoves,
+  changeStatus,
+  computeCharges,
+  countParcel,
+  FINAL,
+  getRates,
+  logEvent,
+  newTrackingCode,
+  requireActiveRider,
+  type Rates,
+} from "./lib/parcel";
+import { parcelStatus, zone } from "./schema";
+
+const parcelInput = v.object({
+  invoice: v.optional(v.string()),
+  recipientName: v.string(),
+  recipientPhone: v.string(),
+  recipientAddress: v.string(),
+  district: v.string(),
+  zone,
+  weightKg: v.number(),
+  codAmount: v.number(),
+  itemDescription: v.optional(v.string()),
+  note: v.optional(v.string()),
+});
+type ParcelInput = typeof parcelInput.type;
+
+function validateInput(input: ParcelInput) {
+  if (!Number.isFinite(input.weightKg) || input.weightKg <= 0 || input.weightKg > 50) {
+    throw new ConvexError("Weight must be between 0.1 and 50 kg.");
+  }
+  if (!Number.isFinite(input.codAmount) || input.codAmount < 0 || input.codAmount > 500_000) {
+    throw new ConvexError("COD amount must be between 0 and 5,00,000 taka.");
+  }
+  return {
+    invoice: clean(input.invoice, 60, "Invoice") || undefined,
+    recipientName: required(input.recipientName, 80, "Customer name"),
+    recipientPhone: normalisePhone(input.recipientPhone),
+    recipientAddress: required(input.recipientAddress, 300, "Address"),
+    district: required(input.district, 40, "District"),
+    zone: input.zone,
+    weightKg: Math.round(input.weightKg * 10) / 10,
+    codAmount: Math.round(input.codAmount),
+    itemDescription: clean(input.itemDescription, 120, "Item description") || undefined,
+    note: clean(input.note, 300, "Note") || undefined,
+  };
+}
+
+function searchTextOf(p: { trackingCode: string; invoice?: string; recipientName: string; recipientPhone: string }) {
+  return [p.trackingCode, p.invoice ?? "", p.recipientName, p.recipientPhone].join(" ");
+}
+
+async function insertParcel(
+  ctx: MutationCtx,
+  rates: Rates,
+  merchant: Doc<"users">,
+  creator: Doc<"users">,
+  raw: ParcelInput,
+) {
+  const input = validateInput(raw);
+  const trackingCode = await newTrackingCode(ctx);
+  const now = Date.now();
+  const doc = {
+    ...input,
+    trackingCode,
+    merchantId: merchant._id,
+    ...computeCharges(rates, input.zone, input.weightKg, input.codAmount),
+    status: "pending" as const,
+    collectedAmount: 0,
+    settlement: "open" as const,
+    cashState: "none" as const,
+    searchText: searchTextOf({ ...input, trackingCode }),
+    createdAt: now,
+    updatedAt: now,
+  };
+  const id = await ctx.db.insert("parcels", doc);
+  await countParcel(ctx, { ...doc, _id: id, _creationTime: now }, null, "pending");
+  await logEvent(ctx, id, "pending", creator, "Parcel created");
+  return { id, trackingCode };
+}
+
+async function resolveMerchant(ctx: MutationCtx, user: Doc<"users">, merchantId?: Id<"users">) {
+  if (user.role === "merchant") return user;
+  if (!merchantId) throw new ConvexError("Choose a merchant.");
+  const merchant = await ctx.db.get("users", merchantId);
+  if (!merchant || merchant.role !== "merchant" || merchant.status !== "active") {
+    throw new ConvexError("That merchant is not active.");
+  }
+  return merchant;
+}
+
+/* ------------------------------------------------------------------ reads */
+
+export const quote = query({
+  args: { token: v.string(), zone, weightKg: v.number(), codAmount: v.number() },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin", "merchant"]);
+    const weight = Number.isFinite(args.weightKg) && args.weightKg > 0 ? args.weightKg : 1;
+    const cod = Number.isFinite(args.codAmount) && args.codAmount > 0 ? args.codAmount : 0;
+    return computeCharges(await getRates(ctx), args.zone, weight, cod);
+  },
+});
+
+export const list = query({
+  args: {
+    token: v.string(),
+    paginationOpts: paginationOptsValidator,
+    status: v.optional(parcelStatus),
+    merchantId: v.optional(v.id("users")),
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
+    // A merchant only ever sees their own parcels, whatever they pass.
+    const merchantId = user.role === "merchant" ? user._id : args.merchantId;
+    const search = (args.search ?? "").trim().slice(0, 60);
+
+    let page;
+    if (search) {
+      page = await ctx.db
+        .query("parcels")
+        .withSearchIndex("search_text", (q) => {
+          const s = q.search("searchText", search);
+          return merchantId ? s.eq("merchantId", merchantId) : s;
+        })
+        .paginate(args.paginationOpts);
+    } else if (merchantId && args.status) {
+      page = await ctx.db
+        .query("parcels")
+        .withIndex("by_merchantId_and_status_and_createdAt", (q) =>
+          q.eq("merchantId", merchantId).eq("status", args.status!),
+        )
+        .order("desc")
+        .paginate(args.paginationOpts);
+    } else if (merchantId) {
+      page = await ctx.db
+        .query("parcels")
+        .withIndex("by_merchantId_and_createdAt", (q) => q.eq("merchantId", merchantId))
+        .order("desc")
+        .paginate(args.paginationOpts);
+    } else if (args.status) {
+      page = await ctx.db
+        .query("parcels")
+        .withIndex("by_status_and_createdAt", (q) => q.eq("status", args.status!))
+        .order("desc")
+        .paginate(args.paginationOpts);
+    } else {
+      page = await ctx.db.query("parcels").withIndex("by_createdAt").order("desc").paginate(args.paginationOpts);
+    }
+
+    const names = new Map<string, string>();
+    const nameOf = async (id?: Id<"users">) => {
+      if (!id) return undefined;
+      if (!names.has(id)) {
+        const u = await ctx.db.get("users", id);
+        names.set(id, u ? (u.businessName ?? u.name) : "—");
+      }
+      return names.get(id);
+    };
+    return {
+      ...page,
+      page: await Promise.all(
+        page.page.map(async (p) => ({
+          ...strip(p),
+          merchantName: user.role === "admin" ? await nameOf(p.merchantId) : undefined,
+          riderName: await nameOf(p.deliveryRiderId ?? p.pickupRiderId),
+        })),
+      ),
+    };
+  },
+});
+
+/** Drops internal fields the client never needs. */
+function strip(p: Doc<"parcels">) {
+  const { searchText: _s, ...rest } = p;
+  return rest;
+}
+
+export const get = query({
+  args: { token: v.string(), id: v.id("parcels") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant", "rider"]);
+    const p = await ctx.db.get("parcels", args.id);
+    if (!p || !canSee(p, user)) return null;
+
+    const events = await ctx.db
+      .query("parcelEvents")
+      .withIndex("by_parcelId_and_at", (q) => q.eq("parcelId", p._id))
+      .order("desc")
+      .take(50);
+    const merchant = await ctx.db.get("users", p.merchantId);
+    const pickupRider = p.pickupRiderId ? await ctx.db.get("users", p.pickupRiderId) : null;
+    const deliveryRider = p.deliveryRiderId ? await ctx.db.get("users", p.deliveryRiderId) : null;
+    const person = (u: Doc<"users"> | null) => (u ? { name: u.name, phone: u.phone } : null);
+
+    return {
+      parcel: strip(p),
+      events: events.map((e) => ({ status: e.status, note: e.note, at: e.at, byRole: e.byRole })),
+      merchant: merchant && {
+        name: merchant.name,
+        businessName: merchant.businessName,
+        phone: merchant.phone,
+        pickupAddress: merchant.pickupAddress,
+      },
+      pickupRider: person(pickupRider),
+      deliveryRider: person(deliveryRider),
+      moves: allowedMoves(p, user),
+      canEdit: canEdit(p, user),
+    };
+  },
+});
+
+function canSee(p: Doc<"parcels">, user: Doc<"users">) {
+  if (user.role === "admin") return true;
+  if (user.role === "merchant") return p.merchantId === user._id;
+  return p.pickupRiderId === user._id || p.deliveryRiderId === user._id;
+}
+
+function canEdit(p: Doc<"parcels">, user: Doc<"users">) {
+  if (user.role === "admin") return !FINAL.includes(p.status);
+  if (user.role === "merchant") return p.merchantId === user._id && p.status === "pending";
+  return false;
+}
+
+/** Parcels for printing labels — same visibility rules as `get`. */
+export const labels = query({
+  args: { token: v.string(), ids: v.array(v.id("parcels")) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
+    const out = [];
+    for (const id of args.ids.slice(0, 100)) {
+      const p = await ctx.db.get("parcels", id);
+      if (!p || !canSee(p, user)) continue;
+      const m = await ctx.db.get("users", p.merchantId);
+      out.push({
+        ...strip(p),
+        merchantName: m?.businessName ?? m?.name ?? "",
+        merchantPhone: m?.phone ?? "",
+      });
+    }
+    return out;
+  },
+});
+
+/**
+ * Delivery history for a phone number across all merchants — counts only, so
+ * a merchant learns how reliable a customer is without seeing anyone else's
+ * orders.
+ */
+export const fraudCheck = query({
+  args: { token: v.string(), phone: v.string() },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin", "merchant"]);
+    let phone: string;
+    try {
+      phone = normalisePhone(args.phone);
+    } catch {
+      return null;
+    }
+    const rows = await ctx.db
+      .query("parcels")
+      .withIndex("by_recipientPhone", (q) => q.eq("recipientPhone", phone))
+      .order("desc")
+      .take(500);
+    const count = (s: Doc<"parcels">["status"][]) => rows.filter((r) => s.includes(r.status)).length;
+    const delivered = count(["delivered", "partial_delivered"]);
+    const returned = count(["returned", "returning"]);
+    const cancelled = count(["cancelled"]);
+    const decided = delivered + returned;
+    return {
+      phone,
+      total: rows.length,
+      delivered,
+      returned,
+      cancelled,
+      inProgress: rows.length - delivered - returned - cancelled,
+      successRate: decided ? Math.round((delivered / decided) * 100) : null,
+      lastOrderAt: rows[0]?.createdAt ?? null,
+    };
+  },
+});
+
+/* --------------------------------------------------------------- writes */
+
+export const create = mutation({
+  args: { token: v.string(), merchantId: v.optional(v.id("users")), parcel: parcelInput },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
+    const merchant = await resolveMerchant(ctx, user, args.merchantId);
+    return await insertParcel(ctx, await getRates(ctx), merchant, user, args.parcel);
+  },
+});
+
+/** Bulk upload. All-or-nothing: one bad row and nothing is created. */
+export const createMany = mutation({
+  args: { token: v.string(), merchantId: v.optional(v.id("users")), parcels: v.array(parcelInput) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
+    if (args.parcels.length === 0) throw new ConvexError("The file has no parcels.");
+    if (args.parcels.length > 200) throw new ConvexError("Upload at most 200 parcels at a time.");
+    const merchant = await resolveMerchant(ctx, user, args.merchantId);
+    const rates = await getRates(ctx);
+    const created = [];
+    for (let i = 0; i < args.parcels.length; i++) {
+      try {
+        created.push(await insertParcel(ctx, rates, merchant, user, args.parcels[i]));
+      } catch (e) {
+        const msg = e instanceof ConvexError ? String(e.data) : "invalid data";
+        throw new ConvexError(`Row ${i + 2}: ${msg}`);
+      }
+    }
+    return created;
+  },
+});
+
+export const update = mutation({
+  args: { token: v.string(), id: v.id("parcels"), parcel: parcelInput },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
+    const p = await ctx.db.get("parcels", args.id);
+    if (!p || !canSee(p, user)) throw new ConvexError("Parcel not found.");
+    if (!canEdit(p, user)) throw new ConvexError("This parcel can no longer be edited.");
+    const input = validateInput(args.parcel);
+    await ctx.db.patch("parcels", p._id, {
+      ...input,
+      ...computeCharges(await getRates(ctx), input.zone, input.weightKg, input.codAmount),
+      searchText: searchTextOf({ ...input, trackingCode: p.trackingCode }),
+      updatedAt: Date.now(),
+    });
+    await logEvent(ctx, p._id, p.status, user, "Details edited");
+    return null;
+  },
+});
+
+export const updateStatus = mutation({
+  args: {
+    token: v.string(),
+    id: v.id("parcels"),
+    to: parcelStatus,
+    note: v.optional(v.string()),
+    collectedAmount: v.optional(v.number()),
+    deliveryRiderId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant", "rider"]);
+    const p = await ctx.db.get("parcels", args.id);
+    if (!p || !canSee(p, user)) throw new ConvexError("Parcel not found.");
+    await changeStatus(ctx, p, user, args.to, {
+      note: clean(args.note, 300, "Note"),
+      collectedAmount: args.collectedAmount,
+      deliveryRiderId: user.role === "admin" ? args.deliveryRiderId : undefined,
+    });
+    return null;
+  },
+});
+
+/** Admin: move many parcels at once (e.g. a whole pickup run reaching the hub). */
+export const bulkUpdateStatus = mutation({
+  args: {
+    token: v.string(),
+    ids: v.array(v.id("parcels")),
+    to: parcelStatus,
+    deliveryRiderId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin"]);
+    if (args.ids.length > 200) throw new ConvexError("Select at most 200 parcels.");
+    if (args.to === "partial_delivered") throw new ConvexError("Partial delivery must be done one by one.");
+    let done = 0;
+    const skipped: string[] = [];
+    for (const id of args.ids) {
+      const p = await ctx.db.get("parcels", id);
+      if (!p) continue;
+      if (!allowedMoves(p, user).includes(args.to)) {
+        skipped.push(p.trackingCode);
+        continue;
+      }
+      await changeStatus(ctx, p, user, args.to, { deliveryRiderId: args.deliveryRiderId });
+      done++;
+    }
+    return { done, skipped };
+  },
+});
+
+/** Admin: give a rider the pickup for these pending parcels. */
+export const assignPickup = mutation({
+  args: { token: v.string(), ids: v.array(v.id("parcels")), riderId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin"]);
+    const rider = await requireActiveRider(ctx, args.riderId);
+    let done = 0;
+    for (const id of args.ids.slice(0, 200)) {
+      const p = await ctx.db.get("parcels", id);
+      if (!p || p.status !== "pending") continue;
+      await ctx.db.patch("parcels", p._id, { pickupRiderId: rider._id, updatedAt: Date.now() });
+      await logEvent(ctx, p._id, "pending", user, `Pickup assigned to ${rider.name}`);
+      done++;
+    }
+    return { done };
+  },
+});

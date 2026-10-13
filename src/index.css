@@ -1,0 +1,116 @@
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "tailwindcss";
+
+/*
+  Morning Rider palette, taken from the logo:
+    navy  — the rider, ring and wordmark
+    orange — "RIDER" and the speed lines
+    sun   — the rising sun behind the city
+*/
+@theme {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy-950: #060f22;
+  --color-navy-900: #0b1b38;
+  --color-navy-800: #12284f;
+  --color-navy-700: #1b3766;
+  --color-navy-600: #2a4c85;
+  --color-navy-100: #e3e9f4;
+  --color-navy-50: #f1f4fa;
+
+  --color-brand: #f57a10;
+  --color-brand-600: #e0690a;
+  --color-brand-700: #bb5407;
+  --color-brand-100: #ffe6cf;
+  --color-brand-50: #fff5eb;
+
+  --color-sun: #f8b030;
+  --color-sun-100: #fdefd0;
+
+  --color-page: #f5f6fa;
+  --color-surface: #ffffff;
+  --color-line: #e5e8ef;
+  --color-ink: #0b1b38;
+  --color-ink-2: #4a5674;
+  --color-ink-3: #8590a8;
+
+  --shadow-card: 0 1px 2px rgb(11 27 56 / 0.04), 0 4px 16px -6px rgb(11 27 56 / 0.08);
+  --shadow-pop: 0 12px 40px -12px rgb(11 27 56 / 0.35);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-page font-sans text-ink antialiased;
+  font-feature-settings: "tnum" 1;
+}
+
+/* The sunrise glow used on the public pages and the sidebar header. */
+.sunrise {
+  background:
+    radial-gradient(120% 80% at 85% -10%, rgb(248 176 48 / 0.35), transparent 55%),
+    radial-gradient(90% 70% at 10% 110%, rgb(245 122 16 / 0.22), transparent 60%),
+    linear-gradient(160deg, var(--color-navy-900), var(--color-navy-950));
+}
+
+.speed-lines {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 18px,
+    rgb(245 122 16 / 0.55) 18px 40px,
+    transparent 40px 52px
+  );
+  height: 3px;
+  border-radius: 2px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.28s ease-out both;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.22s ease-out both;
+}
+
+/* Printing: only the label sheet / invoice is printed. */
+@media print {
+  @page {
+    margin: 8mm;
+  }
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+.print-only {
+  display: none;
+}
