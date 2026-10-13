@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Banknote, MapPin, Package, PackageCheck, Phone, Store, Truck } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { useAuthed } from "../lib/session";
-import { useToast } from "../lib/toast";
+import { usePendingKeys, useToast } from "../lib/toast";
 import { CATEGORY, dateTime, num, tk } from "../lib/format";
 import { Button, Card, Empty, PageHeader, Spinner, StatusBadge, cx } from "../components/ui";
 import { StatusActions } from "../components/ParcelDetail";
@@ -15,7 +15,7 @@ export function RiderTasks() {
   const tasks = useQuery(api.rider.tasks, { token });
   const update = useMutation(api.parcels.updateStatus);
   const [tab, setTab] = useState<"deliver" | "pickup" | "hold">("deliver");
-  const [busyStop, setBusyStop] = useState<number | null>(null);
+  const pendingKeys = usePendingKeys();
   if (!tasks) return <Spinner />;
 
   const tabs = [
@@ -84,17 +84,16 @@ export function RiderTasks() {
                 <Button
                   className="mt-4 w-full"
                   size="lg"
-                  loading={busyStop === i}
-                  onClick={async () => {
-                    setBusyStop(i);
-                    try {
-                      for (const p of s.parcels) await update({ token, id: p._id, to: "picked_up" });
-                      toast.ok(t("{n} parcel(s) picked up.", { n: s.parcels.length }));
-                    } catch (e) {
-                      toast.error(e);
-                    } finally {
-                      setBusyStop(null);
-                    }
+                  disabled={pendingKeys.has(`stop:${s.parcels[0]._id}`)}
+                  onClick={() => {
+                    const ids = s.parcels.map((p) => p._id);
+                    toast.undoable(
+                      t("{n} parcel(s) picked up.", { n: ids.length }),
+                      async () => {
+                        for (const id of ids) await update({ token, id, to: "picked_up" });
+                      },
+                      `stop:${ids[0]}`,
+                    );
                   }}
                 >
                   {t("Picked up all {n}", { n: s.parcels.length })}

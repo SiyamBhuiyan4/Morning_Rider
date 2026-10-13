@@ -32,7 +32,7 @@ import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { CONTACT } from "../lib/contact";
 import { useAuthed } from "../lib/session";
-import { useToast } from "../lib/toast";
+import { usePendingKeys, useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
 import { PAYOUT_METHOD, STATUS, date, dateTime, longDateTime, num, startOfToday, tk } from "../lib/format";
 import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner, StatCard, StatusBadge, cx } from "../components/ui";
@@ -274,7 +274,13 @@ function DemoCard() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirm(false)}>{t("Back")}</Button>
-            <Button variant="danger" loading={busy} onClick={() => run(() => remove({ token }), t("Demo data cleared."))}>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setConfirm(false);
+                toast.undoable(t("Demo data cleared."), () => remove({ token }), "demo");
+              }}
+            >
               {t("Clear demo data")}
             </Button>
           </>
@@ -325,13 +331,7 @@ function PasswordRequests() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={async () => {
-                  try {
-                    await dismiss({ token, requestId: r._id });
-                  } catch (e) {
-                    toast.error(e);
-                  }
-                }}
+                onClick={() => toast.undoable(t("Request dismissed."), () => dismiss({ token, requestId: r._id }), `pwreq:${r._id}`)}
               >
                 {t("Dismiss")}
               </Button>
@@ -373,13 +373,8 @@ export function Merchants() {
   const [docsFor, setDocsFor] = useState<Id<"users"> | null>(null);
   const [viewing, setViewing] = useState<Id<"users"> | null>(null);
 
-  async function act(userId: Id<"users">, status: "active" | "suspended", msg: string) {
-    try {
-      await setStatus({ token, userId, status });
-      toast.ok(msg);
-    } catch (e) {
-      toast.error(e);
-    }
+  function act(userId: Id<"users">, status: "active" | "suspended", msg: string) {
+    toast.undoable(msg, () => setStatus({ token, userId, status }), `user:${userId}`);
   }
 
   return (
@@ -596,6 +591,7 @@ function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider"; 
 export function Riders() {
   const { token } = useAuthed();
   const toast = useToast();
+  const pendingKeys = usePendingKeys();
   const rows = useQuery(api.users.list, { token, role: "rider" });
   const setStatus = useMutation(api.users.setStatus);
   const [creating, setCreating] = useState(false);
@@ -674,12 +670,14 @@ export function Riders() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={async () => {
-                    try {
-                      await setStatus({ token, userId: r._id, status: r.status === "active" ? "suspended" : "active" });
-                    } catch (e) {
-                      toast.error(e);
-                    }
+                  disabled={pendingKeys.has(`user:${r._id}`)}
+                  onClick={() => {
+                    const to = r.status === "active" ? "suspended" : "active";
+                    toast.undoable(
+                      to === "suspended" ? t("{name} suspended.", { name: r.name }) : t("{name} activated.", { name: r.name }),
+                      () => setStatus({ token, userId: r._id, status: to }),
+                      `user:${r._id}`,
+                    );
                   }}
                 >
                   {r.status === "active" ? t("Suspend") : t("Activate")}
@@ -738,7 +736,6 @@ function DeleteRiderModal({
   const { token } = useAuthed();
   const toast = useToast();
   const remove = useMutation(api.users.removeRider);
-  const [busy, setBusy] = useState(false);
 
   return (
     <Modal
@@ -751,19 +748,11 @@ function DeleteRiderModal({
           <Button
             variant="danger"
             icon={Trash2}
-            loading={busy}
-            onClick={async () => {
+            onClick={() => {
               if (!rider) return;
-              setBusy(true);
-              try {
-                await remove({ token, userId: rider._id });
-                toast.ok(t("Rider deleted."));
-                onClose();
-              } catch (e) {
-                toast.error(e);
-              } finally {
-                setBusy(false);
-              }
+              const userId = rider._id;
+              toast.undoable(t("Rider deleted."), () => remove({ token, userId }), `user:${userId}`);
+              onClose();
             }}
           >
             {t("Delete")}
@@ -841,14 +830,7 @@ function RiderApplications() {
                 size="sm"
                 variant="ghost"
                 icon={UserX}
-                onClick={async () => {
-                  try {
-                    await reject({ token, id: a._id });
-                    toast.ok(t("Application rejected."));
-                  } catch (e) {
-                    toast.error(e);
-                  }
-                }}
+                onClick={() => toast.undoable(t("Application rejected."), () => reject({ token, id: a._id }), `app:${a._id}`)}
               >
                 {t("Reject")}
               </Button>
@@ -1120,8 +1102,9 @@ function PayoutRequests({ onPay }: { onPay: (merchantId: Id<"users">) => void })
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await reject({ token, id: rejecting!, reason });
-                  toast.ok(t("Request rejected."));
+                  const id = rejecting!;
+                  const why = reason;
+                  toast.undoable(t("Request rejected."), () => reject({ token, id, reason: why }), `request:${id}`);
                   setRejecting(null);
                   setReason("");
                 } catch (e) {
@@ -1209,8 +1192,8 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
             onClick={async () => {
               setBusy(true);
               try {
-                await pay({ token, merchantId: merchantId!, method: chosen, reference: reference || undefined, expectedAmount: st.net });
-                toast.ok(t("Payout of {amount} recorded.", { amount: tk(st.net) }));
+                const args = { token, merchantId: merchantId!, method: chosen, reference: reference || undefined, expectedAmount: st.net };
+                toast.undoable(t("Payout of {amount} recorded.", { amount: tk(st.net) }), () => pay(args), `payout:${merchantId}`);
                 onClose();
               } catch (e) {
                 toast.error(e);
@@ -1310,6 +1293,7 @@ export function RiderCashAdmin() {
   const cash = useQuery(api.money.riderCash, riderId ? { token, riderId } : "skip");
   const receive = useMutation(api.money.receiveCash);
   const [cashRange, setCashRange] = useDateRange("cash", "all");
+  const pendingKeys = usePendingKeys();
   const [busy, setBusy] = useState(false);
   const withCash = riders?.filter((r) => r.cashInHand > 0) ?? [];
 
@@ -1352,11 +1336,12 @@ export function RiderCashAdmin() {
                   <Button
                     size="lg"
                     loading={busy}
+                    disabled={pendingKeys.has(`cash:${riderId}`)}
                     onClick={async () => {
                       setBusy(true);
                       try {
-                        const r = await receive({ token, riderId: riderId as Id<"users">, expectedAmount: cash.total });
-                        toast.ok(t("Received {amount}.", { amount: tk(r.amount) }));
+                        const args = { token, riderId: riderId as Id<"users">, expectedAmount: cash.total };
+                        toast.undoable(t("Received {amount}.", { amount: tk(cash.total) }), () => receive(args), `cash:${riderId}`);
                       } catch (e) {
                         toast.error(e);
                       } finally {
@@ -1448,8 +1433,8 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
             e.preventDefault();
             setBusy(true);
             try {
-              await save({ token, ...(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, Number(v)])) as Record<keyof typeof f, number>) });
-              toast.ok(t("Rates saved."));
+              const rates = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, Number(v)])) as Record<keyof typeof f, number>;
+              toast.undoable(t("Rates saved."), () => save({ token, ...rates }), "rates");
             } catch (err) {
               toast.error(err);
             } finally {

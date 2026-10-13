@@ -1115,4 +1115,12 @@ export const BN: Record<string, string> = {
   "Enter the phone number (01XXXXXXXXX) or email you signed up with.": "যে ফোন নম্বর (01XXXXXXXXX) বা ইমেইল দিয়ে অ্যাকাউন্ট খুলেছিলেন সেটি দিন।",
   "Too many searches right now. Please try again in an hour or call Morning Rider.": "এখন অনেক বেশি খোঁজা হচ্ছে। এক ঘণ্টা পর আবার চেষ্টা করুন বা Morning Rider-এ কল করুন।",
   "Enter your current password to change payment details or email.": "পেমেন্টের তথ্য বা ইমেইল পরিবর্তন করতে বর্তমান পাসওয়ার্ড দিন।",
+  "Collected amount must be between 0 and {max} for a partial delivery.": "আংশিক ডেলিভারিতে সংগ্রহের পরিমাণ ০ থেকে {max}-এর মধ্যে হতে হবে।",
+  "Saving in a few seconds… press Undo below to cancel.": "কয়েক সেকেন্ডের মধ্যে সেভ হবে… বাতিল করতে নিচে আনডু চাপুন।",
+  "{n} parcel(s) marked as {status}.": "{n}টি পার্সেল {status} করা হয়েছে।",
+  "Undone. Nothing was changed.": "আনডু করা হয়েছে। কিছুই পরিবর্তন হয়নি।",
+  "Undo": "আনডু",
+  "Request dismissed.": "অনুরোধ বাতিল করা হয়েছে।",
+  "{name} suspended.": "{name} স্থগিত করা হয়েছে।",
+  "{name} activated.": "{name} চালু করা হয়েছে।",
 };

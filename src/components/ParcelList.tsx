@@ -26,7 +26,6 @@ export function ParcelList() {
   const [open, setOpen] = useState<Id<"parcels"> | null>(null);
   const [selected, setSelected] = useState<Set<Id<"parcels">>>(new Set());
   const [bulkRider, setBulkRider] = useState("");
-  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 300);
@@ -59,32 +58,21 @@ export function ParcelList() {
     });
   const allSelected = results.length > 0 && results.every((p) => selected.has(p._id));
 
-  async function runBulk(kind: "pickup" | Status) {
-    setBulkBusy(true);
-    try {
-      const ids = [...selected];
-      if (kind === "pickup") {
-        const r = await assignPickup({ token, ids, riderId: bulkRider as Id<"users"> });
-        toast.ok(t("Pickup assigned for {n} parcel(s).", { n: r.done }));
-      } else {
-        const r = await bulkStatus({
-          token,
-          ids,
-          to: kind,
-          deliveryRiderId: kind === "out_for_delivery" ? (bulkRider as Id<"users">) : undefined,
-        });
-        toast.ok(
-          r.skipped.length
-            ? t("{done} updated, {skipped} skipped (not allowed from their status).", { done: r.done, skipped: r.skipped.length })
-            : t("{done} updated.", { done: r.done }),
-        );
-      }
-      setSelected(new Set());
-    } catch (e) {
-      toast.error(e);
-    } finally {
-      setBulkBusy(false);
+  function runBulk(kind: "pickup" | Status) {
+    const ids = [...selected];
+    const riderId = bulkRider as Id<"users">;
+    if (kind === "pickup") {
+      toast.undoable(t("Pickup assigned for {n} parcel(s).", { n: ids.length }), () => assignPickup({ token, ids, riderId }));
+    } else {
+      toast.undoable(t("{n} parcel(s) marked as {status}.", { n: ids.length, status: STATUS[kind].label }), async () => {
+        const r = await bulkStatus({ token, ids, to: kind, deliveryRiderId: kind === "out_for_delivery" ? riderId : undefined });
+        // Only worth a second message when some couldn't move.
+        if (r.skipped.length) {
+          toast.ok(t("{done} updated, {skipped} skipped (not allowed from their status).", { done: r.done, skipped: r.skipped.length }));
+        }
+      });
     }
+    setSelected(new Set());
   }
 
   return (
@@ -143,16 +131,16 @@ export function ParcelList() {
               <div className="w-60">
                 <RiderSelect value={bulkRider} onChange={setBulkRider} />
               </div>
-              <Button size="sm" disabled={!bulkRider} loading={bulkBusy} onClick={() => runBulk("pickup")}>
+              <Button size="sm" disabled={!bulkRider} onClick={() => runBulk("pickup")}>
                 {t("Assign pickup")}
               </Button>
-              <Button size="sm" disabled={!bulkRider} loading={bulkBusy} onClick={() => runBulk("out_for_delivery")}>
+              <Button size="sm" disabled={!bulkRider} onClick={() => runBulk("out_for_delivery")}>
                 {t("Send out for delivery")}
               </Button>
-              <Button size="sm" variant="dark" loading={bulkBusy} onClick={() => runBulk("picked_up")}>
+              <Button size="sm" variant="dark" onClick={() => runBulk("picked_up")}>
                 {t("Mark picked up")}
               </Button>
-              <Button size="sm" variant="dark" loading={bulkBusy} onClick={() => runBulk("at_hub")}>
+              <Button size="sm" variant="dark" onClick={() => runBulk("at_hub")}>
                 {t("Mark at hub")}
               </Button>
             </>

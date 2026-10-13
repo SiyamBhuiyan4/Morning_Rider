@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Bike, Pencil, Printer, Store, User } from "lucide-react";
+import { Bike, Loader2, Pencil, Printer, Store, User } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
-import { useToast } from "../lib/toast";
+import { usePending, useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
 import { CATEGORY, STATUS, ZONE, dateTime, dec, tk, type Status } from "../lib/format";
 import { Button, Field, Input, Modal, Select, Spinner, StatusBadge, cx } from "./ui";
@@ -62,32 +62,43 @@ export function StatusActions({
   const [note, setNote] = useState("");
   const [amount, setAmount] = useState("");
   const [rider, setRider] = useState<string>(currentRiderId ?? "");
-  const [busy, setBusy] = useState(false);
+  const waiting = usePending(`parcel:${parcelId}`);
 
   if (moves.length === 0) return null;
 
-  async function confirm() {
+  function confirm() {
     if (!move) return;
-    setBusy(true);
-    try {
-      await update({
-        token,
-        id: parcelId,
-        to: move,
-        note: note || undefined,
-        collectedAmount: move === "partial_delivered" ? Number(amount) : undefined,
-        deliveryRiderId: move === "out_for_delivery" && rider ? (rider as Id<"users">) : undefined,
-      });
-      toast.ok(t("Marked as {status}.", { status: STATUS[move].label }));
-      setMove(null);
-      setNote("");
-      setAmount("");
-      onDone?.();
-    } catch (e) {
-      toast.error(e);
-    } finally {
-      setBusy(false);
+    // Check what we can here, so a mistake shows now and not after the Undo time.
+    const collected = Number(amount);
+    if (move === "partial_delivered" && !(amount !== "" && Number.isInteger(collected) && collected >= 0 && collected < codAmount)) {
+      toast.error(t("Collected amount must be between 0 and {max} for a partial delivery.", { max: codAmount - 1 }));
+      return;
     }
+    if (move === "out_for_delivery" && me.role === "admin" && !rider) {
+      toast.error(t("Assign a delivery rider first."));
+      return;
+    }
+    const args = {
+      token,
+      id: parcelId,
+      to: move,
+      note: note || undefined,
+      collectedAmount: move === "partial_delivered" ? collected : undefined,
+      deliveryRiderId: move === "out_for_delivery" && rider ? (rider as Id<"users">) : undefined,
+    };
+    toast.undoable(t("Marked as {status}.", { status: STATUS[move].label }), () => update(args), `parcel:${parcelId}`);
+    setMove(null);
+    setNote("");
+    setAmount("");
+    onDone?.();
+  }
+
+  if (waiting) {
+    return (
+      <p className="flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">
+        <Loader2 className="size-4 animate-spin" /> {t("Saving in a few seconds… press Undo below to cancel.")}
+      </p>
+    );
   }
 
   return (
@@ -131,7 +142,7 @@ export function StatusActions({
             )}
           </Field>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={confirm} loading={busy} variant={move === "cancelled" ? "danger" : "primary"}>
+            <Button onClick={confirm} variant={move === "cancelled" ? "danger" : "primary"}>
               {t("Confirm: {status}", { status: STATUS[move].label })}
             </Button>
             <Button variant="ghost" onClick={() => setMove(null)}>
@@ -230,13 +241,9 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
                   <Button
                     className="shrink-0 whitespace-nowrap"
                     disabled={!pickupRider}
-                    onClick={async () => {
-                      try {
-                        await assignPickup({ token, ids: [data.parcel._id], riderId: pickupRider as Id<"users"> });
-                        toast.ok(t("Pickup rider assigned."));
-                      } catch (e) {
-                        toast.error(e);
-                      }
+                    onClick={() => {
+                      const args = { token, ids: [data.parcel._id], riderId: pickupRider as Id<"users"> };
+                      toast.undoable(t("Pickup rider assigned."), () => assignPickup(args), `parcel:${data.parcel._id}`);
                     }}
                   >
                     {t("Assign")}

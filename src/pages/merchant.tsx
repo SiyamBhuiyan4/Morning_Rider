@@ -4,7 +4,7 @@ import { HandCoins, Download, FileSpreadsheet, Package, PackageCheck, Plus, Rota
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
-import { useToast } from "../lib/toast";
+import { usePendingKeys, useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
 import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, date, dateTime, dec, num, startOfToday, tk, zoneFor, type Category, type Zone } from "../lib/format";
 import { parseCsv } from "../lib/csv";
@@ -141,7 +141,7 @@ function PayoutRequestCard({ balance }: { balance: number | undefined }) {
   const request = useMutation(api.money.requestPayout);
   const cancel = useMutation(api.money.cancelPayoutRequest);
   const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
+  const pendingKeys = usePendingKeys();
   if (!requests || balance === undefined) return null;
 
   const open = requests.find((r) => r.status === "open");
@@ -180,13 +180,10 @@ function PayoutRequestCard({ balance }: { balance: number | undefined }) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={async () => {
-                try {
-                  await cancel({ token, id: open._id });
-                  toast.ok(t("Request cancelled."));
-                } catch (e) {
-                  toast.error(e);
-                }
+              disabled={pendingKeys.has(`payreq:${open._id}`)}
+              onClick={() => {
+                const id = open._id;
+                toast.undoable(t("Request cancelled."), () => cancel({ token, id }), `payreq:${id}`);
               }}
             >
               {t("Cancel request")}
@@ -197,16 +194,9 @@ function PayoutRequestCard({ balance }: { balance: number | undefined }) {
             className="flex flex-wrap gap-2"
             onSubmit={async (e) => {
               e.preventDefault();
-              setBusy(true);
-              try {
-                await request({ token, note: note || undefined });
-                setNote("");
-                toast.ok(t("Payout requested. We'll let you know when it's sent."));
-              } catch (err) {
-                toast.error(err);
-              } finally {
-                setBusy(false);
-              }
+              const n = note || undefined;
+              setNote("");
+              toast.undoable(t("Payout requested. We'll let you know when it's sent."), () => request({ token, note: n }), "payreq:new");
             }}
           >
             <Input
@@ -216,7 +206,7 @@ function PayoutRequestCard({ balance }: { balance: number | undefined }) {
               placeholder={t("Note for Morning Rider (optional)")}
               className="min-w-60 flex-1"
             />
-            <Button type="submit" icon={HandCoins} loading={busy} disabled={!me.payoutMethod}>
+            <Button type="submit" icon={HandCoins} disabled={!me.payoutMethod || pendingKeys.has("payreq:new")}>
               {t("Request payout of {amount}", { amount: tk(balance) })}
             </Button>
           </form>

@@ -184,14 +184,7 @@ function Conversation({ userId, onBack }: { userId: Id<"users">; onBack: () => v
             size="sm"
             variant="outline"
             icon={RotateCcw}
-            onClick={async () => {
-              try {
-                await reset({ token, userId });
-                toast.ok(t("Seen. They can send {n} more messages.", { n: data.limit }));
-              } catch (e) {
-                toast.error(e);
-              }
-            }}
+            onClick={() => toast.undoable(t("Seen. They can send {n} more messages.", { n: data.limit }), () => reset({ token, userId }), `chatreset:${userId}`)}
           >
             {t("Seen, allow {n} more", { n: data.limit })}
           </Button>

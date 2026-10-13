@@ -62,43 +62,34 @@ export function VerificationReviewModal({ merchantId, onClose }: { merchantId: I
   const reject = useMutation(api.verification.reject);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
 
-  async function run(kind: "approve" | "reject") {
+  function run(kind: "approve" | "reject") {
     if (kind === "reject" && !reason.trim()) return toast.error(t("Write the reason so the merchant knows what to fix."));
-    setBusy(kind);
-    try {
-      if (kind === "approve") {
-        await approve({ token, merchantId });
-        toast.ok(t("Business verified. The merchant can now send parcels."));
-      } else {
-        await reject({ token, merchantId, reason: reason.trim() });
-        toast.ok(t("Verification rejected. The merchant will see your reason."));
-      }
-      onClose();
-    } catch (e) {
-      toast.error(e);
-    } finally {
-      setBusy(null);
+    if (kind === "approve") {
+      toast.undoable(t("Business verified. The merchant can now send parcels."), () => approve({ token, merchantId }), `verify:${merchantId}`);
+    } else {
+      const why = reason.trim();
+      toast.undoable(t("Verification rejected. The merchant will see your reason."), () => reject({ token, merchantId, reason: why }), `verify:${merchantId}`);
     }
+    onClose();
   }
 
   const footer = !d ? undefined : rejecting ? (
     <>
       <Button variant="ghost" onClick={() => setRejecting(false)}>{t("Back")}</Button>
-      <Button variant="danger" icon={XCircle} loading={busy === "reject"} disabled={!reason.trim()} onClick={() => run("reject")}>
+      <Button variant="danger" icon={XCircle} disabled={!reason.trim()} onClick={() => run("reject")}>
         {t("Reject")}
       </Button>
     </>
   ) : (
     <>
       {d.status !== "rejected" && (
-        <Button variant="outline" icon={XCircle} onClick={() => setRejecting(true)} disabled={!!busy}>
+        <Button variant="outline" icon={XCircle} onClick={() => setRejecting(true)}>
           {t("Reject")}
         </Button>
       )}
       {d.status !== "approved" && (
-        <Button icon={CheckCircle2} loading={busy === "approve"} onClick={() => run("approve")}>
+        <Button icon={CheckCircle2} onClick={() => run("approve")}>
           {t("Approve")}
         </Button>
       )}
