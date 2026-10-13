@@ -5,7 +5,7 @@ import { Printer } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
-import { PAYOUT_METHOD, STATUS, ZONE, date, dateTime, tk } from "../lib/format";
+import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, date, dateTime, tk } from "../lib/format";
 import { Button, Spinner } from "../components/ui";
 import { t } from "../lib/prefs";
 
@@ -87,6 +87,12 @@ export function PrintLabels({ ids }: { ids: Id<"parcels">[] }) {
                   {p.itemDescription && <p>{p.itemDescription}</p>}
                 </div>
               </div>
+              {p.category && CATEGORY[p.category].careful && (
+                <p className="mt-2 rounded border-2 border-black px-2 py-1 text-center font-extrabold uppercase">
+                  {CATEGORY[p.category].emoji} {CATEGORY[p.category].careful}
+                </p>
+              )}
+              {p.zone === "uttara" && <p className="mt-2 rounded bg-black px-2 py-1 text-center font-extrabold text-white">⚡ {t("3-hour express")}</p>}
               {p.note && <p className="mt-2 rounded bg-black/5 px-2 py-1">{t("Note")}: {p.note}</p>}
             </div>
           ))}

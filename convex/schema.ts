@@ -8,10 +8,32 @@ export const userStatus = v.union(
   v.literal("suspended"),
 );
 
+/*
+  Where Morning Rider delivers (from its Facebook page): Uttara gets the
+  3-hour express, the rest of Dhaka and Gazipur city corporations same day,
+  and Narayanganj city is the newest area. Each zone has its own price.
+*/
 export const zone = v.union(
-  v.literal("inside_dhaka"),
-  v.literal("sub_dhaka"),
-  v.literal("outside_dhaka"),
+  v.literal("uttara"),
+  v.literal("dhaka_city"),
+  v.literal("gazipur_city"),
+  v.literal("narayanganj_city"),
+);
+
+/** What is inside the parcel — riders handle frozen and bakery items differently. */
+export const category = v.union(
+  v.literal("parcel"),
+  v.literal("document"),
+  v.literal("food"),
+  v.literal("medicine"),
+  v.literal("shopping"),
+  v.literal("electronics"),
+  v.literal("cosmetics"),
+  v.literal("gift"),
+  v.literal("frozen"),
+  v.literal("bakery"),
+  v.literal("home"),
+  v.literal("business"),
 );
 
 /*
@@ -80,11 +102,12 @@ export default defineSchema({
 
   /* Single row: delivery charge rates. Edited by admin in Settings. */
   rates: defineTable({
-    insideDhaka: v.number(), // base charge up to 1 kg
-    subDhaka: v.number(),
-    outsideDhaka: v.number(),
-    extraPerKgInside: v.number(),
-    extraPerKgOutside: v.number(), // used for sub + outside Dhaka
+    // base charge per zone, up to 1 kg
+    uttara: v.number(),
+    dhakaCity: v.number(),
+    gazipurCity: v.number(),
+    narayanganjCity: v.number(),
+    extraPerKg: v.number(),
     codPercent: v.number(), // % of collected COD
     returnPercent: v.number(), // % of delivery charge billed on a returned parcel
     updatedAt: v.number(),
@@ -97,8 +120,9 @@ export default defineSchema({
     recipientName: v.string(),
     recipientPhone: v.string(),
     recipientAddress: v.string(),
-    district: v.string(),
+    district: v.string(), // the delivery area, e.g. "Mirpur 10" (named district before areas were city-level)
     zone,
+    category: v.optional(category),
     weightKg: v.number(),
     codAmount: v.number(), // amount to collect from the customer
     itemDescription: v.optional(v.string()),
@@ -173,6 +197,28 @@ export default defineSchema({
   })
     .index("by_createdAt", ["createdAt"])
     .index("by_merchantId_and_createdAt", ["merchantId", "createdAt"]),
+
+  /*
+    People applying to be riders from the public website. An application is
+    never an account: the admin reviews it, invites the person for an
+    interview, and creates the rider account only when hiring them.
+  */
+  riderApplications: defineTable({
+    name: v.string(),
+    phone: v.string(),
+    email: v.optional(v.string()),
+    area: v.string(),
+    hasBike: v.boolean(),
+    hasLicense: v.boolean(),
+    note: v.optional(v.string()),
+    status: v.union(v.literal("new"), v.literal("interview"), v.literal("hired"), v.literal("rejected")),
+    interviewAt: v.optional(v.number()),
+    interviewPlace: v.optional(v.string()),
+    riderId: v.optional(v.id("users")), // the account created on hiring
+    createdAt: v.number(),
+  })
+    .index("by_status_and_createdAt", ["status", "createdAt"])
+    .index("by_phone", ["phone"]),
 
   cashDeposits: defineTable({
     riderId: v.id("users"),

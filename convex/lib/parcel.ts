@@ -7,16 +7,30 @@ export type Status = Doc<"parcels">["status"];
 export type Zone = Doc<"parcels">["zone"];
 export type Rates = Omit<Doc<"rates">, "_id" | "_creationTime">;
 
+/* Starting prices until the admin sets real ones in Delivery rates. */
 export const DEFAULT_RATES: Rates = {
-  insideDhaka: 70,
-  subDhaka: 100,
-  outsideDhaka: 130,
-  extraPerKgInside: 15,
-  extraPerKgOutside: 25,
+  uttara: 60,
+  dhakaCity: 70,
+  gazipurCity: 80,
+  narayanganjCity: 90,
+  extraPerKg: 15,
   codPercent: 1,
   returnPercent: 50,
   updatedAt: 0,
 };
+
+export function zoneBase(rates: Rates, zone: Zone) {
+  switch (zone) {
+    case "uttara":
+      return rates.uttara;
+    case "gazipur_city":
+      return rates.gazipurCity;
+    case "narayanganj_city":
+      return rates.narayanganjCity;
+    case "dhaka_city":
+      return rates.dhakaCity;
+  }
+}
 
 export async function getRates(ctx: QueryCtx | MutationCtx): Promise<Rates> {
   const row = await ctx.db.query("rates").first();
@@ -25,11 +39,8 @@ export async function getRates(ctx: QueryCtx | MutationCtx): Promise<Rates> {
 
 /** All money is whole taka. */
 export function computeCharges(rates: Rates, zone: Zone, weightKg: number, codAmount: number) {
-  const base =
-    zone === "inside_dhaka" ? rates.insideDhaka : zone === "sub_dhaka" ? rates.subDhaka : rates.outsideDhaka;
-  const perKg = zone === "inside_dhaka" ? rates.extraPerKgInside : rates.extraPerKgOutside;
   const extraKg = Math.max(0, Math.ceil(weightKg - 1));
-  const deliveryCharge = base + extraKg * perKg;
+  const deliveryCharge = zoneBase(rates, zone) + extraKg * rates.extraPerKg;
   return {
     deliveryCharge,
     codCharge: codCharge(rates, codAmount),

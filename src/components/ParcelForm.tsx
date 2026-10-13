@@ -5,7 +5,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
-import { DISTRICTS, ZONE, tk, zoneFor, type Zone } from "../lib/format";
+import { AREAS, CATEGORY, ZONE, ZONES, ZONE_TIME, tk, zoneFor, type Category, type Zone } from "../lib/format";
 import { Button, Card, Field, Input, Select, Textarea } from "./ui";
 import { FraudSummary } from "./FraudSummary";
 import { t } from "../lib/prefs";
@@ -15,8 +15,9 @@ export type ParcelFields = {
   recipientName: string;
   recipientPhone: string;
   recipientAddress: string;
-  district: string;
+  district: string; // the delivery area
   zone: Zone;
+  category: Category | "";
   weightKg: string;
   codAmount: string;
   itemDescription: string;
@@ -28,8 +29,9 @@ export const emptyParcel: ParcelFields = {
   recipientName: "",
   recipientPhone: "",
   recipientAddress: "",
-  district: "Dhaka",
-  zone: "inside_dhaka",
+  district: "",
+  zone: "dhaka_city",
+  category: "",
   weightKg: "1",
   codAmount: "",
   itemDescription: "",
@@ -44,6 +46,7 @@ export function toPayload(f: ParcelFields) {
     recipientAddress: f.recipientAddress,
     district: f.district,
     zone: f.zone,
+    category: f.category || undefined,
     weightKg: Number(f.weightKg),
     codAmount: Number(f.codAmount || 0),
     itemDescription: f.itemDescription || undefined,
@@ -109,25 +112,34 @@ export function ParcelForm({
             <Field label={t("Full address")} className="sm:col-span-2">
               {(id) => <Textarea id={id} value={f.recipientAddress} onChange={set("recipientAddress")} required maxLength={300} placeholder={t("House, road, area, thana")} />}
             </Field>
-            <Field label={t("District")}>
+            <Field label={t("Area")} hint={t("Type or pick, e.g. Uttara Sector 7, Mirpur 10")}>
               {(id) => (
-                <Select
-                  id={id}
-                  value={f.district}
-                  onChange={(e) => setF((s) => ({ ...s, district: e.target.value, zone: zoneFor(e.target.value) }))}
-                >
-                  {DISTRICTS.map((d) => (
-                    <option key={d}>{d}</option>
-                  ))}
-                </Select>
+                <>
+                  <Input
+                    id={id}
+                    list="mr-areas"
+                    value={f.district}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setF((s) => ({ ...s, district: v, zone: v.trim() ? zoneFor(v) : s.zone }));
+                    }}
+                    required
+                    maxLength={60}
+                  />
+                  <datalist id="mr-areas">
+                    {AREAS.map((a) => (
+                      <option key={a} value={a} />
+                    ))}
+                  </datalist>
+                </>
               )}
             </Field>
-            <Field label={t("Delivery zone")}>
+            <Field label={t("Delivery zone")} hint={ZONE_TIME[f.zone as (typeof ZONES)[number]]}>
               {(id) => (
                 <Select id={id} value={f.zone} onChange={set("zone")}>
-                  {Object.entries(ZONE).map(([k, label]) => (
+                  {ZONES.map((k) => (
                     <option key={k} value={k}>
-                      {label}
+                      {ZONE[k]}
                     </option>
                   ))}
                 </Select>
@@ -143,6 +155,25 @@ export function ParcelForm({
 
         <Card className="p-6">
           <h2 className="font-bold">{t("Parcel")}</h2>
+          <p className="mt-4 text-[13px] font-semibold text-ink-2">{t("What is inside?")}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(Object.keys(CATEGORY) as Category[]).map((c) => (
+              <button
+                type="button"
+                key={c}
+                onClick={() => setF((s) => ({ ...s, category: s.category === c ? "" : c }))}
+                className={
+                  "rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition " +
+                  (f.category === c ? "bg-brand text-white ring-brand" : "bg-surface text-ink-2 ring-line hover:ring-brand/50")
+                }
+              >
+                {CATEGORY[c].emoji} {CATEGORY[c].label}
+              </button>
+            ))}
+          </div>
+          {f.category && CATEGORY[f.category].careful && (
+            <p className="mt-2 rounded-xl bg-sun-100 px-3 py-2 text-xs font-semibold text-amber-800">{CATEGORY[f.category].careful}</p>
+          )}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("Cash to collect (COD)")} hint={t("Enter 0 if already paid.")}>
               {(id) => <Input id={id} type="number" min={0} step={1} inputMode="numeric" value={f.codAmount} onChange={set("codAmount")} required placeholder="0" />}

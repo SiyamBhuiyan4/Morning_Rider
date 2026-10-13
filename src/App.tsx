@@ -4,7 +4,7 @@ import { navigate, useLocation } from "./lib/router";
 import { useSession } from "./lib/session";
 import { Shell } from "./components/Shell";
 import { Spinner } from "./components/ui";
-import { Home, Login, Register, Track } from "./pages/public";
+import { Home, Join, Login, Register, RiderLogin, Track } from "./pages/public";
 import { AdminDashboard, Merchants, Payouts, RateSettings, RiderCashAdmin, Riders } from "./pages/admin";
 import { BulkUpload, MerchantDashboard, MerchantPayments } from "./pages/merchant";
 import { RiderCash, RiderTasks } from "./pages/rider";
@@ -22,7 +22,10 @@ export default function App() {
   const { me } = useSession();
 
   // The admin website has no public pages: everything starts at its login.
-  if (IS_ADMIN_PORTAL && (path === "/" || path === "/register" || path.startsWith("/track"))) {
+  if (
+    IS_ADMIN_PORTAL &&
+    (path === "/" || path === "/register" || path === "/rider" || path === "/join" || path.startsWith("/track"))
+  ) {
     return <Redirect to={me ? "/app" : "/login"} />;
   }
 
@@ -31,10 +34,11 @@ export default function App() {
   if (path === "/track" || path.startsWith("/track/")) {
     return <Track code={decodeURIComponent(path.slice(7)) || undefined} />;
   }
-  if (path === "/login" || path === "/register") {
+  if (path === "/join") return <Join />;
+  if (path === "/login" || path === "/register" || path === "/rider") {
     if (me === undefined) return <Spinner className="h-full items-center" />;
     if (me) return <Redirect to="/app" />;
-    return path === "/login" ? <Login /> : <Register />;
+    return path === "/login" ? <Login /> : path === "/rider" ? <RiderLogin /> : <Register />;
   }
 
   // Everything below needs a signed-in user

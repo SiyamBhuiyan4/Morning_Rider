@@ -18,14 +18,20 @@ import {
   Wallet,
   TrendingUp,
   FlaskConical,
+  UserPlus,
+  CalendarClock,
+  Mail,
+  MessageCircle,
+  Phone,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { CONTACT } from "../lib/contact";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
 import { PAYOUT_METHOD, STATUS, date, dateTime, num, startOfToday, tk } from "../lib/format";
-import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner, StatCard, StatusBadge } from "../components/ui";
+import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner, StatCard, StatusBadge, cx } from "../components/ui";
 import { TrendChart } from "../components/TrendChart";
 import { t } from "../lib/prefs";
 
@@ -368,6 +374,7 @@ export function Riders() {
         subtitle={t("Your delivery team.")}
         actions={<Button icon={Plus} onClick={() => setCreating(true)}>{t("Add rider")}</Button>}
       />
+      <RiderApplications />
       {!rows ? (
         <Spinner />
       ) : rows.length === 0 ? (
@@ -441,6 +448,223 @@ export function Riders() {
       <CreateUserModal role="rider" open={creating} onClose={() => setCreating(false)} />
       <TempPasswordModal value={reset} onClose={() => setReset(null)} />
     </>
+  );
+}
+
+/* ------------------------------------------------------ rider applications */
+
+/**
+ * People who applied on the website. Nothing here is an account until the
+ * admin presses Hire after the interview.
+ */
+function RiderApplications() {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const apps = useQuery(api.riderApplications.list, { token });
+  const reject = useMutation(api.riderApplications.reject);
+  const [inviting, setInviting] = useState<Doc<"riderApplications"> | null>(null);
+  const [hiring, setHiring] = useState<Doc<"riderApplications"> | null>(null);
+  const [created, setCreated] = useState<{ name: string; password: string } | null>(null);
+  if (!apps || apps.length === 0) return null;
+
+  return (
+    <div className="mb-8">
+      <h2 className="mb-3 flex items-center gap-2 font-bold">
+        <UserPlus className="size-5 text-brand" /> {t("Rider applications")}
+        <Badge tone="brand">{apps.length}</Badge>
+      </h2>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {apps.map((a) => (
+          <Card key={a._id} className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-bold">{a.name}</p>
+                <p className="text-sm text-ink-2">
+                  {a.phone}
+                  {a.email && ` · ${a.email}`}
+                </p>
+                <p className="text-xs text-ink-3">
+                  {a.area} · {t("applied")} {date(a.createdAt)}
+                </p>
+              </div>
+              {a.status === "interview" ? (
+                <Badge tone="amber">{t("Interview")}: {a.interviewAt ? dateTime(a.interviewAt) : ""}</Badge>
+              ) : (
+                <Badge tone="brand">{t("New")}</Badge>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5 text-xs font-semibold">
+              <Badge tone={a.hasBike ? "green" : "red"}>{a.hasBike ? t("Has motorcycle") : t("No motorcycle")}</Badge>
+              <Badge tone={a.hasLicense ? "green" : "red"}>{a.hasLicense ? t("Has licence") : t("No licence")}</Badge>
+            </div>
+            {a.note && <p className="mt-2 text-sm text-ink-2">“{a.note}”</p>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button size="sm" variant={a.status === "interview" ? "outline" : "primary"} icon={CalendarClock} onClick={() => setInviting(a)}>
+                {a.status === "interview" ? t("Change interview") : t("Invite to interview")}
+              </Button>
+              <Button size="sm" variant={a.status === "interview" ? "primary" : "outline"} icon={UserCheck} onClick={() => setHiring(a)}>
+                {t("Hire")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={UserX}
+                onClick={async () => {
+                  try {
+                    await reject({ token, id: a._id });
+                    toast.ok(t("Application rejected."));
+                  } catch (e) {
+                    toast.error(e);
+                  }
+                }}
+              >
+                {t("Reject")}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <InviteModal app={inviting} onClose={() => setInviting(null)} />
+      <HireModal
+        app={hiring}
+        onClose={() => setHiring(null)}
+        onHired={(name, password) => {
+          setHiring(null);
+          setCreated({ name, password });
+        }}
+      />
+      <TempPasswordModal value={created} onClose={() => setCreated(null)} />
+    </div>
+  );
+}
+
+function InviteModal({ app, onClose }: { app: Doc<"riderApplications"> | null; onClose: () => void }) {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const invite = useMutation(api.riderApplications.invite);
+  const [when, setWhen] = useState("");
+  const [place, setPlace] = useState(CONTACT.address);
+  const [busy, setBusy] = useState(false);
+  if (!app) return null;
+
+  const at = when ? new Date(when) : null;
+  const whenText = at ? at.toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" }) : "";
+  const subject = "Morning Rider — rider interview invitation";
+  const message =
+    `Dear ${app.name},\n\n` +
+    `Thank you for applying to be a Morning Rider delivery rider. We would like to invite you for an interview.\n\n` +
+    `When: ${whenText}\nWhere: ${place}\n\n` +
+    `Please bring your NID, driving licence and motorcycle papers.\n` +
+    `If you cannot come at this time, call or WhatsApp us at ${CONTACT.phone}.\n\n` +
+    `Morning Rider — Fast • Safe • On Time`;
+  const waNumber = "88" + app.phone;
+
+  async function record() {
+    if (!at) return toast.error(t("Choose the interview date and time."));
+    setBusy(true);
+    try {
+      await invite({ token, id: app!._id, interviewAt: at.getTime(), place });
+      toast.ok(t("Interview saved. Now send the invitation."));
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={t("Invite {name} to interview", { name: app.name })} wide>
+      <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("Interview date & time")}>
+            {(id) => <Input id={id} type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} required />}
+          </Field>
+          <Field label={t("Place")}>{(id) => <Input id={id} value={place} onChange={(e) => setPlace(e.target.value)} />}</Field>
+        </div>
+        <div>
+          <p className="mb-1.5 text-[13px] font-semibold text-ink-2">{t("Message preview")}</p>
+          <pre className="whitespace-pre-wrap rounded-2xl bg-page p-4 font-sans text-sm text-ink-2">{message}</pre>
+        </div>
+        <Button onClick={record} loading={busy} disabled={!at} className="w-full">
+          {t("1. Save interview")}
+        </Button>
+        <p className="text-sm font-semibold">{t("2. Send the invitation")}</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <a
+            className={cx(!app.email || !at ? "pointer-events-none opacity-40" : "")}
+            href={`mailto:${app.email ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`}
+          >
+            <Button variant="outline" icon={Mail} className="w-full" disabled={!app.email || !at}>
+              {t("Email")}
+            </Button>
+          </a>
+          <a className={cx(!at ? "pointer-events-none opacity-40" : "")} href={`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" icon={MessageCircle} className="w-full" disabled={!at}>
+              WhatsApp
+            </Button>
+          </a>
+          <a href={`tel:${app.phone}`}>
+            <Button variant="outline" icon={Phone} className="w-full">
+              {t("Call")}
+            </Button>
+          </a>
+        </div>
+        {!app.email && <p className="text-xs text-ink-3">{t("No email given — use WhatsApp or call.")}</p>}
+      </div>
+    </Modal>
+  );
+}
+
+function HireModal({
+  app,
+  onClose,
+  onHired,
+}: {
+  app: Doc<"riderApplications"> | null;
+  onClose: () => void;
+  onHired: (name: string, password: string) => void;
+}) {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const hire = useMutation(api.riderApplications.hire);
+  const [busy, setBusy] = useState(false);
+  if (!app) return null;
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={t("Hire {name}", { name: app.name })}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>{t("Back")}</Button>
+          <Button
+            loading={busy}
+            icon={UserCheck}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const { password } = await hire({ token, id: app._id });
+                toast.ok(t("{name} added.", { name: app.name }));
+                onHired(app.name, password);
+              } catch (e) {
+                toast.error(e);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t("Create rider account")}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-ink-2">
+        {t("This creates a rider account for {name} ({phone}). They will sign in on the rider login page with a temporary password that you give them.", {
+          name: app.name,
+          phone: app.phone,
+        })}
+      </p>
+    </Modal>
   );
 }
 
@@ -757,21 +981,21 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
   const toast = useToast();
   const save = useMutation(api.settings.updateRates);
   const [f, setF] = useState(() => ({
-    insideDhaka: String(initial.insideDhaka),
-    subDhaka: String(initial.subDhaka),
-    outsideDhaka: String(initial.outsideDhaka),
-    extraPerKgInside: String(initial.extraPerKgInside),
-    extraPerKgOutside: String(initial.extraPerKgOutside),
+    uttara: String(initial.uttara),
+    dhakaCity: String(initial.dhakaCity),
+    gazipurCity: String(initial.gazipurCity),
+    narayanganjCity: String(initial.narayanganjCity),
+    extraPerKg: String(initial.extraPerKg),
     codPercent: String(initial.codPercent),
     returnPercent: String(initial.returnPercent),
   }));
   const [busy, setBusy] = useState(false);
   const fields: [keyof typeof f, string, string][] = [
-    ["insideDhaka", "Inside Dhaka (up to 1 kg)", "৳"],
-    ["subDhaka", "Dhaka Sub-area (up to 1 kg)", "৳"],
-    ["outsideDhaka", "Outside Dhaka (up to 1 kg)", "৳"],
-    ["extraPerKgInside", "Each extra kg — inside Dhaka", "৳"],
-    ["extraPerKgOutside", "Each extra kg — sub-area & outside", "৳"],
+    ["uttara", "Uttara — 3-hour express (up to 1 kg)", "৳"],
+    ["dhakaCity", "Dhaka City (up to 1 kg)", "৳"],
+    ["gazipurCity", "Gazipur City (up to 1 kg)", "৳"],
+    ["narayanganjCity", "Narayanganj City (up to 1 kg)", "৳"],
+    ["extraPerKg", "Each extra kg", "৳"],
     ["codPercent", "COD charge", "%"],
     ["returnPercent", "Return charge (of delivery charge)", "%"],
   ];

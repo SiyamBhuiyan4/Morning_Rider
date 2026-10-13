@@ -29,19 +29,21 @@ const RIDERS = [
 ];
 
 const CUSTOMERS = [
-  ["Ayesha Siddika", "Flat 5A, Road 3, Mirpur 10", "Dhaka", "inside_dhaka"],
-  ["Mahmud Hossain", "House 8, Block C, Banani", "Dhaka", "inside_dhaka"],
-  ["Farhana Akter", "Tongi College Road", "Gazipur", "sub_dhaka"],
-  ["Shakil Khan", "Chashara, Narayanganj Sadar", "Narayanganj", "sub_dhaka"],
-  ["Rumana Islam", "Agrabad C/A", "Chattogram", "outside_dhaka"],
-  ["Imran Kabir", "Zindabazar", "Sylhet", "outside_dhaka"],
-  ["Sabbir Rahman", "Shaheb Bazar", "Rajshahi", "outside_dhaka"],
-  ["Tania Sultana", "Road 27, Dhanmondi", "Dhaka", "inside_dhaka"],
-  ["Hasan Mahmud", "Sonadanga", "Khulna", "outside_dhaka"],
-  ["Mitu Begum", "Sector 11, Uttara", "Dhaka", "inside_dhaka"],
+  ["Ayesha Siddika", "House 14, Road 7, Sector 4", "Uttara", "uttara"],
+  ["Mahmud Hossain", "House 8, Block C", "Banani", "dhaka_city"],
+  ["Farhana Akter", "College Road", "Tongi, Gazipur", "gazipur_city"],
+  ["Shakil Khan", "Chashara", "Narayanganj Sadar", "narayanganj_city"],
+  ["Rumana Islam", "Flat 5A, Road 3", "Mirpur 10", "dhaka_city"],
+  ["Imran Kabir", "House 22, Road 11, Sector 9", "Uttara", "uttara"],
+  ["Sabbir Rahman", "Joydebpur Chowrasta", "Gazipur Sadar", "gazipur_city"],
+  ["Tania Sultana", "Road 27", "Dhanmondi", "dhaka_city"],
+  ["Hasan Mahmud", "Gulshan Avenue", "Gulshan 1", "dhaka_city"],
+  ["Mitu Begum", "Sector 11", "Uttara", "uttara"],
 ] as const;
 
-const ITEMS = ["2 T-shirts", "Bluetooth earbuds", "Honey 1 kg", "Ladies bag", "Phone cover", "Panjabi", "Smart watch", "Mustard oil 2 L"];
+const CATEGORIES = ["shopping", "electronics", "frozen", "bakery", "medicine", "food", "gift", "document"] as const;
+
+const ITEMS = ["2 T-shirts", "Bluetooth earbuds", "Frozen chicken nuggets", "Birthday cake 2 lb", "Paracetamol + saline", "Home-made biryani", "Gift box", "Office documents"];
 
 /** Status, how many days ago it was booked, and what the money side looks like. */
 const PLAN: { status: Status; daysAgo: number; partial?: number; cashIn?: boolean; paid?: boolean }[] = [
@@ -150,6 +152,7 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
   for (let i = 0; i < PLAN.length; i++) {
     const plan = PLAN[i];
     const [recipientName, address, district, zone] = CUSTOMERS[i % CUSTOMERS.length];
+    const category = CATEGORIES[i % CATEGORIES.length];
     const merchantId = activeMerchants[i % activeMerchants.length];
     const pickupRiderId = riderIds[i % riderIds.length];
     const deliveryRiderId = riderIds[(i + 1) % riderIds.length];
@@ -180,6 +183,7 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
       recipientAddress: address,
       district,
       zone,
+      category,
       weightKg,
       codAmount,
       itemDescription: ITEMS[i % ITEMS.length],
@@ -385,4 +389,10 @@ export const loadInternal = internalMutation({
       .first();
     return await seed(ctx, admin?._id);
   },
+});
+
+/** CLI: npx convex run --prod demo:removeInternal */
+export const removeInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => await clear(ctx),
 });

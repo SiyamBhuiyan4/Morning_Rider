@@ -50,10 +50,23 @@ type LoginResult = { ok: true; token: string; expiresAt: number } | { ok: false;
   a failure — so the main site cannot be used to find or guess admin logins.
 */
 
-/** Main website: merchants and riders. */
+/*
+  Merchants (customers) and riders (staff) sign in through separate pages and
+  separate endpoints: a rider's password does nothing on the merchant login
+  and the other way round — the same generic "wrong password" answer as for a
+  wrong guess, counted towards the lock.
+*/
+
+/** Main website, merchant login. */
 export const login = mutation({
   args: { phone: v.string(), password: v.string() },
-  handler: async (ctx, args): Promise<LoginResult> => attemptLogin(ctx, args, ["merchant", "rider"]),
+  handler: async (ctx, args): Promise<LoginResult> => attemptLogin(ctx, args, ["merchant"]),
+});
+
+/** Main website, rider login (/rider). */
+export const riderLogin = mutation({
+  args: { phone: v.string(), password: v.string() },
+  handler: async (ctx, args): Promise<LoginResult> => attemptLogin(ctx, args, ["rider"]),
 });
 
 /*

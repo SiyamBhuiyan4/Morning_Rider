@@ -15,7 +15,7 @@ import {
   requireActiveRider,
   type Rates,
 } from "./lib/parcel";
-import { parcelStatus, zone } from "./schema";
+import { category, parcelStatus, zone } from "./schema";
 
 const parcelInput = v.object({
   invoice: v.optional(v.string()),
@@ -24,6 +24,7 @@ const parcelInput = v.object({
   recipientAddress: v.string(),
   district: v.string(),
   zone,
+  category: v.optional(category),
   weightKg: v.number(),
   codAmount: v.number(),
   itemDescription: v.optional(v.string()),
@@ -43,8 +44,9 @@ function validateInput(input: ParcelInput) {
     recipientName: required(input.recipientName, 80, "Customer name"),
     recipientPhone: normalisePhone(input.recipientPhone),
     recipientAddress: required(input.recipientAddress, 300, "Address"),
-    district: required(input.district, 40, "District"),
+    district: required(input.district, 60, "Area"),
     zone: input.zone,
+    category: input.category,
     weightKg: Math.round(input.weightKg * 10) / 10,
     codAmount: Math.round(input.codAmount),
     itemDescription: clean(input.itemDescription, 120, "Item description") || undefined,

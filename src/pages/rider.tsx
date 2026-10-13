@@ -4,7 +4,7 @@ import { Banknote, MapPin, Package, PackageCheck, Phone, Store, Truck } from "lu
 import { api } from "../../convex/_generated/api";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
-import { dateTime, tk } from "../lib/format";
+import { CATEGORY, dateTime, tk } from "../lib/format";
 import { Button, Card, Empty, PageHeader, Spinner, StatusBadge, cx } from "../components/ui";
 import { StatusActions } from "../components/ParcelDetail";
 import { t } from "../lib/prefs";
@@ -75,7 +75,10 @@ export function RiderTasks() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {s.parcels.map((p) => (
-                    <span key={p._id} className="rounded-lg bg-page px-2 py-1 font-mono text-xs font-semibold">{p.trackingCode}</span>
+                    <span key={p._id} className="rounded-lg bg-page px-2 py-1 font-mono text-xs font-semibold">
+                      {p.category && `${CATEGORY[p.category].emoji} `}
+                      {p.trackingCode}
+                    </span>
                   ))}
                 </div>
                 <Button
@@ -120,7 +123,19 @@ export function RiderTasks() {
                     <p className="mt-1 flex items-start gap-1.5 text-sm text-ink-2">
                       <MapPin className="mt-0.5 size-4 shrink-0 text-brand" /> {p.recipientAddress}, {p.district}
                     </p>
-                    {p.itemDescription && <p className="mt-1 text-xs text-ink-3">{t("Item")}: {p.itemDescription}</p>}
+                    {p.zone === "uttara" && (
+                      <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-brand px-2 py-1 text-xs font-bold text-white">⚡ {t("3-hour express")}</p>
+                    )}
+                    {p.category && (
+                      <p className="mt-2 text-xs font-semibold text-ink-2">
+                        {CATEGORY[p.category].emoji} {CATEGORY[p.category].label}
+                        {p.itemDescription && ` · ${p.itemDescription}`}
+                      </p>
+                    )}
+                    {!p.category && p.itemDescription && <p className="mt-1 text-xs text-ink-3">{t("Item")}: {p.itemDescription}</p>}
+                    {p.category && CATEGORY[p.category].careful && (
+                      <p className="mt-1 rounded-lg bg-sky-50 px-2 py-1 text-xs font-bold text-sky-700">{CATEGORY[p.category].careful}</p>
+                    )}
                     {p.note && <p className="mt-1 rounded-lg bg-sun-100 px-2 py-1 text-xs font-medium text-amber-900">{t("Note")}: {p.note}</p>}
                   </div>
                   <a href={`tel:${p.recipientPhone}`} className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-white" aria-label={t("Call customer")}>

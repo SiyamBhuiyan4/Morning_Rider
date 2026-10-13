@@ -6,7 +6,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
-import { DISTRICTS, STATUS, ZONE, date, num, startOfToday, tk, zoneFor, type Zone } from "../lib/format";
+import { CATEGORY, STATUS, ZONE, date, num, startOfToday, tk, zoneFor, type Category, type Zone } from "../lib/format";
 import { parseCsv } from "../lib/csv";
 import { Button, Card, Empty, PageHeader, Spinner, StatCard } from "../components/ui";
 import { TrendChart } from "../components/TrendChart";
@@ -123,19 +123,22 @@ export function MerchantPayments() {
 
 /* ------------------------------------------------------------ bulk upload */
 
-const TEMPLATE_HEADER = "invoice,customer_name,customer_phone,address,district,zone,weight_kg,cod_amount,item,note";
-const TEMPLATE_ROW = 'INV-1001,Rahim Uddin,01712345678,"House 12, Road 5, Mirpur 10",Dhaka,inside,1,1250,2 T-shirts,Call before delivery';
+const TEMPLATE_HEADER = "invoice,customer_name,customer_phone,address,area,zone,category,weight_kg,cod_amount,item,note";
+const TEMPLATE_ROW = 'INV-1001,Rahim Uddin,01712345678,"House 12, Road 5",Mirpur 10,dhaka,shopping,1,1250,2 T-shirts,Call before delivery';
 
+/* Accepted spellings for the zone column; blank means "guess from the area". */
 const ZONE_ALIASES: Record<string, Zone> = {
-  inside: "inside_dhaka",
-  inside_dhaka: "inside_dhaka",
-  "inside dhaka": "inside_dhaka",
-  sub: "sub_dhaka",
-  sub_dhaka: "sub_dhaka",
-  "sub dhaka": "sub_dhaka",
-  outside: "outside_dhaka",
-  outside_dhaka: "outside_dhaka",
-  "outside dhaka": "outside_dhaka",
+  uttara: "uttara",
+  express: "uttara",
+  dhaka: "dhaka_city",
+  dhaka_city: "dhaka_city",
+  "dhaka city": "dhaka_city",
+  gazipur: "gazipur_city",
+  gazipur_city: "gazipur_city",
+  "gazipur city": "gazipur_city",
+  narayanganj: "narayanganj_city",
+  narayanganj_city: "narayanganj_city",
+  "narayanganj city": "narayanganj_city",
 };
 
 type Row = {
@@ -145,6 +148,7 @@ type Row = {
   recipientAddress: string;
   district: string;
   zone: Zone;
+  category?: Category;
   weightKg: number;
   codAmount: number;
   itemDescription?: string;
@@ -181,12 +185,17 @@ export function BulkUpload() {
     table.slice(1).forEach((r, i) => {
       if (r.every((c) => !c.trim())) return;
       const get = (n: string) => (col(n) >= 0 ? (r[col(n)] ?? "").trim() : "");
-      const districtRaw = get("district") || "Dhaka";
-      const district = DISTRICTS.find((d) => d.toLowerCase() === districtRaw.toLowerCase()) ?? districtRaw;
-      const zone = ZONE_ALIASES[get("zone").toLowerCase()] ?? zoneFor(district);
+      // "district" is still accepted from older copies of the template
+      const district = get("area") || get("district");
+      const zoneRaw = get("zone").toLowerCase();
+      const zone = ZONE_ALIASES[zoneRaw] ?? zoneFor(district);
+      const categoryRaw = get("category").toLowerCase() as Category;
+      const category = categoryRaw in CATEGORY ? categoryRaw : undefined;
+      if (!district) issues.push(t("Row {row}: area is required.", { row: i + 2 }));
+      if (zoneRaw && !ZONE_ALIASES[zoneRaw]) issues.push(t("Row {row}: zone must be uttara, dhaka, gazipur or narayanganj.", { row: i + 2 }));
       const cod = Number(get("cod_amount") || 0);
       const weight = Number(get("weight_kg") || 1);
-      if (!get("customer_name") || !get("customer_phone") || !get("address")) issues.push(`Row ${i + 2}: name, phone and address are required.`);
+      if (!get("customer_name") || !get("customer_phone") || !get("address")) issues.push(t("Row {row}: name, phone and address are required.", { row: i + 2 }));
       if (!Number.isFinite(cod) || cod < 0) issues.push(t("Row {row}: cod_amount must be a number.", { row: i + 2 }));
       if (!Number.isFinite(weight) || weight <= 0) issues.push(t("Row {row}: weight_kg must be a positive number.", { row: i + 2 }));
       out.push({
@@ -196,13 +205,14 @@ export function BulkUpload() {
         recipientAddress: get("address"),
         district,
         zone,
+        category,
         weightKg: weight,
         codAmount: cod,
         itemDescription: get("item") || undefined,
         note: get("note") || undefined,
       });
     });
-    if (out.length > 200) issues.push("At most 200 parcels per upload — split the file.");
+    if (out.length > 200) issues.push(t("At most 200 parcels per upload — split the file."));
     setProblems(issues);
     setRows(out);
   }

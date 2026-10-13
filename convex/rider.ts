@@ -40,7 +40,7 @@ export const tasks = query({
         merchantName: m?.businessName ?? m?.name ?? "—",
         merchantPhone: m?.phone ?? "",
         pickupAddress: m?.pickupAddress ?? "",
-        parcels: list.map((p) => ({ _id: p._id, trackingCode: p.trackingCode, weightKg: p.weightKg })),
+        parcels: list.map((p) => ({ _id: p._id, trackingCode: p.trackingCode, weightKg: p.weightKg, category: p.category })),
       });
     }
 
@@ -52,6 +52,8 @@ export const tasks = query({
       recipientPhone: p.recipientPhone,
       recipientAddress: p.recipientAddress,
       district: p.district,
+      zone: p.zone,
+      category: p.category,
       codAmount: p.codAmount,
       itemDescription: p.itemDescription,
       note: p.note,

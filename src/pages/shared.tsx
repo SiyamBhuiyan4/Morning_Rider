@@ -101,6 +101,7 @@ export function EditParcel({ id }: { id: Id<"parcels"> }) {
     recipientAddress: p.recipientAddress,
     district: p.district,
     zone: p.zone,
+    category: p.category ?? "",
     weightKg: String(p.weightKg),
     codAmount: String(p.codAmount),
     itemDescription: p.itemDescription ?? "",

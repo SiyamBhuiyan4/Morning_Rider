@@ -6,7 +6,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
-import { STATUS, ZONE, dateTime, tk, type Status } from "../lib/format";
+import { CATEGORY, STATUS, ZONE, dateTime, tk, type Status } from "../lib/format";
 import { Button, Field, Input, Modal, Select, Spinner, StatusBadge, cx } from "./ui";
 import { t } from "../lib/prefs";
 
@@ -207,6 +207,7 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
             <Money label={t("COD charge")} value={tk(data.parcel.codCharge)} />
           </div>
           <p className="-mt-3 text-xs text-ink-3">
+            {data.parcel.category && `${CATEGORY[data.parcel.category].emoji} ${CATEGORY[data.parcel.category].label} · `}
             {data.parcel.weightKg} {t("kg")}{data.parcel.itemDescription && ` · ${data.parcel.itemDescription}`}
             {data.parcel.note && ` · ${t("Note")}: ${data.parcel.note}`}
             {data.parcel.settlement === "paid" && ` · ${t("Paid to merchant")}`}

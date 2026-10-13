@@ -17,9 +17,11 @@ export const publicRates = query({
   handler: async (ctx) => {
     const r = await getRates(ctx);
     return {
-      insideDhaka: r.insideDhaka,
-      subDhaka: r.subDhaka,
-      outsideDhaka: r.outsideDhaka,
+      uttara: r.uttara,
+      dhakaCity: r.dhakaCity,
+      gazipurCity: r.gazipurCity,
+      narayanganjCity: r.narayanganjCity,
+      extraPerKg: r.extraPerKg,
       codPercent: r.codPercent,
     };
   },
@@ -28,11 +30,11 @@ export const publicRates = query({
 export const updateRates = mutation({
   args: {
     token: v.string(),
-    insideDhaka: v.number(),
-    subDhaka: v.number(),
-    outsideDhaka: v.number(),
-    extraPerKgInside: v.number(),
-    extraPerKgOutside: v.number(),
+    uttara: v.number(),
+    dhakaCity: v.number(),
+    gazipurCity: v.number(),
+    narayanganjCity: v.number(),
+    extraPerKg: v.number(),
     codPercent: v.number(),
     returnPercent: v.number(),
   },
