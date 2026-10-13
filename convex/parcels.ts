@@ -264,7 +264,7 @@ export const labels = query({
 export const fraudCheck = query({
   args: { token: v.string(), phone: v.string() },
   handler: async (ctx, args) => {
-    await requireUser(ctx, args.token, ["admin", "merchant"]);
+    const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
     let phone: string;
     try {
       phone = normalisePhone(args.phone);
@@ -276,23 +276,111 @@ export const fraudCheck = query({
       .withIndex("by_recipientPhone", (q) => q.eq("recipientPhone", phone))
       .order("desc")
       .take(500);
-    const count = (s: Doc<"parcels">["status"][]) => rows.filter((r) => s.includes(r.status)).length;
-    const delivered = count(["delivered", "partial_delivered"]);
-    const returned = count(["returned", "returning"]);
-    const cancelled = count(["cancelled"]);
-    const decided = delivered + returned;
+    const is = (r: Doc<"parcels">, s: Doc<"parcels">["status"][]) => s.includes(r.status);
+    const delivered = rows.filter((r) => is(r, ["delivered"])).length;
+    const partial = rows.filter((r) => is(r, ["partial_delivered"])).length;
+    const returned = rows.filter((r) => is(r, ["returned", "returning"])).length;
+    const cancelled = rows.filter((r) => is(r, ["cancelled"])).length;
+    const decided = delivered + partial + returned;
+    const inProgress = rows.length - decided - cancelled;
+
+    // Money: what was asked on parcels that reached an end, what was paid, what was refused.
+    let collected = 0;
+    let refused = 0;
+    for (const r of rows) {
+      if (is(r, ["delivered", "partial_delivered"])) {
+        collected += r.collectedAmount;
+        refused += Math.max(0, r.codAmount - r.collectedAmount);
+      } else if (is(r, ["returned", "returning"])) refused += r.codAmount;
+    }
+
+    const risk = riskScore(rows, { delivered, partial, returned, cancelled, inProgress });
     return {
       phone,
       total: rows.length,
-      delivered,
+      delivered: delivered + partial,
+      partial,
       returned,
       cancelled,
-      inProgress: rows.length - delivered - returned - cancelled,
-      successRate: decided ? Math.round((delivered / decided) * 100) : null,
+      inProgress,
+      successRate: decided ? Math.round(((delivered + partial) / decided) * 100) : null,
+      collected,
+      refused,
+      mine: user.role === "merchant" ? rows.filter((r) => r.merchantId === user._id).length : null,
+      merchants: new Set(rows.map((r) => r.merchantId)).size,
+      firstOrderAt: rows.at(-1)?.createdAt ?? null,
       lastOrderAt: rows[0]?.createdAt ?? null,
+      ...risk,
     };
   },
 });
+
+type RiskLevel = "low" | "medium" | "high";
+
+/*
+  Risk of a customer refusing the parcel, 0–100. Starts from the share of
+  parcels they did not take (a partial delivery counts as half), smoothed
+  towards 20% so one return out of one parcel doesn't read as 100%. Recent
+  behaviour, cancellations and a pile of open orders nudge it up or down.
+  Under 30 is low, 30–59 medium, 60+ high.
+*/
+function riskScore(
+  rows: Doc<"parcels">[], // newest first
+  c: { delivered: number; partial: number; returned: number; cancelled: number; inProgress: number },
+) {
+  const decided = c.delivered + c.partial + c.returned;
+  // Each reason is an English sentence with {a}/{b} slots, so the app can translate it.
+  const reasons: { text: string; a?: number; b?: number }[] = [];
+  const say = (text: string, a?: number, b?: number) => reasons.push({ text, a, b });
+  if (decided === 0) {
+    let score = 30;
+    say("New customer — no finished deliveries yet");
+    if (c.cancelled >= 2) {
+      score += 10;
+      say("Several orders cancelled before pickup");
+    }
+    if (c.inProgress >= 3) {
+      score += 10;
+      say("Many open orders at once");
+    }
+    return { riskScore: score, riskLevel: (score >= 60 ? "high" : "medium") as RiskLevel, reasons, isNew: true };
+  }
+
+  const failures = c.returned + c.partial * 0.5;
+  let score = ((failures + 0.6) / (decided + 3)) * 100;
+
+  const recent = rows.filter((r) =>
+    ["delivered", "partial_delivered", "returned", "returning"].includes(r.status),
+  );
+  const last3 = recent.slice(0, 3);
+  const returnedRecently = last3.filter((r) => r.status === "returned" || r.status === "returning").length;
+  if (last3.length >= 2 && returnedRecently >= 2) {
+    score += 15;
+    say("Refused most of their latest parcels");
+  } else if (last3.length === 3 && returnedRecently === 0) {
+    score -= 8;
+    say("Took their last 3 parcels");
+  }
+  if (c.returned === 0) say("Never refused a parcel");
+  else say("Refused {a} of {b} parcels", c.returned, decided);
+  if (c.partial > 0) say("Paid only part on {a} parcels", c.partial);
+  if (c.cancelled >= 2) {
+    score += Math.min(10, c.cancelled * 2);
+    say("Several orders cancelled before pickup");
+  }
+  if (c.inProgress >= 3) {
+    score += 5;
+    say("Many open orders at once");
+  }
+  if (decided >= 10 && c.returned / decided < 0.1) {
+    score -= 5;
+    say("Long, clean delivery record");
+  }
+
+  const riskScore = Math.max(3, Math.min(100, Math.round(score))); // nobody is risk-free
+  const riskLevel: RiskLevel = riskScore >= 60 ? "high" : riskScore >= 30 ? "medium" : "low";
+  return { riskScore, riskLevel, reasons, isNew: false };
+}
 
 /* --------------------------------------------------------------- writes */
 

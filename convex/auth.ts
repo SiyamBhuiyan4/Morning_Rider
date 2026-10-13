@@ -310,6 +310,8 @@ export const changePassword = mutation({
   handler: async (ctx, args) => {
     const user = await currentUser(ctx, args.token);
     if (!user) throw new ConvexError("Not signed in.");
+    // The admin passcode can only be set from the CLI (setAdminPasscode below).
+    if (user.role === "admin") throw new ConvexError("You do not have access to this.");
     const candidate = await derive(
       args.currentPassword.slice(0, 128),
       user.passwordSalt,
@@ -321,11 +323,11 @@ export const changePassword = mutation({
     await ctx.db.patch(
       "users",
       user._id,
-      user.role === "admin" ? await hashAdminPasscode(args.newPassword) : await hashPassword(args.newPassword),
+      await hashPassword(args.newPassword),
     );
     // Sign out every other device; this one gets a fresh session.
     await revokeSessions(ctx, user._id);
-    return await issueSession(ctx, user._id, user.role === "admin" ? ADMIN_SESSION_TTL_MS : undefined);
+    return await issueSession(ctx, user._id);
   },
 });
 

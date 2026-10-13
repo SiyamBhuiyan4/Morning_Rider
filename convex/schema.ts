@@ -64,6 +64,30 @@ export const payoutMethod = v.union(
 /** Merchant business verification. A merchant can send parcels only once approved. */
 export const verificationStatus = v.union(v.literal("submitted"), v.literal("approved"), v.literal("rejected"));
 
+export const maritalStatus = v.union(
+  v.literal("single"),
+  v.literal("married"),
+  v.literal("divorced"),
+  v.literal("widowed"),
+);
+export const religion = v.union(
+  v.literal("islam"),
+  v.literal("hinduism"),
+  v.literal("buddhism"),
+  v.literal("christianity"),
+  v.literal("other"),
+);
+export const education = v.union(
+  v.literal("none"),
+  v.literal("primary"),
+  v.literal("jsc"),
+  v.literal("ssc"),
+  v.literal("hsc"),
+  v.literal("diploma"),
+  v.literal("bachelor"),
+  v.literal("masters"),
+);
+
 export default defineSchema({
   users: defineTable({
     name: v.string(),
@@ -288,4 +312,36 @@ export default defineSchema({
   })
     .index("by_createdAt", ["createdAt"])
     .index("by_riderId_and_createdAt", ["riderId", "createdAt"]),
+
+  /*
+    Personal details the office keeps on each rider. Admin-only: never sent
+    to the rider app or to merchants. Every field is optional so a profile
+    can be filled in bit by bit.
+  */
+  riderProfiles: defineTable({
+    riderId: v.id("users"),
+    dateOfBirth: v.optional(v.string()), // YYYY-MM-DD
+    idType: v.optional(v.union(v.literal("nid"), v.literal("birth_certificate"))),
+    idNumber: v.optional(v.string()),
+    maritalStatus: v.optional(maritalStatus),
+    religion: v.optional(religion),
+    education: v.optional(education),
+    institution: v.optional(v.string()),
+    bloodGroup: v.optional(v.string()),
+    whatsapp: v.optional(v.string()),
+    facebook: v.optional(v.string()),
+    fatherName: v.optional(v.string()),
+    fatherPhone: v.optional(v.string()),
+    motherName: v.optional(v.string()),
+    motherPhone: v.optional(v.string()),
+    guardianName: v.optional(v.string()),
+    guardianRelation: v.optional(v.string()),
+    guardianPhone: v.optional(v.string()),
+    presentAddress: v.optional(v.string()),
+    permanentAddress: v.optional(v.string()),
+    bikeNumber: v.optional(v.string()),
+    licenseNumber: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_riderId", ["riderId"]),
 });

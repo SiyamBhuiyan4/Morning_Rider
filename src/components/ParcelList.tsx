@@ -16,7 +16,9 @@ export function ParcelList() {
   const toast = useToast();
   const isAdmin = me.role === "admin";
   const [status, setStatus] = useState<Status | "">(() => (new URLSearchParams(location.search).get("status") as Status) ?? "");
-  const [merchantId, setMerchantId] = useState<Id<"users"> | "">("");
+  const [merchantId, setMerchantId] = useState<Id<"users"> | "">(
+    () => (new URLSearchParams(location.search).get("merchant") as Id<"users"> | null) ?? "",
+  );
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<Id<"parcels"> | null>(null);

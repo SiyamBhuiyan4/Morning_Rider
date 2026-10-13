@@ -133,7 +133,7 @@ export function FraudCheck() {
   return (
     <>
       <PageHeader title={t("Fraud check")} subtitle={t("See a customer's delivery record across Morning Rider before you ship.")} />
-      <Card className="max-w-2xl p-6">
+      <Card className="max-w-3xl p-6">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -214,13 +214,13 @@ export function Account() {
 
   async function savePassword(e: FormEvent) {
     e.preventDefault();
-    if (pw.next !== pw.confirm) return toast.error(isAdmin ? t("New passcodes do not match.") : t("New passwords do not match."));
+    if (pw.next !== pw.confirm) return toast.error(t("New passwords do not match."));
     setBusy("pw");
     try {
       const s = await changePassword({ token, currentPassword: pw.current, newPassword: pw.next });
       signIn(s.token, s.expiresAt);
       setPw({ current: "", next: "", confirm: "" });
-      toast.ok(isAdmin ? t("Passcode changed. Other devices have been signed out.") : t("Password changed. Other devices have been signed out."));
+      toast.ok(t("Password changed. Other devices have been signed out."));
     } catch (err) {
       toast.error(err);
     } finally {
@@ -266,20 +266,20 @@ export function Account() {
             <Button type="submit" loading={busy === "profile"}>{t("Save profile")}</Button>
           </form>
         </Card>
-        <Card className="h-fit p-6">
-          <h2 className="mb-4 font-bold">{isAdmin ? t("Change admin passcode") : t("Change password")}</h2>
-          <form onSubmit={savePassword} className="space-y-4">
-            <Field label={isAdmin ? t("Current passcode") : t("Current password")}>{(id) => <Input id={id} type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required />}</Field>
-            <Field
-              label={isAdmin ? t("New passcode") : t("New password")}
-              hint={isAdmin ? t("At least 6 characters.") : t("At least 8 characters with a letter and a number.")}
-            >
-              {(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required minLength={isAdmin ? 6 : 8} />}
-            </Field>
-            <Field label={isAdmin ? t("Confirm new passcode") : t("Confirm new password")}>{(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required />}</Field>
-            <Button type="submit" variant="dark" loading={busy === "pw"}>{isAdmin ? t("Change passcode") : t("Change password")}</Button>
-          </form>
-        </Card>
+        {/* The admin passcode is changed only from the command line (auth:setAdminPasscode). */}
+        {!isAdmin && (
+          <Card className="h-fit p-6">
+            <h2 className="mb-4 font-bold">{t("Change password")}</h2>
+            <form onSubmit={savePassword} className="space-y-4">
+              <Field label={t("Current password")}>{(id) => <Input id={id} type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required />}</Field>
+              <Field label={t("New password")} hint={t("At least 8 characters with a letter and a number.")}>
+                {(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required minLength={8} />}
+              </Field>
+              <Field label={t("Confirm new password")}>{(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required />}</Field>
+              <Button type="submit" variant="dark" loading={busy === "pw"}>{t("Change password")}</Button>
+            </form>
+          </Card>
+        )}
       </div>
     </>
   );

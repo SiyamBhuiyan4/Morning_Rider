@@ -1,6 +1,6 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type QueryCtx } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   clean,
   derive,
@@ -20,6 +20,25 @@ function publicUser(u: Doc<"users">) {
   return rest;
 }
 
+/** True once a rider has been on any parcel or handed in any cash. */
+async function riderHasHistory(ctx: QueryCtx, riderId: Id<"users">) {
+  const parcel =
+    (await ctx.db
+      .query("parcels")
+      .withIndex("by_pickupRiderId_and_status", (q) => q.eq("pickupRiderId", riderId))
+      .first()) ??
+    (await ctx.db
+      .query("parcels")
+      .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", riderId))
+      .first());
+  if (parcel) return true;
+  const deposit = await ctx.db
+    .query("cashDeposits")
+    .withIndex("by_riderId_and_createdAt", (q) => q.eq("riderId", riderId))
+    .first();
+  return deposit !== null;
+}
+
 export const list = query({
   args: { token: v.string(), role, status: v.optional(userStatus) },
   handler: async (ctx, args) => {
@@ -35,7 +54,9 @@ export const list = query({
     }
     out.sort((a, b) => b.createdAt - a.createdAt);
 
-    if (args.role !== "rider") return out.map((u) => ({ ...publicUser(u), cashInHand: 0, activeTasks: 0 }));
+    if (args.role !== "rider") {
+      return out.map((u) => ({ ...publicUser(u), cashInHand: 0, activeTasks: 0, canDelete: false }));
+    }
 
     return await Promise.all(
       out.map(async (u) => {
@@ -59,6 +80,7 @@ export const list = query({
           ...publicUser(u),
           cashInHand: cash.reduce((s, p) => s + p.collectedAmount, 0),
           activeTasks: delivering.length + pickups.length,
+          canDelete: !(await riderHasHistory(ctx, u._id)),
         };
       }),
     );
@@ -143,6 +165,38 @@ export const setPassword = mutation({
     if (!user || user.role === "admin") throw new ConvexError("User not found.");
     await ctx.db.patch("users", user._id, await hashPassword(args.password.trim()));
     await revokeSessions(ctx, user._id);
+    return null;
+  },
+});
+
+/**
+ * Deletes a rider added by mistake. Only allowed when the rider has never
+ * touched a parcel or handed in cash, so no money record is left pointing at
+ * a missing person. Anyone with history must be suspended instead.
+ */
+export const removeRider = mutation({
+  args: { token: v.string(), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const user = await ctx.db.get("users", args.userId);
+    if (!user || user.role !== "rider") throw new ConvexError("Rider not found.");
+    if (await riderHasHistory(ctx, user._id)) {
+      throw new ConvexError("This rider has parcel or cash history, so they can't be deleted. Suspend them instead.");
+    }
+    await revokeSessions(ctx, user._id);
+    const apps = await ctx.db
+      .query("riderApplications")
+      .withIndex("by_phone", (q) => q.eq("phone", user.phone))
+      .take(10);
+    for (const a of apps) {
+      if (a.riderId === user._id) await ctx.db.patch("riderApplications", a._id, { riderId: undefined });
+    }
+    const profile = await ctx.db
+      .query("riderProfiles")
+      .withIndex("by_riderId", (q) => q.eq("riderId", user._id))
+      .unique();
+    if (profile) await ctx.db.delete("riderProfiles", profile._id);
+    await ctx.db.delete("users", user._id);
     return null;
   },
 });

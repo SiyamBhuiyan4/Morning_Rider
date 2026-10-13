@@ -26,6 +26,7 @@ import {
   Phone,
   ShieldCheck,
   FileSearch,
+  Trash2,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -38,6 +39,8 @@ import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Sp
 import { TrendChart } from "../components/TrendChart";
 import { t } from "../lib/prefs";
 import { VerificationBadge, VerificationQueue, VerificationReviewModal } from "./adminVerify";
+import { RiderProfileModal } from "./riderProfile";
+import { MerchantProfileModal } from "./merchantProfile";
 
 /* -------------------------------------------------------------- dashboard */
 
@@ -219,6 +222,7 @@ export function Merchants() {
   const [creating, setCreating] = useState(false);
   const [reset, setReset] = useState<{ name: string; password: string } | null>(null);
   const [docsFor, setDocsFor] = useState<Id<"users"> | null>(null);
+  const [viewing, setViewing] = useState<Id<"users"> | null>(null);
   const resetPassword = useMutation(api.users.resetPassword);
 
   async function act(userId: Id<"users">, status: "active" | "suspended", msg: string) {
@@ -253,7 +257,24 @@ export function Merchants() {
         ) : (
           <div className="divide-y divide-line">
             {rows.map((m) => (
-              <div key={m._id} className="flex flex-wrap items-center gap-4 p-4">
+              <div
+                key={m._id}
+                role="button"
+                tabIndex={0}
+                title={t("View merchant details")}
+                onClick={(e) => {
+                  // The action buttons in the row do their own thing.
+                  if ((e.target as HTMLElement).closest("button, a")) return;
+                  setViewing(m._id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    setViewing(m._id);
+                  }
+                }}
+                className="flex cursor-pointer flex-wrap items-center gap-4 p-4 outline-none transition hover:bg-page focus-visible:bg-page"
+              >
                 <div className="grid size-11 place-items-center rounded-xl bg-navy-50 font-bold text-navy-700">
                   {(m.businessName ?? m.name).slice(0, 1).toUpperCase()}
                 </div>
@@ -323,6 +344,7 @@ export function Merchants() {
       <CreateUserModal role="merchant" open={creating} onClose={() => setCreating(false)} />
       <TempPasswordModal value={reset} onClose={() => setReset(null)} />
       {docsFor && <VerificationReviewModal merchantId={docsFor} onClose={() => setDocsFor(null)} />}
+      <MerchantProfileModal merchantId={viewing} onClose={() => setViewing(null)} />
     </>
   );
 }
@@ -488,6 +510,8 @@ export function Riders() {
   const [creating, setCreating] = useState(false);
   const [settingPw, setSettingPw] = useState<{ _id: Id<"users">; name: string; phone: string } | null>(null);
   const [given, setGiven] = useState<{ name: string; phone: string; password: string } | null>(null);
+  const [deleting, setDeleting] = useState<{ _id: Id<"users">; name: string; phone: string } | null>(null);
+  const [viewing, setViewing] = useState<Id<"users"> | null>(null);
 
   return (
     <>
@@ -506,7 +530,24 @@ export function Riders() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((r) => (
-            <Card key={r._id} className="p-5">
+            <Card key={r._id} className="p-0 transition hover:border-brand/40">
+              <div
+                role="button"
+                tabIndex={0}
+                title={t("View full profile")}
+                onClick={(e) => {
+                  // The action buttons inside the card do their own thing.
+                  if ((e.target as HTMLElement).closest("button, a")) return;
+                  setViewing(r._id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    setViewing(r._id);
+                  }
+                }}
+                className="h-full cursor-pointer rounded-2xl p-5 outline-none focus-visible:ring-4 focus-visible:ring-brand/30"
+              >
               <div className="flex items-center gap-3">
                 <div className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand">
                   <Bike className="size-6" />
@@ -550,6 +591,18 @@ export function Riders() {
                 >
                   {r.status === "active" ? t("Suspend") : t("Activate")}
                 </Button>
+                {r.canDelete && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={Trash2}
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => setDeleting({ _id: r._id, name: r.name, phone: r.phone })}
+                  >
+                    {t("Delete")}
+                  </Button>
+                )}
+              </div>
               </div>
             </Card>
           ))}
@@ -567,7 +620,65 @@ export function Riders() {
         }}
       />
       <RiderPasswordModal value={given} onClose={() => setGiven(null)} />
+      <DeleteRiderModal rider={deleting} onClose={() => setDeleting(null)} />
+      <RiderProfileModal riderId={viewing} onClose={() => setViewing(null)} />
     </>
+  );
+}
+
+/** Confirms deleting a rider with no history. The server checks again. */
+function DeleteRiderModal({
+  rider,
+  onClose,
+}: {
+  rider: { _id: Id<"users">; name: string; phone: string } | null;
+  onClose: () => void;
+}) {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const remove = useMutation(api.users.removeRider);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <Modal
+      open={rider !== null}
+      onClose={onClose}
+      title={t("Delete rider?")}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>{t("Cancel")}</Button>
+          <Button
+            variant="danger"
+            icon={Trash2}
+            loading={busy}
+            onClick={async () => {
+              if (!rider) return;
+              setBusy(true);
+              try {
+                await remove({ token, userId: rider._id });
+                toast.ok(t("Rider deleted."));
+                onClose();
+              } catch (e) {
+                toast.error(e);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t("Delete")}
+          </Button>
+        </>
+      }
+    >
+      {rider && (
+        <p className="text-sm text-ink-2">
+          {t("{name} ({phone}) will be removed for good and can no longer log in. This can't be undone.", {
+            name: rider.name,
+            phone: rider.phone,
+          })}
+        </p>
+      )}
+    </Modal>
   );
 }
 

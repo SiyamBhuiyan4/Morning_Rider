@@ -23,6 +23,30 @@ const MERCHANTS = [
   { name: "Tanvir Ahmed", businessName: "Demo Organic Food", phone: "01300000103", pickupAddress: "Sector 7, Uttara, Dhaka", payoutMethod: "bank" as const, payoutAccount: "City Bank 1234567890", status: "pending" as const },
 ];
 
+/* Made-up personal details so the rider profile page has something to show. */
+const RIDER_PROFILES = [
+  {
+    dateOfBirth: "1998-03-14", idType: "nid" as const, idNumber: "1990000000001", maritalStatus: "married" as const,
+    religion: "islam" as const, education: "hsc" as const, institution: "Mirpur College", bloodGroup: "B+",
+    facebook: "facebook.com/demo.karim", fatherName: "Abdul Karim", fatherPhone: "01300000301",
+    motherName: "Rahima Begum", motherPhone: "01300000302", presentAddress: "Section 10, Mirpur, Dhaka",
+    permanentAddress: "Village Charpara, Mymensingh", bikeNumber: "Dhaka Metro-HA 11-0001", licenseNumber: "DK0000001",
+  },
+  {
+    dateOfBirth: "2001-07-02", idType: "nid" as const, idNumber: "2000000000002", maritalStatus: "single" as const,
+    religion: "islam" as const, education: "ssc" as const, bloodGroup: "O+", facebook: "facebook.com/demo.sohel",
+    fatherName: "Mokbul Hossain", fatherPhone: "01300000303", guardianName: "Rafiq Uddin", guardianRelation: "Uncle",
+    guardianPhone: "01300000304", presentAddress: "Road 4, Dhanmondi, Dhaka", permanentAddress: "Sadar, Comilla",
+    bikeNumber: "Dhaka Metro-LA 22-0002",
+  },
+  {
+    dateOfBirth: "2004-11-20", idType: "birth_certificate" as const, idNumber: "20040000000000003",
+    maritalStatus: "single" as const, religion: "hinduism" as const, education: "jsc" as const, bloodGroup: "A+",
+    fatherName: "Sunil Das", fatherPhone: "01300000305", motherName: "Mala Das", motherPhone: "01300000306",
+    presentAddress: "Sector 11, Uttara, Dhaka", permanentAddress: "Sector 11, Uttara, Dhaka",
+  },
+];
+
 const RIDERS = [
   { name: "Demo Rider Karim", phone: "01300000201", riderArea: "Mirpur" },
   { name: "Demo Rider Sohel", phone: "01300000202", riderArea: "Dhanmondi" },
@@ -73,6 +97,16 @@ const PLAN: { status: Status; daysAgo: number; partial?: number; cashIn?: boolea
   { status: "returned", daysAgo: 5 },
   { status: "returned", daysAgo: 10, paid: true },
   { status: "cancelled", daysAgo: 4 },
+];
+
+/*
+  Two customers who order again and again, so Fraud check has something to
+  show: one takes every parcel (low risk), one keeps refusing (high risk).
+  Numbers are indexes into PLAN.
+*/
+const REPEAT_CUSTOMERS = [
+  { phone: "01710000777", parcels: [15, 16, 17, 18, 19] },
+  { phone: "01710000666", parcels: [21, 22, 23, 3] },
 ];
 
 /** The steps a parcel went through to reach `status`. */
@@ -146,10 +180,17 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
   }
   const activeMerchants = merchantIds.slice(0, 2);
   const riderIds: Id<"users">[] = [];
-  for (const r of RIDERS) {
-    riderIds.push(
-      await ctx.db.insert("users", { ...r, role: "rider", status: "active", demo: true, ...(await lockedPassword()), createdAt: now - 12 * DAY }),
-    );
+  for (const [i, r] of RIDERS.entries()) {
+    const riderId = await ctx.db.insert("users", {
+      ...r,
+      role: "rider",
+      status: "active",
+      demo: true,
+      ...(await lockedPassword()),
+      createdAt: now - 12 * DAY,
+    });
+    riderIds.push(riderId);
+    await ctx.db.insert("riderProfiles", { riderId, ...RIDER_PROFILES[i], whatsapp: r.phone, updatedAt: now });
   }
 
   const counts = new Map<string, number>();
@@ -160,7 +201,8 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
 
   for (let i = 0; i < PLAN.length; i++) {
     const plan = PLAN[i];
-    const [recipientName, address, district, zone] = CUSTOMERS[i % CUSTOMERS.length];
+    const regular = REPEAT_CUSTOMERS.find((c) => c.parcels.includes(i));
+    const [recipientName, address, district, zone] = regular ? CUSTOMERS[regular.parcels[0] % CUSTOMERS.length] : CUSTOMERS[i % CUSTOMERS.length];
     const category = CATEGORIES[i % CATEGORIES.length];
     const merchantId = activeMerchants[i % activeMerchants.length];
     const pickupRiderId = riderIds[i % riderIds.length];
@@ -182,7 +224,7 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
     crypto.getRandomValues(bytes);
     for (const b of bytes) trackingCode += CODE[b % 32];
 
-    const phone = "017" + String(10000000 + ((i * 7919) % 89999999)).padStart(8, "0");
+    const phone = regular?.phone ?? "017" + String(10000000 + ((i * 7919) % 89999999)).padStart(8, "0");
     const doc = {
       trackingCode,
       merchantId,
@@ -364,6 +406,11 @@ async function clear(ctx: MutationCtx) {
         .withIndex("by_riderId_and_createdAt", (q) => q.eq("riderId", u._id))
         .take(500);
       for (const d of deposits) await ctx.db.delete("cashDeposits", d._id);
+      const profile = await ctx.db
+        .query("riderProfiles")
+        .withIndex("by_riderId", (q) => q.eq("riderId", u._id))
+        .unique();
+      if (profile) await ctx.db.delete("riderProfiles", profile._id);
     }
     const sessions = await ctx.db
       .query("sessions")
