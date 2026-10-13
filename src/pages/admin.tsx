@@ -39,7 +39,8 @@ import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Sp
 import { TrendChart } from "../components/TrendChart";
 import { t } from "../lib/prefs";
 import { VerificationBadge, VerificationQueue, VerificationReviewModal } from "./adminVerify";
-import { RiderProfileModal } from "./riderProfile";
+import { AddRiderModal, RiderProfileModal } from "./riderProfile";
+import { generatePassword } from "../lib/password";
 import { MerchantProfileModal } from "./merchantProfile";
 import { LiveBadge, LiveFeed, RidersOnRoad, Ticker } from "../components/Live";
 import { RangePills, rangeLabel, useDateRange } from "../components/RangePicker";
@@ -415,14 +416,6 @@ export function Merchants() {
   );
 }
 
-/** A readable strong password: letters + digits, no look-alike characters. */
-function generatePassword() {
-  const letters = "abcdefghjkmnpqrstuvwxyz";
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  const word = [...bytes.slice(0, 6)].map((b) => letters[b % letters.length]).join("");
-  return "Mr" + word + String(10 + (bytes[6] % 90));
-}
 
 /** Password box the office fills in for a rider, with a Generate button. */
 function RiderPasswordField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -675,7 +668,14 @@ export function Riders() {
         </div>
       )}
 
-      <CreateUserModal role="rider" open={creating} onClose={() => setCreating(false)} />
+      <AddRiderModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        onCreated={(v) => {
+          setCreating(false);
+          setGiven(v);
+        }}
+      />
       <SetRiderPasswordModal
         key={settingPw?._id}
         rider={settingPw}

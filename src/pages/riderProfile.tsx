@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Bike, ExternalLink, MessageCircle, Pencil, Phone } from "lucide-react";
 import { navigate } from "../lib/router";
+import { generatePassword } from "../lib/password";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
@@ -251,15 +252,31 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ProfileForm({ data, onDone }: { data: Data; onDone: () => void }) {
+/**
+ * The rider details form. With `data` it edits an existing rider; without it
+ * it is the "Add rider" form, which also asks for the login phone and password
+ * and creates the account and profile together.
+ */
+function ProfileForm({
+  data,
+  onDone,
+  onCreated,
+}: {
+  data?: Data;
+  onDone: () => void;
+  onCreated?: (v: { name: string; phone: string; password: string }) => void;
+}) {
   const { token } = useAuthed();
   const toast = useToast();
   const save = useMutation(api.riderProfiles.save);
-  const p = data.profile;
+  const create = useMutation(api.riderProfiles.create);
+  const adding = !data;
+  const p = data?.profile;
+  const [login, setLogin] = useState({ phone: "", password: generatePassword() });
   const [f, setF] = useState({
-    name: data.rider.name,
-    email: data.rider.email ?? "",
-    riderArea: data.rider.riderArea ?? "",
+    name: data?.rider.name ?? "",
+    email: data?.rider.email ?? "",
+    riderArea: data?.rider.riderArea ?? "",
     dateOfBirth: p?.dateOfBirth ?? "",
     idType: p?.idType ?? "nid",
     idNumber: p?.idNumber ?? "",
@@ -291,17 +308,22 @@ function ProfileForm({ data, onDone }: { data: Data; onDone: () => void }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await save({
-        token,
-        riderId: data.rider._id,
+      const form = {
         ...f,
         idType: f.idType as "nid" | "birth_certificate",
         maritalStatus: (f.maritalStatus || undefined) as Marital | undefined,
         religion: (f.religion || undefined) as Religion | undefined,
         education: (f.education || undefined) as Education | undefined,
-      });
-      toast.ok(t("Profile saved."));
-      onDone();
+      };
+      if (data) {
+        await save({ token, riderId: data.rider._id, ...form });
+        toast.ok(t("Profile saved."));
+        onDone();
+      } else {
+        const r = await create({ token, ...form, phone: login.phone, password: login.password });
+        toast.ok(t("{name} added.", { name: f.name }));
+        onCreated?.({ name: f.name, phone: r.phone, password: login.password.trim() });
+      }
     } catch (err) {
       toast.error(err);
     } finally {
@@ -319,6 +341,42 @@ function ProfileForm({ data, onDone }: { data: Data; onDone: () => void }) {
       <FormSection title={t("Basic")}>
         {text("name", t("Full name"), { required: true })}
         {text("riderArea", t("Working area"), { placeholder: t("e.g. Mirpur, Uttara") })}
+        {adding && (
+          <>
+            <Field label={t("Phone number (login)")}>
+              {(id) => (
+                <Input
+                  id={id}
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="01XXXXXXXXX"
+                  value={login.phone}
+                  onChange={(e) => setLogin({ ...login, phone: e.target.value })}
+                  required
+                />
+              )}
+            </Field>
+            <Field label={t("Rider's password")} hint={t("At least 8 characters with a letter and a number. The rider collects it from the office.")}>
+              {(id) => (
+                <div className="flex gap-2">
+                  <Input
+                    id={id}
+                    type="text"
+                    autoComplete="off"
+                    value={login.password}
+                    onChange={(e) => setLogin({ ...login, password: e.target.value })}
+                    className="font-mono"
+                    required
+                    minLength={8}
+                  />
+                  <Button type="button" variant="outline" className="shrink-0" onClick={() => setLogin({ ...login, password: generatePassword() })}>
+                    {t("Generate")}
+                  </Button>
+                </div>
+              )}
+            </Field>
+          </>
+        )}
       </FormSection>
 
       <FormSection title={t("Personal")}>
@@ -423,7 +481,7 @@ function ProfileForm({ data, onDone }: { data: Data; onDone: () => void }) {
           {t("Cancel")}
         </Button>
         <Button type="submit" loading={busy}>
-          {t("Save profile")}
+          {adding ? t("Create rider") : t("Save profile")}
         </Button>
       </div>
     </form>
@@ -438,3 +496,28 @@ function FormSection({ title, children }: { title: string; children: ReactNode }
     </fieldset>
   );
 }
+
+/** "Add rider": login + every profile detail in one form. */
+export function AddRiderModal({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (v: { name: string; phone: string; password: string }) => void;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} title={t("Add rider")} wide>
+      {open && (
+        <>
+          <p className="mb-5 text-sm text-ink-2">
+            {t("Only name, phone and password are required. Fill in the rest now or later from the rider's profile.")}
+          </p>
+          <ProfileForm onDone={onClose} onCreated={onCreated} />
+        </>
+      )}
+    </Modal>
+  );
+}
+

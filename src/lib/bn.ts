@@ -1064,4 +1064,10 @@ export const BN: Record<string, string> = {
   "Riders' messages show up here the moment they're sent.": "রাইডাররা মেসেজ পাঠানোর সাথে সাথেই এখানে দেখা যাবে।",
   "Not found.": "পাওয়া যায়নি।",
   "No conversation with this person yet.": "এই ব্যক্তির সাথে এখনো কোনো কথোপকথন নেই।",
+  "This is a rider account. Please sign in on the Rider login page.": "এটি একটি রাইডার অ্যাকাউন্ট। অনুগ্রহ করে রাইডার লগইন পেজ থেকে সাইন ইন করুন।",
+  "This is a merchant account. Please sign in on the Merchant login page.": "এটি একটি মার্চেন্ট অ্যাকাউন্ট। অনুগ্রহ করে মার্চেন্ট লগইন পেজ থেকে সাইন ইন করুন।",
+  "Go to Rider login →": "রাইডার লগইনে যান →",
+  "Go to Merchant login →": "মার্চেন্ট লগইনে যান →",
+  "Create rider": "রাইডার তৈরি করুন",
+  "Only name, phone and password are required. Fill in the rest now or later from the rider's profile.": "শুধু নাম, ফোন ও পাসওয়ার্ড বাধ্যতামূলক। বাকি তথ্য এখন বা পরে রাইডারের প্রোফাইল থেকে দিতে পারবেন।",
 };

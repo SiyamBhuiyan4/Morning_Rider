@@ -542,12 +542,14 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [wrongDoor, setWrongDoor] = useState<"rider" | "merchant" | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
+    setWrongDoor(null);
     try {
       const r =
         door === "admin"
@@ -558,7 +560,10 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
       if (r.ok) {
         signIn(r.token, r.expiresAt);
         navigate(safeNext(nextParam()), { replace: true });
-      } else setError(translateServer(r.error));
+      } else {
+        setError(translateServer(r.error));
+        if ("wrongDoor" in r && r.wrongDoor) setWrongDoor(r.wrongDoor);
+      }
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -602,6 +607,14 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
           )}
         </Field>
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">{error}</p>}
+        {wrongDoor && (
+          <Link
+            href={withNext(wrongDoor === "rider" ? "/rider" : "/login")}
+            className="block rounded-xl bg-brand px-3.5 py-2.5 text-center text-sm font-bold text-white hover:bg-brand-600"
+          >
+            {wrongDoor === "rider" ? t("Go to Rider login →") : t("Go to Merchant login →")}
+          </Link>
+        )}
         <Button type="submit" size="lg" loading={busy} variant={door === "rider" ? "dark" : "primary"} className="w-full">
           {t("Sign in")}
         </Button>

@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { clean, normalisePhone, requireUser } from "./lib/auth";
+import { clean, hashPassword, normalisePhone, requireUser } from "./lib/auth";
 import { education, maritalStatus, religion } from "./schema";
 
 /*
@@ -68,10 +68,8 @@ const optionalPhone = (raw: string | undefined, field: string) => {
   }
 };
 
-export const save = mutation({
-  args: {
-    token: v.string(),
-    riderId: v.id("users"),
+/** Everything on the rider profile form except the login (phone + password). */
+const profileFields = {
     name: v.string(),
     email: v.optional(v.string()),
     riderArea: v.optional(v.string()),
@@ -97,12 +95,11 @@ export const save = mutation({
     bikeNumber: v.optional(v.string()),
     licenseNumber: v.optional(v.string()),
     notes: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await requireUser(ctx, args.token, ["admin"]);
-    const rider = await ctx.db.get("users", args.riderId);
-    if (!rider || rider.role !== "rider") throw new ConvexError("Rider not found.");
+  };
+const profileArgs = v.object(profileFields);
 
+/** Checks and tidies the form; throws a readable error for anything wrong. */
+function buildProfile(args: typeof profileArgs.type) {
     const name = clean(args.name, 80, "Name");
     if (!name) throw new ConvexError("Name is required.");
     const email = clean(args.email, 120, "Email");
@@ -156,12 +153,18 @@ export const save = mutation({
       notes: text(args.notes, 1000, "Notes"),
       updatedAt: Date.now(),
     } satisfies Omit<Doc<"riderProfiles">, "_id" | "_creationTime" | "riderId">;
+    return { name, email: email || undefined, riderArea: clean(args.riderArea, 80, "Area") || undefined, profile };
+}
 
-    await ctx.db.patch("users", rider._id, {
-      name,
-      email: email || undefined,
-      riderArea: clean(args.riderArea, 80, "Area") || undefined,
-    });
+export const save = mutation({
+  args: { token: v.string(), riderId: v.id("users"), ...profileFields },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const rider = await ctx.db.get("users", args.riderId);
+    if (!rider || rider.role !== "rider") throw new ConvexError("Rider not found.");
+    const { token: _t, riderId: _r, ...form } = args;
+    const { name, email, riderArea, profile } = buildProfile(form);
+    await ctx.db.patch("users", rider._id, { name, email, riderArea });
     const existing = await ctx.db
       .query("riderProfiles")
       .withIndex("by_riderId", (q) => q.eq("riderId", rider._id))
@@ -171,3 +174,32 @@ export const save = mutation({
     return null;
   },
 });
+
+/** "Add rider": the login and the whole profile in one go, so nothing is half-made. */
+export const create = mutation({
+  args: { token: v.string(), phone: v.string(), password: v.string(), ...profileFields },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const { token: _t, phone: rawPhone, password, ...form } = args;
+    const phone = normalisePhone(rawPhone);
+    const clash = await ctx.db
+      .query("users")
+      .withIndex("by_phone", (q) => q.eq("phone", phone))
+      .unique();
+    if (clash) throw new ConvexError("An account with this phone number already exists.");
+    const { name, email, riderArea, profile } = buildProfile(form);
+    const riderId = await ctx.db.insert("users", {
+      name,
+      phone,
+      email,
+      riderArea,
+      role: "rider",
+      status: "active",
+      ...(await hashPassword(password.trim())),
+      createdAt: Date.now(),
+    });
+    await ctx.db.insert("riderProfiles", { riderId, ...profile, whatsapp: profile.whatsapp ?? phone });
+    return { riderId, phone };
+  },
+});
+

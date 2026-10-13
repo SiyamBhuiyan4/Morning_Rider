@@ -27,21 +27,23 @@ import { payoutMethod } from "./schema";
   so `login` reports failure by *returning* — otherwise the failure row would
   be discarded together with the error and the count would never grow.
 */
-const MAX_FAILURES = 5;
+const MAX_FAILURES = 1000; // Siyam's choice (2026-10-14); was 5
 const FAILURE_WINDOW_MS = 15 * 60 * 1000;
 /*
   Site-wide ceiling. The per-phone lock stops guessing one account; this stops
   "password spraying" — one common password tried against many numbers —
   which never trips any single account's lock.
 */
-const GLOBAL_MAX_FAILURES = 300;
+const GLOBAL_MAX_FAILURES = 1000; // must be >= MAX_FAILURES; was 300
 /** Public sign-ups allowed per hour, so nobody can flood the approval queue. */
 const MAX_SIGNUPS_PER_HOUR = 30;
 
 /** A fixed salt for the decoy derivation when the phone has no account. */
 const DECOY_SALT = "6d6f726e696e67726964657264656379";
 
-type LoginResult = { ok: true; token: string; expiresAt: number } | { ok: false; error: string };
+type LoginResult =
+  | { ok: true; token: string; expiresAt: number }
+  | { ok: false; error: string; wrongDoor?: "rider" | "merchant" };
 
 /*
   Two front doors. The main website signs in merchants and riders only; the
@@ -183,7 +185,33 @@ async function attemptLogin(
     user?.passwordSalt ?? DECOY_SALT,
     user?.passwordIterations ?? PBKDF2_ITERATIONS,
   );
-  if (!user || !timingSafeEqual(candidate, user.passwordHash) || !roles.includes(user.role)) {
+  let matches = !!user && timingSafeEqual(candidate, user.passwordHash);
+  /*
+    Passwords are stored without spaces at either end (Set password trims
+    them), but one copied from the hand-over dialog can pick up a space.
+    Accept the trimmed form too.
+  */
+  const trimmed = args.password.trim();
+  if (user && !matches && trimmed !== args.password && trimmed.length > 0) {
+    matches = timingSafeEqual(await derive(trimmed, user.passwordSalt, user.passwordIterations), user.passwordHash);
+  }
+  /*
+    Right password, wrong door (a rider on the merchant login or the other
+    way round): say where to go instead of "wrong password". Only reachable
+    with the correct password, so it reveals nothing to a guesser, and it is
+    not counted as a failed try. Admin accounts never get this hint.
+  */
+  if (user && matches && !roles.includes(user.role) && (user.role === "rider" || user.role === "merchant")) {
+    return {
+      ok: false,
+      error:
+        user.role === "rider"
+          ? "This is a rider account. Please sign in on the Rider login page."
+          : "This is a merchant account. Please sign in on the Merchant login page.",
+      wrongDoor: user.role,
+    };
+  }
+  if (!user || !matches || !roles.includes(user.role)) {
     await ctx.db.insert("loginFailures", { phone, at: now });
     const old = await ctx.db
       .query("loginFailures")

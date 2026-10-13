@@ -145,7 +145,7 @@ export const create = mutation({
         args.role === "merchant" ? required(args.businessName, 100, "Business name") : undefined,
       pickupAddress: args.role === "merchant" ? clean(args.pickupAddress, 300, "Pickup address") : undefined,
       riderArea: args.role === "rider" ? clean(args.riderArea, 80, "Area") || undefined : undefined,
-      ...(await hashPassword(args.password)),
+      ...(await hashPassword(args.password.trim())),
       createdAt: Date.now(),
     });
     return null;
