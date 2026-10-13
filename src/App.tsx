@@ -10,6 +10,7 @@ import { BulkUpload, MerchantDashboard, MerchantPayments } from "./pages/merchan
 import { RiderCash, RiderTasks } from "./pages/rider";
 import { Account, EditParcel, FraudCheck, NewParcel, ParcelsPage } from "./pages/shared";
 import { PrintLabels, PrintPayout } from "./pages/print";
+import { VerifyBusiness } from "./pages/verify";
 import { IS_ADMIN_PORTAL } from "./lib/portal";
 
 function Redirect({ to }: { to: string }) {
@@ -85,6 +86,7 @@ function route(path: string, role: "admin" | "merchant" | "rider"): ReactNode {
   if (role === "merchant") {
     if (path === "/app") return <MerchantDashboard />;
     if (path === "/app/payments") return <MerchantPayments />;
+    if (path === "/app/verify") return <VerifyBusiness />;
     return <Redirect to="/app" />;
   }
 

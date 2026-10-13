@@ -24,6 +24,8 @@ import {
   Mail,
   MessageCircle,
   Phone,
+  ShieldCheck,
+  FileSearch,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -35,6 +37,7 @@ import { PAYOUT_METHOD, STATUS, date, dateTime, longDateTime, num, startOfToday,
 import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner, StatCard, StatusBadge, cx } from "../components/ui";
 import { TrendChart } from "../components/TrendChart";
 import { t } from "../lib/prefs";
+import { VerificationBadge, VerificationQueue, VerificationReviewModal } from "./adminVerify";
 
 /* -------------------------------------------------------------- dashboard */
 
@@ -69,6 +72,15 @@ export function AdminDashboard() {
         >
           <Store className="size-5" />
           {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
+        </button>
+      )}
+      {d.pendingVerifications > 0 && (
+        <button
+          onClick={() => navigate("/app/merchants")}
+          className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-sun-100 px-5 py-3.5 text-left text-sm font-semibold text-amber-900 ring-1 ring-sun/50 hover:bg-sun/30"
+        >
+          <ShieldCheck className="size-5" />
+          {t("{n} business(es) waiting for verification →", { n: d.pendingVerifications })}
         </button>
       )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -165,7 +177,7 @@ function DemoCard() {
             </p>
             <p className="mt-1 text-ink-3">
               {t(
-                "To see the merchant or rider panel: open Merchants or Riders, press “Reset password” on a Demo account, then sign in on the main website with its phone number.",
+                "To see the merchant or rider panel: on a Demo account press “Reset password” (Merchants) or “Set password” (Riders), then sign in on the main website with its phone number.",
               )}
             </p>
           </div>
@@ -206,6 +218,7 @@ export function Merchants() {
   const setStatus = useMutation(api.users.setStatus);
   const [creating, setCreating] = useState(false);
   const [reset, setReset] = useState<{ name: string; password: string } | null>(null);
+  const [docsFor, setDocsFor] = useState<Id<"users"> | null>(null);
   const resetPassword = useMutation(api.users.resetPassword);
 
   async function act(userId: Id<"users">, status: "active" | "suspended", msg: string) {
@@ -220,7 +233,8 @@ export function Merchants() {
   return (
     <>
       <PageHeader title={t("Merchants")} subtitle={t("Businesses that send parcels with Morning Rider.")} actions={<Button icon={Plus} onClick={() => setCreating(true)}>{t("Add merchant")}</Button>} />
-      <div className="mb-4 flex gap-2">
+      <VerificationQueue />
+      <div className="mb-4 flex flex-wrap gap-2">
         {(["active", "pending", "suspended"] as const).map((k) => (
           <Button key={k} size="sm" variant={tab === k ? "dark" : "outline"} onClick={() => setTab(k)}>
             {k === "pending"
@@ -244,9 +258,10 @@ export function Merchants() {
                   {(m.businessName ?? m.name).slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-48 flex-1">
-                  <p className="flex items-center gap-2 font-bold">
+                  <p className="flex flex-wrap items-center gap-2 font-bold">
                     {m.businessName}
                     {m.demo && <Badge tone="brand">{t("Demo")}</Badge>}
+                    <VerificationBadge status={m.verification} />
                   </p>
                   <p className="text-sm text-ink-2">
                     {m.name} · {m.phone}
@@ -257,6 +272,11 @@ export function Merchants() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {m.verification !== undefined && (
+                    <Button size="sm" variant="outline" icon={FileSearch} onClick={() => setDocsFor(m._id)}>
+                      {t("Documents")}
+                    </Button>
+                  )}
                   {m.status === "pending" && (
                     <Button size="sm" icon={UserCheck} onClick={() => act(m._id, "active", t("{name} approved.", { name: m.businessName ?? m.name }))}>
                       {t("Approve")}
@@ -302,7 +322,99 @@ export function Merchants() {
       </Card>
       <CreateUserModal role="merchant" open={creating} onClose={() => setCreating(false)} />
       <TempPasswordModal value={reset} onClose={() => setReset(null)} />
+      {docsFor && <VerificationReviewModal merchantId={docsFor} onClose={() => setDocsFor(null)} />}
     </>
+  );
+}
+
+/** A readable strong password: letters + digits, no look-alike characters. */
+function generatePassword() {
+  const letters = "abcdefghjkmnpqrstuvwxyz";
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const word = [...bytes.slice(0, 6)].map((b) => letters[b % letters.length]).join("");
+  return "Mr" + word + String(10 + (bytes[6] % 90));
+}
+
+/** Password box the office fills in for a rider, with a Generate button. */
+function RiderPasswordField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <Field label={t("Rider's password")} hint={t("At least 8 characters with a letter and a number. The rider collects it from the office.")}>
+      {(id) => (
+        <div className="flex gap-2">
+          <Input id={id} type="text" autoComplete="off" value={value} onChange={(e) => onChange(e.target.value)} className="font-mono" required minLength={8} />
+          <Button type="button" variant="outline" className="shrink-0 whitespace-nowrap" onClick={() => onChange(generatePassword())}>
+            {t("Generate")}
+          </Button>
+        </div>
+      )}
+    </Field>
+  );
+}
+
+/** Shown after the office sets a rider's password, so it can be handed over. */
+function RiderPasswordModal({ value, onClose }: { value: { name: string; phone: string; password: string } | null; onClose: () => void }) {
+  return (
+    <Modal open={!!value} onClose={onClose} title={t("Rider login details")} footer={<Button onClick={onClose}>{t("Done")}</Button>}>
+      <p className="text-sm text-ink-2">
+        {t("Give these to {name}. They sign in on the rider login page with this phone number and password.", { name: value?.name ?? "" })}
+      </p>
+      <div className="mt-4 space-y-2 rounded-2xl bg-navy-50 p-4 text-center">
+        <p className="font-mono text-lg font-bold select-all">{value?.phone}</p>
+        <p className="font-mono text-2xl font-bold select-all">{value?.password}</p>
+      </div>
+    </Modal>
+  );
+}
+
+/** Office sets (or changes) a rider's permanent password. */
+function SetRiderPasswordModal({
+  rider,
+  onClose,
+  onDone,
+}: {
+  rider: { _id: Id<"users">; name: string; phone: string } | null;
+  onClose: () => void;
+  onDone: (v: { name: string; phone: string; password: string }) => void;
+}) {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const setPassword = useMutation(api.users.setPassword);
+  const [password, setPw] = useState(() => generatePassword());
+  const [busy, setBusy] = useState(false);
+  if (!rider) return null;
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={t("Set password for {name}", { name: rider.name })}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>{t("Back")}</Button>
+          <Button
+            loading={busy}
+            icon={KeyRound}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await setPassword({ token, userId: rider._id, password });
+                toast.ok(t("Password saved."));
+                onDone({ name: rider.name, phone: rider.phone, password });
+              } catch (e) {
+                toast.error(e);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t("Save password")}
+          </Button>
+        </>
+      }
+    >
+      <RiderPasswordField value={password} onChange={setPw} />
+      <p className="mt-3 text-xs text-ink-3">{t("The rider is signed out on every phone and must use the new password.")}</p>
+    </Modal>
   );
 }
 
@@ -373,9 +485,9 @@ export function Riders() {
   const toast = useToast();
   const rows = useQuery(api.users.list, { token, role: "rider" });
   const setStatus = useMutation(api.users.setStatus);
-  const resetPassword = useMutation(api.users.resetPassword);
   const [creating, setCreating] = useState(false);
-  const [reset, setReset] = useState<{ name: string; password: string } | null>(null);
+  const [settingPw, setSettingPw] = useState<{ _id: Id<"users">; name: string; phone: string } | null>(null);
+  const [given, setGiven] = useState<{ name: string; phone: string; password: string } | null>(null);
 
   return (
     <>
@@ -422,19 +534,8 @@ export function Riders() {
                 {r.cashInHand > 0 && (
                   <Button size="sm" variant="dark" onClick={() => navigate(`/app/cash?rider=${r._id}`)}>{t("Receive cash")}</Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon={KeyRound}
-                  onClick={async () => {
-                    try {
-                      setReset({ name: r.name, password: (await resetPassword({ token, userId: r._id })).password });
-                    } catch (e) {
-                      toast.error(e);
-                    }
-                  }}
-                >
-                  {t("Reset password")}
+                <Button size="sm" variant="ghost" icon={KeyRound} onClick={() => setSettingPw({ _id: r._id, name: r.name, phone: r.phone })}>
+                  {t("Set password")}
                 </Button>
                 <Button
                   size="sm"
@@ -456,7 +557,16 @@ export function Riders() {
       )}
 
       <CreateUserModal role="rider" open={creating} onClose={() => setCreating(false)} />
-      <TempPasswordModal value={reset} onClose={() => setReset(null)} />
+      <SetRiderPasswordModal
+        key={settingPw?._id}
+        rider={settingPw}
+        onClose={() => setSettingPw(null)}
+        onDone={(v) => {
+          setSettingPw(null);
+          setGiven(v);
+        }}
+      />
+      <RiderPasswordModal value={given} onClose={() => setGiven(null)} />
     </>
   );
 }
@@ -474,7 +584,7 @@ function RiderApplications() {
   const reject = useMutation(api.riderApplications.reject);
   const [inviting, setInviting] = useState<Doc<"riderApplications"> | null>(null);
   const [hiring, setHiring] = useState<Doc<"riderApplications"> | null>(null);
-  const [created, setCreated] = useState<{ name: string; password: string } | null>(null);
+  const [created, setCreated] = useState<{ name: string; phone: string; password: string } | null>(null);
   if (!apps || apps.length === 0) return null;
 
   return (
@@ -538,12 +648,12 @@ function RiderApplications() {
       <HireModal
         app={hiring}
         onClose={() => setHiring(null)}
-        onHired={(name, password) => {
+        onHired={(name, phone, password) => {
           setHiring(null);
-          setCreated({ name, password });
+          setCreated({ name, phone, password });
         }}
       />
-      <TempPasswordModal value={created} onClose={() => setCreated(null)} />
+      <RiderPasswordModal value={created} onClose={() => setCreated(null)} />
     </div>
   );
 }
@@ -630,12 +740,13 @@ function HireModal({
 }: {
   app: Doc<"riderApplications"> | null;
   onClose: () => void;
-  onHired: (name: string, password: string) => void;
+  onHired: (name: string, phone: string, password: string) => void;
 }) {
   const { token } = useAuthed();
   const toast = useToast();
   const hire = useMutation(api.riderApplications.hire);
   const [busy, setBusy] = useState(false);
+  const [password, setPassword] = useState(() => generatePassword());
   if (!app) return null;
   return (
     <Modal
@@ -651,9 +762,9 @@ function HireModal({
             onClick={async () => {
               setBusy(true);
               try {
-                const { password } = await hire({ token, id: app._id });
+                const r = await hire({ token, id: app._id, password });
                 toast.ok(t("{name} added.", { name: app.name }));
-                onHired(app.name, password);
+                onHired(app.name, app.phone, r.password);
               } catch (e) {
                 toast.error(e);
               } finally {
@@ -666,12 +777,13 @@ function HireModal({
         </>
       }
     >
-      <p className="text-sm text-ink-2">
-        {t("This creates a rider account for {name} ({phone}). They will sign in on the rider login page with a temporary password that you give them.", {
+      <p className="mb-4 text-sm text-ink-2">
+        {t("This creates a rider account for {name} ({phone}). They collect this password from the office and sign in on the rider login page with their phone number and password.", {
           name: app.name,
           phone: app.phone,
         })}
       </p>
+      <RiderPasswordField value={password} onChange={setPassword} />
     </Modal>
   );
 }

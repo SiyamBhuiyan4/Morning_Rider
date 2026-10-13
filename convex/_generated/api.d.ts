@@ -21,6 +21,7 @@ import type * as riderApplications from "../riderApplications.js";
 import type * as settings from "../settings.js";
 import type * as track from "../track.js";
 import type * as users from "../users.js";
+import type * as verification from "../verification.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   track: typeof track;
   users: typeof users;
+  verification: typeof verification;
 }>;
 
 /**

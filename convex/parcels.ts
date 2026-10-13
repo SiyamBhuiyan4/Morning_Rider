@@ -88,7 +88,11 @@ async function insertParcel(
 }
 
 async function resolveMerchant(ctx: MutationCtx, user: Doc<"users">, merchantId?: Id<"users">) {
-  if (user.role === "merchant") return user;
+  if (user.role === "merchant") {
+    // Business verification gate (see verification.ts). Admins booking for a merchant are not blocked.
+    if (user.verification !== "approved") throw new ConvexError("Verify your business before sending parcels.");
+    return user;
+  }
   if (!merchantId) throw new ConvexError("Choose a merchant.");
   const merchant = await ctx.db.get("users", merchantId);
   if (!merchant || merchant.role !== "merchant" || merchant.status !== "active") {

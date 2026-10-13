@@ -93,6 +93,7 @@ const SERVER_PATTERNS: [RegExp, string][] = [
   [/^Phone (\S+) is already used by a real account\.$/, "Phone {1} is already used by a real account."],
   [/^Real parcel (\S+) is assigned to (.+)\. Give it to a real rider first, then clear the demo data\.$/, "Real parcel {1} is assigned to {2}. Give it to a real rider first, then clear the demo data."],
   [/^Each rate must be between 0 and (\d+)\.$/, "Each rate must be between 0 and {1}."],
+  [/^Add at most (\d+) other documents\.$/, "Add at most {1} other documents."],
 ];
 
 export function translateServer(msg: string): string {
@@ -115,6 +116,7 @@ export function translateServer(msg: string): string {
 const FIELD_LABELS = new Set([
   "Address", "Area", "Business name", "Customer name", "Email", "Interview place", "Invoice",
   "Item description", "Name", "Note", "Payment account", "Pickup address", "Reason", "Reference",
+  "NID number", "TIN number", "Trade licence number",
 ]);
 
 /**

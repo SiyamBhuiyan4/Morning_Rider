@@ -15,6 +15,7 @@ import {
   X,
   Upload,
   ClipboardList,
+  BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useLocation } from "../lib/router";
@@ -44,6 +45,7 @@ const NAV: Record<"admin" | "merchant" | "rider", NavItem[]> = {
     { href: "/app/parcels", label: "My parcels", icon: Package },
     { href: "/app/payments", label: "Payments", icon: Wallet },
     { href: "/app/fraud", label: "Fraud check", icon: ShieldCheck },
+    { href: "/app/verify", label: "Business verification", icon: BadgeCheck },
   ],
   rider: [
     { href: "/app", label: "My tasks", icon: ClipboardList },

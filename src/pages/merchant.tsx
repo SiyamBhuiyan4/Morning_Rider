@@ -13,6 +13,7 @@ import { TrendChart } from "../components/TrendChart";
 import { PayoutHistory, StatementTable } from "./admin";
 import { MerchantPicker } from "../components/ParcelForm";
 import { t } from "../lib/prefs";
+import { VerificationBanner, VerificationNeeded, needsVerification } from "./verify";
 
 export function MerchantDashboard() {
   const { token, me } = useAuthed();
@@ -37,6 +38,7 @@ export function MerchantDashboard() {
           </>
         }
       />
+      <VerificationBanner />
       <Card className="sunrise mb-6 overflow-hidden border-0 p-6 text-white">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
@@ -344,6 +346,8 @@ export function BulkUpload() {
     a.click();
     URL.revokeObjectURL(a.href);
   }
+
+  if (needsVerification(me)) return <VerificationNeeded title={t("Bulk upload")} />;
 
   return (
     <>

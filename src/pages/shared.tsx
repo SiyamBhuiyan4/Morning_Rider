@@ -12,6 +12,7 @@ import { MerchantPicker, ParcelForm, type ParcelFields } from "../components/Par
 import { ParcelList } from "../components/ParcelList";
 import { FraudSummary } from "../components/FraudSummary";
 import { t } from "../lib/prefs";
+import { VerificationNeeded, needsVerification } from "./verify";
 
 export function ParcelsPage() {
   const { me } = useAuthed();
@@ -33,6 +34,9 @@ export function NewParcel() {
   const [merchantId, setMerchantId] = useState<Id<"users"> | "">("");
   const [created, setCreated] = useState<{ id: Id<"parcels">; trackingCode: string } | null>(null);
   const [formKey, setFormKey] = useState(0);
+
+  // Merchants can only send parcels once their business is verified.
+  if (needsVerification(me)) return <VerificationNeeded title={t("Create parcel")} />;
 
   return (
     <>

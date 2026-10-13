@@ -87,9 +87,13 @@ export const invite = mutation({
   },
 });
 
-/** Admin: after a good interview — creates the rider account. */
+/**
+ * Admin: after a good interview — creates the rider account. The office
+ * sets the rider's permanent password here (the rider collects it from the
+ * office); if none is given, a strong one is generated to hand over.
+ */
 export const hire = mutation({
-  args: { token: v.string(), id: v.id("riderApplications") },
+  args: { token: v.string(), id: v.id("riderApplications"), password: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireUser(ctx, args.token, ["admin"]);
     const app = await ctx.db.get("riderApplications", args.id);
@@ -99,7 +103,7 @@ export const hire = mutation({
       .withIndex("by_phone", (q) => q.eq("phone", app.phone))
       .unique();
     if (clash) throw new ConvexError("An account with this phone number already exists.");
-    const password = temporaryPassword();
+    const password = args.password?.trim() ? args.password.trim() : temporaryPassword();
     const riderId = await ctx.db.insert("users", {
       name: app.name,
       phone: app.phone,
@@ -111,7 +115,7 @@ export const hire = mutation({
       createdAt: Date.now(),
     });
     await ctx.db.patch("riderApplications", app._id, { status: "hired", riderId });
-    // Shown to the admin once, to hand to the new rider.
+    // Shown to the admin, to hand to the new rider.
     return { password };
   },
 });

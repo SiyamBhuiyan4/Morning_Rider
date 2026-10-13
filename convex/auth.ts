@@ -244,6 +244,7 @@ export const me = query({
       payoutMethod: user.payoutMethod,
       payoutAccount: user.payoutAccount,
       riderArea: user.riderArea,
+      verification: user.verification ?? "none",
     };
   },
 });

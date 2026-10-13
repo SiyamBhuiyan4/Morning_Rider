@@ -61,6 +61,9 @@ export const payoutMethod = v.union(
   v.literal("cash"),
 );
 
+/** Merchant business verification. A merchant can send parcels only once approved. */
+export const verificationStatus = v.union(v.literal("submitted"), v.literal("approved"), v.literal("rejected"));
+
 export default defineSchema({
   users: defineTable({
     name: v.string(),
@@ -78,6 +81,8 @@ export default defineSchema({
     payoutAccount: v.optional(v.string()),
     // rider profile
     riderArea: v.optional(v.string()),
+    // merchant business verification; undefined = not submitted yet
+    verification: v.optional(verificationStatus),
     demo: v.optional(v.boolean()), // sample data, removable from the admin dashboard
     createdAt: v.number(),
   })
@@ -241,6 +246,38 @@ export default defineSchema({
   })
     .index("by_status_and_createdAt", ["status", "createdAt"])
     .index("by_phone", ["phone"]),
+
+  /*
+    A merchant's business documents, sent for review. A merchant has at most
+    one live row: a resubmission after rejection replaces the old row (and
+    its files). The NID is required; TIN, trade licence and other documents
+    are optional.
+  */
+  merchantVerifications: defineTable({
+    merchantId: v.id("users"),
+    nidNumber: v.string(),
+    nidFront: v.id("_storage"),
+    nidBack: v.id("_storage"),
+    tinNumber: v.optional(v.string()),
+    tinFile: v.optional(v.id("_storage")),
+    tradeLicenseNumber: v.optional(v.string()),
+    tradeLicenseFile: v.optional(v.id("_storage")),
+    otherFiles: v.array(v.id("_storage")), // max 5
+    status: verificationStatus,
+    reason: v.optional(v.string()), // why it was rejected, shown to the merchant
+    submittedAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_merchantId_and_submittedAt", ["merchantId", "submittedAt"])
+    .index("by_status_and_submittedAt", ["status", "submittedAt"]),
+
+  /* Every file ever put in a verification, so one upload can't be claimed twice. */
+  verificationFiles: defineTable({
+    storageId: v.id("_storage"),
+    merchantId: v.id("users"),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_merchantId", ["merchantId"]),
 
   cashDeposits: defineTable({
     riderId: v.id("users"),

@@ -2,6 +2,7 @@ import { internalMutation, mutation, query, type MutationCtx } from "./_generate
 import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { randomHex, hashPassword, requireUser } from "./lib/auth";
+import { removeVerification } from "./verification";
 import { codCharge, computeCharges, getRates, merchantNet, type Status } from "./lib/parcel";
 
 /*
@@ -132,7 +133,15 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined) {
   const merchantIds: Id<"users">[] = [];
   for (const m of MERCHANTS) {
     merchantIds.push(
-      await ctx.db.insert("users", { ...m, role: "merchant", demo: true, ...(await lockedPassword()), createdAt: now - 12 * DAY }),
+      await ctx.db.insert("users", {
+        ...m,
+        role: "merchant",
+        // the active ones are verified; the pending one hasn't sent documents yet
+        verification: m.status === "active" ? "approved" : undefined,
+        demo: true,
+        ...(await lockedPassword()),
+        createdAt: now - 12 * DAY,
+      }),
     );
   }
   const activeMerchants = merchantIds.slice(0, 2);
@@ -348,6 +357,7 @@ async function clear(ctx: MutationCtx) {
         .withIndex("by_scope_and_status", (q) => q.eq("scope", u._id))
         .take(20);
       for (const c of counters) await ctx.db.delete("statusCounts", c._id);
+      await removeVerification(ctx, u._id);
     } else {
       const deposits = await ctx.db
         .query("cashDeposits")

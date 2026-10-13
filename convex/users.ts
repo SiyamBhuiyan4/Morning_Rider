@@ -129,6 +129,24 @@ export const create = mutation({
   },
 });
 
+/**
+ * Admin sets a rider's (or merchant's) password to one the office chooses —
+ * a permanent password the person collects from the office. Signs them out
+ * everywhere so the old password stops working at once.
+ */
+export const setPassword = mutation({
+  args: { token: v.string(), userId: v.id("users"), password: v.string() },
+  handler: async (ctx, args) => {
+    const admin = await requireUser(ctx, args.token, ["admin"]);
+    if (admin._id === args.userId) throw new ConvexError("Use Account → Change password for yourself.");
+    const user = await ctx.db.get("users", args.userId);
+    if (!user || user.role === "admin") throw new ConvexError("User not found.");
+    await ctx.db.patch("users", user._id, await hashPassword(args.password.trim()));
+    await revokeSessions(ctx, user._id);
+    return null;
+  },
+});
+
 /** Gives the user a one-off password and signs them out everywhere. */
 export const resetPassword = mutation({
   args: { token: v.string(), userId: v.id("users") },

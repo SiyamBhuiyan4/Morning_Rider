@@ -71,8 +71,13 @@ export const admin = query({
       .query("payoutRequests")
       .withIndex("by_status_and_createdAt", (q) => q.eq("status", "open"))
       .take(100);
+    const pendingVerifications = await ctx.db
+      .query("merchantVerifications")
+      .withIndex("by_status_and_submittedAt", (q) => q.eq("status", "submitted"))
+      .take(200);
     return {
       openPayoutRequests: payoutRequests.length,
+      pendingVerifications: pendingVerifications.length,
       counts: await statusCounts(ctx, "all"),
       todayCreated: today.length,
       todayCod: today.reduce((s, p) => s + p.codAmount, 0),
