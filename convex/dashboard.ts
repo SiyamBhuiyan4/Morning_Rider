@@ -38,16 +38,62 @@ function lastDays(parcels: Doc<"parcels">[], dayStart: number, days: number) {
   return buckets;
 }
 
+/*
+  Chart buckets for a range: one bar per day up to ~3 months, one per month
+  beyond that. A range shorter than a week still shows the last 14 days so
+  the chart has a shape.
+*/
+function rangeTrend(parcels: Doc<"parcels">[], from: number, to: number) {
+  const DAY = 86_400_000;
+  const span = Math.round((to - from) / DAY);
+  if (span > 92) {
+    const buckets: { day: number; created: number; delivered: number; month: true }[] = [];
+    const d = new Date(from);
+    d.setDate(1);
+    while (d.getTime() < to) {
+      buckets.push({ day: d.getTime(), created: 0, delivered: 0, month: true });
+      d.setMonth(d.getMonth() + 1);
+    }
+    const at = (ms: number) => {
+      for (let i = buckets.length - 1; i >= 0; i--) if (ms >= buckets[i].day) return i;
+      return -1;
+    };
+    for (const p of parcels) {
+      if (p.createdAt >= from && p.createdAt < to) {
+        const i = at(p.createdAt);
+        if (i >= 0) buckets[i].created++;
+      }
+      if (p.finalAt && p.finalAt >= from && p.finalAt < to && (p.status === "delivered" || p.status === "partial_delivered")) {
+        const i = at(p.finalAt);
+        if (i >= 0) buckets[i].delivered++;
+      }
+    }
+    return buckets;
+  }
+  const days = Math.max(span, 14);
+  return lastDays(parcels, to - DAY, days);
+}
+
 export const admin = query({
-  args: { token: v.string(), dayStart: v.number() },
+  args: {
+    token: v.string(),
+    dayStart: v.number(),
+    // The range the Booked / Revenue cards and the chart cover; defaults to today.
+    from: v.optional(v.number()),
+    to: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     await requireUser(ctx, args.token, ["admin"]);
     const DAY = 86_400_000;
+    const to = args.to ?? args.dayStart + DAY;
+    const from = Math.min(args.from ?? args.dayStart, to - DAY);
+    const span = Math.round((to - from) / DAY);
+    const chartFrom = span > 92 ? from : to - Math.max(span, 14) * DAY;
     const recent = await ctx.db
       .query("parcels")
-      .withIndex("by_createdAt", (q) => q.gte("createdAt", args.dayStart - 13 * DAY))
-      .take(10000);
-    const today = recent.filter((p) => p.createdAt >= args.dayStart);
+      .withIndex("by_createdAt", (q) => q.gte("createdAt", Math.min(chartFrom, from)))
+      .take(20000);
+    const inRange = recent.filter((p) => p.createdAt >= from && p.createdAt < to);
     const withRiders = await ctx.db
       .query("parcels")
       .withIndex("by_cashState", (q) => q.eq("cashState", "with_rider"))
@@ -60,12 +106,13 @@ export const admin = query({
       .query("users")
       .withIndex("by_role_and_status", (q) => q.eq("role", "merchant").eq("status", "pending"))
       .take(100);
-    // Morning Rider's own earnings: delivery + COD charges (or return charge) on parcels closed today.
-    const closedToday = await ctx.db
+    // Morning Rider's own earnings: delivery + COD charges (or return charge) on parcels closed in the range.
+    const closed = await ctx.db
       .query("parcels")
-      .withIndex("by_finalAt", (q) => q.gte("finalAt", args.dayStart))
-      .take(8000);
-    const revenue = closedToday.reduce((s, p) => s + (p.collectedAmount - merchantNet(p)), 0);
+      .withIndex("by_finalAt", (q) => q.gte("finalAt", from).lt("finalAt", to))
+      .take(20000);
+    const revenue = closed.reduce((s, p) => s + (p.collectedAmount - merchantNet(p)), 0);
+    const delivered = closed.filter((p) => p.status === "delivered" || p.status === "partial_delivered").length;
 
     const payoutRequests = await ctx.db
       .query("payoutRequests")
@@ -79,13 +126,14 @@ export const admin = query({
       openPayoutRequests: payoutRequests.length,
       pendingVerifications: pendingVerifications.length,
       counts: await statusCounts(ctx, "all"),
-      todayCreated: today.length,
-      todayCod: today.reduce((s, p) => s + p.codAmount, 0),
+      todayCreated: inRange.length,
+      todayCod: inRange.reduce((s, p) => s + p.codAmount, 0),
       todayRevenue: revenue,
+      deliveredInRange: delivered,
       cashWithRiders: withRiders.reduce((s, p) => s + p.collectedAmount, 0),
       payableToMerchants: unpaid.reduce((s, p) => s + merchantNet(p), 0),
       pendingMerchants: pendingMerchants.length,
-      trend: lastDays(recent, args.dayStart, 14),
+      trend: rangeTrend(recent, from, to),
     };
   },
 });

@@ -347,4 +347,30 @@ export default defineSchema({
     notes: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_riderId", ["riderId"]),
+
+  /*
+    Office <-> merchant chat. One thread per merchant. A merchant may send at
+    most 5 messages in a row: the counter resets when the office replies or
+    presses "Seen, allow 5 more".
+  */
+  chatThreads: defineTable({
+    merchantId: v.id("users"),
+    lastMessageAt: v.number(),
+    lastBody: v.string(), // short preview for the list
+    lastFrom: v.union(v.literal("admin"), v.literal("merchant")),
+    adminUnread: v.number(),
+    merchantUnread: v.number(),
+    merchantSent: v.number(), // messages since the last reset, max 5
+    adminSeenAt: v.optional(v.number()),
+    merchantSeenAt: v.optional(v.number()),
+  })
+    .index("by_merchantId", ["merchantId"])
+    .index("by_lastMessageAt", ["lastMessageAt"]),
+
+  chatMessages: defineTable({
+    merchantId: v.id("users"),
+    from: v.union(v.literal("admin"), v.literal("merchant")),
+    body: v.string(),
+    createdAt: v.number(),
+  }).index("by_merchantId_and_createdAt", ["merchantId", "createdAt"]),
 });

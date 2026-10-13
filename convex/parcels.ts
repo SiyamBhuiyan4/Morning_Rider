@@ -120,9 +120,14 @@ export const list = query({
     status: v.optional(parcelStatus),
     merchantId: v.optional(v.id("users")),
     search: v.optional(v.string()),
+    // Booking-date range: from inclusive, to exclusive.
+    from: v.optional(v.number()),
+    to: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
+    const from = args.from ?? 0;
+    const to = args.to ?? Number.MAX_SAFE_INTEGER;
     // A merchant only ever sees their own parcels, whatever they pass.
     const merchantId = user.role === "merchant" ? user._id : args.merchantId;
     const search = (args.search ?? "").trim().slice(0, 60);
@@ -135,29 +140,34 @@ export const list = query({
           const s = q.search("searchText", search);
           return merchantId ? s.eq("merchantId", merchantId) : s;
         })
+        .filter((q) => q.and(q.gte(q.field("createdAt"), from), q.lt(q.field("createdAt"), to)))
         .paginate(args.paginationOpts);
     } else if (merchantId && args.status) {
       page = await ctx.db
         .query("parcels")
         .withIndex("by_merchantId_and_status_and_createdAt", (q) =>
-          q.eq("merchantId", merchantId).eq("status", args.status!),
+          q.eq("merchantId", merchantId).eq("status", args.status!).gte("createdAt", from).lt("createdAt", to),
         )
         .order("desc")
         .paginate(args.paginationOpts);
     } else if (merchantId) {
       page = await ctx.db
         .query("parcels")
-        .withIndex("by_merchantId_and_createdAt", (q) => q.eq("merchantId", merchantId))
+        .withIndex("by_merchantId_and_createdAt", (q) => q.eq("merchantId", merchantId).gte("createdAt", from).lt("createdAt", to))
         .order("desc")
         .paginate(args.paginationOpts);
     } else if (args.status) {
       page = await ctx.db
         .query("parcels")
-        .withIndex("by_status_and_createdAt", (q) => q.eq("status", args.status!))
+        .withIndex("by_status_and_createdAt", (q) => q.eq("status", args.status!).gte("createdAt", from).lt("createdAt", to))
         .order("desc")
         .paginate(args.paginationOpts);
     } else {
-      page = await ctx.db.query("parcels").withIndex("by_createdAt").order("desc").paginate(args.paginationOpts);
+      page = await ctx.db
+        .query("parcels")
+        .withIndex("by_createdAt", (q) => q.gte("createdAt", from).lt("createdAt", to))
+        .order("desc")
+        .paginate(args.paginationOpts);
     }
 
     const names = new Map<string, string>();

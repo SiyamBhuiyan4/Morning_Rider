@@ -6,6 +6,7 @@ import { Shell } from "./components/Shell";
 import { Spinner } from "./components/ui";
 import { Home, Join, Login, Register, RiderLogin, Track } from "./pages/public";
 import { AdminDashboard, Merchants, Payouts, RateSettings, RiderCashAdmin, Riders } from "./pages/admin";
+import { Messages } from "./pages/messages";
 import { BulkUpload, MerchantDashboard, MerchantPayments } from "./pages/merchant";
 import { RiderCash, RiderTasks } from "./pages/rider";
 import { Account, EditParcel, FraudCheck, NewParcel, ParcelsPage } from "./pages/shared";
@@ -96,5 +97,6 @@ function route(path: string, role: "admin" | "merchant" | "rider"): ReactNode {
   if (path === "/app/payouts") return <Payouts />;
   if (path === "/app/cash") return <RiderCashAdmin />;
   if (path === "/app/settings") return <RateSettings />;
+  if (path === "/app/messages") return <Messages />;
   return <Redirect to="/app" />;
 }

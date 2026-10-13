@@ -9,6 +9,7 @@ import { navigate } from "../lib/router";
 import { STATUS, STATUS_ORDER, dateTime, tk, type Status } from "../lib/format";
 import { Button, Card, Empty, Input, Select, Spinner, StatusBadge, cx } from "./ui";
 import { ParcelDetail, RiderSelect } from "./ParcelDetail";
+import { RangePills, useDateRange } from "./RangePicker";
 import { t } from "../lib/prefs";
 
 export function ParcelList() {
@@ -19,6 +20,7 @@ export function ParcelList() {
   const [merchantId, setMerchantId] = useState<Id<"users"> | "">(
     () => (new URLSearchParams(location.search).get("merchant") as Id<"users"> | null) ?? "",
   );
+  const [range, setRange] = useDateRange("parcels", "all");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<Id<"parcels"> | null>(null);
@@ -30,7 +32,7 @@ export function ParcelList() {
     const t = setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => clearTimeout(t);
   }, [searchInput]);
-  useEffect(() => setSelected(new Set()), [status, merchantId, search]);
+  useEffect(() => setSelected(new Set()), [status, merchantId, search, range.from, range.to]);
 
   const merchants = useQuery(api.users.options, isAdmin ? { token, role: "merchant" } : "skip");
   const { results, status: loadState, loadMore } = usePaginatedQuery(
@@ -40,6 +42,8 @@ export function ParcelList() {
       status: status || undefined,
       merchantId: merchantId || undefined,
       search: search || undefined,
+      from: range.preset === "all" ? undefined : range.from,
+      to: range.preset === "all" ? undefined : range.to,
     },
     { initialNumItems: 25 },
   );
@@ -106,6 +110,9 @@ export function ParcelList() {
               ))}
             </Select>
           )}
+        </div>
+        <div className="mt-3">
+          <RangePills value={range} onChange={setRange} withAll />
         </div>
         {!search && (
           <div className="mt-3 flex flex-wrap gap-1.5">

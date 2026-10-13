@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
   Banknote,
@@ -42,14 +42,21 @@ import { VerificationBadge, VerificationQueue, VerificationReviewModal } from ".
 import { RiderProfileModal } from "./riderProfile";
 import { MerchantProfileModal } from "./merchantProfile";
 import { LiveBadge, LiveFeed, RidersOnRoad, Ticker } from "../components/Live";
+import { RangePills, rangeLabel, useDateRange } from "../components/RangePicker";
 
 /* -------------------------------------------------------------- dashboard */
 
 export function AdminDashboard() {
   const { token } = useAuthed();
   const dayStart = useMemo(startOfToday, []);
-  const d = useQuery(api.dashboard.admin, { token, dayStart });
+  const [range, setRange] = useDateRange("dashboard", "today");
+  const live = useQuery(api.dashboard.admin, { token, dayStart, from: range.from, to: range.to });
+  // Keep showing the last numbers while a new range loads, so the cards roll instead of blinking.
+  const last = useRef(live);
+  if (live) last.current = live;
+  const d = live ?? last.current;
   if (!d) return <Spinner />;
+  const today = range.preset === "today";
   const c = (s: keyof typeof STATUS) => d.counts[s] ?? 0;
   const pipelineMax = Math.max(1, ...Object.values(d.counts).map((n) => n ?? 0));
 
@@ -66,6 +73,10 @@ export function AdminDashboard() {
         }
       />
       <DemoCard />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <RangePills value={range} onChange={setRange} />
+        <span className="text-xs font-semibold text-ink-3">{t("Cash with riders and payable are always as of now.")}</span>
+      </div>
       {(d.openPayoutRequests > 0 || d.pendingMerchants > 0 || d.pendingVerifications > 0) && (
         <div className="mb-4 flex flex-wrap gap-2">
           {d.openPayoutRequests > 0 && (
@@ -86,8 +97,19 @@ export function AdminDashboard() {
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("Booked today")} value={<Ticker value={d.todayCreated} />} icon={Package} hint={<>COD <Ticker value={d.todayCod} format={tk} /></>} />
-        <StatCard label={t("Revenue today")} value={<Ticker value={d.todayRevenue} format={tk} />} icon={TrendingUp} accent="green" hint={t("Delivery + COD charges")} />
+        <StatCard
+          label={today ? t("Booked today") : `${t("Booked")} · ${rangeLabel(range)}`}
+          value={<Ticker value={d.todayCreated} />}
+          icon={Package}
+          hint={<>COD <Ticker value={d.todayCod} format={tk} /> · {t("{n} delivered", { n: d.deliveredInRange })}</>}
+        />
+        <StatCard
+          label={today ? t("Revenue today") : `${t("Revenue")} · ${rangeLabel(range)}`}
+          value={<Ticker value={d.todayRevenue} format={tk} />}
+          icon={TrendingUp}
+          accent="green"
+          hint={t("Delivery + COD charges")}
+        />
         <StatCard label={t("Cash with riders")} value={<Ticker value={d.cashWithRiders} format={tk} />} icon={Banknote} accent="sun" hint={t("Collect from riders")} />
         <StatCard label={t("Payable to merchants")} value={<Ticker value={d.payableToMerchants} format={tk} />} icon={Wallet} accent="brand" hint={t("Unpaid balance")} />
       </div>
@@ -99,7 +121,7 @@ export function AdminDashboard() {
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Card className="p-6">
-          <h2 className="mb-4 font-bold">{t("Last 14 days")}</h2>
+          <h2 className="mb-4 font-bold">{range.days > 14 || range.preset === "custom" ? rangeLabel(range) : t("Last 14 days")}</h2>
           <TrendChart data={d.trend} />
         </Card>
         <Card className="p-6">
@@ -949,6 +971,10 @@ export function Payouts() {
   const { token } = useAuthed();
   const balances = useQuery(api.money.balances, { token });
   const history = useQuery(api.money.payouts, { token });
+  const [historyRange, setHistoryRange] = useDateRange("payouts", "all");
+  const shownHistory = history?.filter(
+    (p) => historyRange.preset === "all" || (p.createdAt >= historyRange.from && p.createdAt < historyRange.to),
+  );
   const [paying, setPaying] = useState<Id<"users"> | null>(
     () => (new URLSearchParams(location.search).get("merchant") as Id<"users"> | null) ?? null,
   );
@@ -984,8 +1010,19 @@ export function Payouts() {
         )}
       </Card>
 
-      <h2 className="mb-3 mt-8 font-bold">{t("Payout history")}</h2>
-      <PayoutHistory rows={history} showMerchant />
+      <div className="mb-3 mt-8 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-bold">{t("Payout history")}</h2>
+        <RangePills value={historyRange} onChange={setHistoryRange} withAll />
+      </div>
+      {history && history.length > 0 && (
+        <p className="mb-3 text-sm text-ink-2">
+          {t("{n} payouts, {amount} paid", {
+            n: shownHistory?.length ?? 0,
+            amount: tk((shownHistory ?? []).reduce((sum, p) => sum + p.amount, 0)),
+          })}
+        </p>
+      )}
+      <PayoutHistory rows={shownHistory} showMerchant />
       <PayModal merchantId={paying} onClose={() => setPaying(null)} />
     </>
   );
@@ -1237,6 +1274,7 @@ export function RiderCashAdmin() {
   );
   const cash = useQuery(api.money.riderCash, riderId ? { token, riderId } : "skip");
   const receive = useMutation(api.money.receiveCash);
+  const [cashRange, setCashRange] = useDateRange("cash", "all");
   const [busy, setBusy] = useState(false);
   const withCash = riders?.filter((r) => r.cashInHand > 0) ?? [];
 
@@ -1308,12 +1346,17 @@ export function RiderCashAdmin() {
               </div>
               {cash.deposits.length > 0 && (
                 <>
-                  <p className="mb-2 mt-6 text-sm font-bold">{t("Recent hand-overs")}</p>
-                  {cash.deposits.map((d) => (
+                  <div className="mb-2 mt-6 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-bold">{t("Recent hand-overs")}</p>
+                    <RangePills value={cashRange} onChange={setCashRange} withAll />
+                  </div>
+                  {cash.deposits
+                    .filter((d) => cashRange.preset === "all" || (d.createdAt >= cashRange.from && d.createdAt < cashRange.to))
+                    .map((d) => (
                     <p key={d._id} className="text-sm text-ink-2">
                       {dateTime(d.createdAt)} — {tk(d.amount)} ({t("{n} parcels", { n: d.parcelCount })})
                     </p>
-                  ))}
+                    ))}
                 </>
               )}
             </>

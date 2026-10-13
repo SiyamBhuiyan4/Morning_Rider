@@ -94,6 +94,8 @@ const SERVER_PATTERNS: [RegExp, string][] = [
   [/^Real parcel (\S+) is assigned to (.+)\. Give it to a real rider first, then clear the demo data\.$/, "Real parcel {1} is assigned to {2}. Give it to a real rider first, then clear the demo data."],
   [/^Each rate must be between 0 and (\d+)\.$/, "Each rate must be between 0 and {1}."],
   [/^Add at most (\d+) other documents\.$/, "Add at most {1} other documents."],
+  [/^You can send (\d+) messages until Morning Rider replies\.$/, "You can send {1} messages until Morning Rider replies."],
+  [/^A message can have at most (\d+) words\.$/, "A message can have at most {1} words."],
   [/^(.+): enter a valid Bangladeshi mobile number \(01XXXXXXXXX\)\.$/, "{1}: enter a valid Bangladeshi mobile number (01XXXXXXXXX)."],
 ];
 

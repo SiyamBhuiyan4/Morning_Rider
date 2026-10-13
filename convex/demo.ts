@@ -15,6 +15,7 @@ import { randomHex, hashPassword, requireUser } from "./lib/auth";
 import { removeVerification } from "./verification";
 import { changeStatus, codCharge, computeCharges, getRates, merchantNet, type Status } from "./lib/parcel";
 import { insertParcel } from "./parcels";
+import { removeChat } from "./chat";
 
 /*
   Sample data so every admin page has something on it while Siyam learns the
@@ -619,6 +620,82 @@ async function seed(ctx: MutationCtx, adminId: Id<"users"> | undefined, files: D
     });
   }
 
+  /* ---- chats with the office: unread, answered, limit reached, settled */
+  const MIN = 60_000;
+  const CHATS: { m: number; msgs: [("a" | "m"), string, number][] }[] = [
+    {
+      m: 0,
+      msgs: [
+        ["m", "Assalamu alaikum. Can you pick up 15 parcels from Dhanmondi before 11 AM tomorrow?", 95],
+        ["m", "Most of them are for Uttara and Mirpur.", 93],
+      ],
+    },
+    {
+      m: 1,
+      msgs: [
+        ["m", "My payout request is pending since morning. When will I get it?", 300],
+        ["a", "Hi Nusrat apu, we checked it. It will be sent to your Nagad today before 6 PM.", 240],
+      ],
+    },
+    {
+      m: 3,
+      msgs: [
+        ["m", "One of my parcels was returned, but the customer says nobody called her.", 70],
+        ["m", "Please check with the rider.", 66],
+        ["m", "Hello?", 50],
+        ["m", "I need an answer today, it's a regular customer.", 30],
+        ["m", "Please reply.", 12],
+      ],
+    },
+    {
+      m: 5,
+      msgs: [
+        ["m", "Can you deliver cakes in Uttara within 3 hours?", 3 * 1440],
+        ["a", "Yes! Uttara express is 3 hours if you book between 6 AM and 12 noon.", 3 * 1440 - 20],
+        ["m", "Perfect, thank you.", 3 * 1440 - 25],
+        ["a", "You're welcome. Mark cakes as Bakery so riders keep them upright.", 3 * 1440 - 30],
+      ],
+    },
+    {
+      m: 9,
+      msgs: [["m", "What documents do I need for business verification? I only have NID.", 180]],
+    },
+  ];
+  for (const c of CHATS) {
+    const merchantId = merchantIds[c.m];
+    let sentInRow = 0;
+    let adminUnread = 0;
+    let merchantUnread = 0;
+    // Oldest first.
+    const ordered = [...c.msgs].sort((a, b) => b[2] - a[2]);
+    for (const [who, body, minsAgo] of ordered) {
+      await ctx.db.insert("chatMessages", { merchantId, from: who === "a" ? "admin" : "merchant", body, createdAt: now - minsAgo * MIN });
+      if (who === "m") {
+        sentInRow++;
+        adminUnread++;
+        merchantUnread = 0;
+      } else {
+        sentInRow = 0;
+        adminUnread = 0;
+        merchantUnread++;
+      }
+    }
+    const lastMsg = ordered[ordered.length - 1];
+    // The settled chat has been read on both sides.
+    const settled = c.m === 5;
+    await ctx.db.insert("chatThreads", {
+      merchantId,
+      lastMessageAt: now - lastMsg[2] * MIN,
+      lastBody: lastMsg[1].length > 90 ? lastMsg[1].slice(0, 90) + "…" : lastMsg[1],
+      lastFrom: lastMsg[0] === "a" ? "admin" : "merchant",
+      adminUnread: settled ? 0 : adminUnread,
+      merchantUnread: settled ? 0 : merchantUnread,
+      merchantSent: sentInRow,
+      adminSeenAt: settled ? now - lastMsg[2] * MIN : undefined,
+      merchantSeenAt: settled ? now - lastMsg[2] * MIN : undefined,
+    });
+  }
+
   return {
     merchants: merchantIds.length,
     riders: riderIds.length,
@@ -689,6 +766,7 @@ async function clear(ctx: MutationCtx) {
         .take(20);
       for (const c of counters) await ctx.db.delete("statusCounts", c._id);
       await removeVerification(ctx, u._id);
+      await removeChat(ctx, u._id);
     } else {
       const deposits = await ctx.db
         .query("cashDeposits")

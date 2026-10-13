@@ -83,7 +83,13 @@ function Details({ data, onClose }: { data: Data; onClose: () => void }) {
       {/* contact */}
       <div className="grid grid-cols-3 gap-2">
         <Contact href={`tel:${m.phone}`} icon={Phone} label={t("Call")} tone="bg-emerald-500 hover:bg-emerald-600" />
-        <Contact href={`sms:${m.phone}`} icon={MessageSquare} label={t("SMS")} tone="bg-sky-500 hover:bg-sky-600" />
+        <button
+          type="button"
+          onClick={() => go(`/app/messages?merchant=${m._id}`)}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-sky-500 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-sky-600"
+        >
+          <MessageSquare className="size-4" /> {t("Message")}
+        </button>
         <Contact
           href={`https://wa.me/88${m.phone}`}
           external

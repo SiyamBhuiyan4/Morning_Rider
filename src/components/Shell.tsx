@@ -16,8 +16,12 @@ import {
   Upload,
   ClipboardList,
   BadgeCheck,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { MerchantChatButton } from "./Chat";
 import { Link, useLocation } from "../lib/router";
 import { useAuthed, useSession } from "../lib/session";
 import { Logo, Wordmark, cx } from "./ui";
@@ -35,6 +39,7 @@ const NAV: Record<"admin" | "merchant" | "rider", NavItem[]> = {
     { href: "/app/riders", label: "Riders", icon: Bike },
     { href: "/app/payouts", label: "Merchant payouts", icon: Wallet },
     { href: "/app/cash", label: "Rider cash", icon: Banknote },
+    { href: "/app/messages", label: "Messages", icon: MessageCircle },
     { href: "/app/fraud", label: "Fraud check", icon: ShieldCheck },
     { href: "/app/settings", label: "Delivery rates", icon: Settings },
   ],
@@ -53,6 +58,19 @@ const NAV: Record<"admin" | "merchant" | "rider", NavItem[]> = {
   ],
 };
 
+/** Red dot with a count on the admin's Messages menu item. */
+function UnreadDot() {
+  const { token } = useAuthed();
+  const n = useQuery(api.chat.unreadCount, { token });
+  if (!n) return null;
+  return (
+    <span className="relative ml-auto flex size-5">
+      <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-60" />
+      <span className="relative grid size-5 place-items-center rounded-full bg-red-500 text-[10px] font-bold text-white">{n > 9 ? "9+" : n}</span>
+    </span>
+  );
+}
+
 export function Shell({ children }: { children: ReactNode }) {
   const { me } = useAuthed();
   const { signOut } = useSession();
@@ -61,7 +79,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const items = [...NAV[me.role], { href: "/app/account", label: "Account", icon: UserCircle }];
 
   const nav = (
-    <nav className="flex flex-1 flex-col gap-1 px-3">
+    <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3">
       {items.map((it) => {
         const active = path === it.href;
         return (
@@ -76,6 +94,7 @@ export function Shell({ children }: { children: ReactNode }) {
           >
             <it.icon className={cx("size-[18px]", active ? "text-white" : "text-white/50 group-hover:text-sun")} />
             {t(it.label)}
+            {it.href === "/app/messages" && <UnreadDot />}
           </Link>
         );
       })}
@@ -129,6 +148,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <Logo size={32} />
         <Wordmark />
         <Prefs className="ml-auto" />
+        {me.role === "merchant" && <MerchantChatButton className="relative" />}
       </header>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -146,7 +166,8 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+      {me.role === "merchant" && <MerchantChatButton className="fixed top-5 right-6 z-40 hidden lg:block" />}
+      <main className={cx("mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8", me.role === "merchant" && "lg:pt-20")}>{children}</main>
     </div>
   );
 }
