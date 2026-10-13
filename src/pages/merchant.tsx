@@ -12,6 +12,7 @@ import { Button, Card, Empty, PageHeader, Spinner, StatCard } from "../component
 import { TrendChart } from "../components/TrendChart";
 import { PayoutHistory, StatementTable } from "./admin";
 import { MerchantPicker } from "../components/ParcelForm";
+import { t } from "../lib/prefs";
 
 export function MerchantDashboard() {
   const { token, me } = useAuthed();
@@ -27,47 +28,47 @@ export function MerchantDashboard() {
   return (
     <>
       <PageHeader
-        title={`Hello, ${me.businessName ?? me.name}`}
-        subtitle="Your parcels and payments at a glance."
+        title={t("Hello, {name}", { name: me.businessName ?? me.name })}
+        subtitle={t("Your parcels and payments at a glance.")}
         actions={
           <>
-            <Button variant="outline" icon={Upload} onClick={() => navigate("/app/parcels/bulk")}>Bulk upload</Button>
-            <Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>Create parcel</Button>
+            <Button variant="outline" icon={Upload} onClick={() => navigate("/app/parcels/bulk")}>{t("Bulk upload")}</Button>
+            <Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>{t("Create parcel")}</Button>
           </>
         }
       />
       <Card className="sunrise mb-6 overflow-hidden border-0 p-6 text-white">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="text-sm font-semibold text-white/70">Current balance</p>
+            <p className="text-sm font-semibold text-white/70">{t("Current balance")}</p>
             <p className="mt-1 text-4xl font-extrabold tracking-tight">{tk(d.balance)}</p>
-            <p className="mt-1 text-sm text-white/60">Will be paid in your next payout</p>
+            <p className="mt-1 text-sm text-white/60">{t("Will be paid in your next payout")}</p>
           </div>
           <div className="flex gap-8 text-sm">
             <div>
-              <p className="text-white/60">Total received</p>
+              <p className="text-white/60">{t("Total received")}</p>
               <p className="text-lg font-bold text-sun">{tk(d.totalPaid)}</p>
             </div>
             <div>
-              <p className="text-white/60">Last payout</p>
+              <p className="text-white/60">{t("Last payout")}</p>
               <p className="text-lg font-bold">{d.lastPayout ? `${tk(d.lastPayout.amount)} · ${date(d.lastPayout.at)}` : "—"}</p>
             </div>
           </div>
         </div>
       </Card>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total parcels" value={num(total)} icon={Package} hint={`${d.todayCreated} today`} />
-        <StatCard label="In progress" value={num(c("pending", "picked_up", "at_hub", "out_for_delivery", "hold"))} icon={Truck} accent="brand" />
-        <StatCard label="Delivered" value={num(delivered)} icon={PackageCheck} accent="green" hint={rate !== null ? `${rate}% success rate` : undefined} />
-        <StatCard label="Returned" value={num(c("returned", "returning"))} icon={RotateCcw} accent="red" />
+        <StatCard label={t("Total parcels")} value={num(total)} icon={Package} hint={`${d.todayCreated} today`} />
+        <StatCard label={t("In progress")} value={num(c("pending", "picked_up", "at_hub", "out_for_delivery", "hold"))} icon={Truck} accent="brand" />
+        <StatCard label={t("Delivered")} value={num(delivered)} icon={PackageCheck} accent="green" hint={rate !== null ? t("{rate}% success rate", { rate }) : undefined} />
+        <StatCard label={t("Returned")} value={num(c("returned", "returning"))} icon={RotateCcw} accent="red" />
       </div>
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Card className="p-6">
-          <h2 className="mb-4 font-bold">Last 14 days</h2>
+          <h2 className="mb-4 font-bold">{t("Last 14 days")}</h2>
           <TrendChart data={d.trend} />
         </Card>
         <Card className="p-6">
-          <h2 className="mb-4 font-bold">By status</h2>
+          <h2 className="mb-4 font-bold">{t("By status")}</h2>
           <div className="space-y-1">
             {(Object.keys(STATUS) as (keyof typeof STATUS)[]).filter((s) => (d.counts[s] ?? 0) > 0).map((s) => (
               <button key={s} onClick={() => navigate(`/app/parcels?status=${s}`)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-page">
@@ -76,7 +77,7 @@ export function MerchantDashboard() {
                 <span className="font-bold">{d.counts[s]}</span>
               </button>
             ))}
-            {total === 0 && <p className="py-6 text-center text-sm text-ink-3">No parcels yet — create your first one!</p>}
+            {total === 0 && <p className="py-6 text-center text-sm text-ink-3">{t("No parcels yet — create your first one!")}</p>}
           </div>
         </Card>
       </div>
@@ -90,7 +91,7 @@ export function MerchantPayments() {
   const history = useQuery(api.money.payouts, { token });
   return (
     <>
-      <PageHeader title="Payments" subtitle="Your balance and payout history." />
+      <PageHeader title={t("Payments")} subtitle={t("Your balance and payout history.")} />
       <Card className="mb-8 p-6">
         {!st ? (
           <Spinner />
@@ -98,23 +99,23 @@ export function MerchantPayments() {
           <>
             <div className="mb-5 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-page p-4">
-                <p className="text-xs text-ink-3">Collected (unpaid)</p>
+                <p className="text-xs text-ink-3">{t("Collected (unpaid)")}</p>
                 <p className="text-xl font-bold">{tk(st.collected)}</p>
               </div>
               <div className="rounded-2xl bg-page p-4">
-                <p className="text-xs text-ink-3">Charges</p>
+                <p className="text-xs text-ink-3">{t("Charges")}</p>
                 <p className="text-xl font-bold">− {tk(st.charges)}</p>
               </div>
               <div className="rounded-2xl bg-brand-50 p-4">
-                <p className="text-xs text-brand-700">Next payout</p>
+                <p className="text-xs text-brand-700">{t("Next payout")}</p>
                 <p className="text-xl font-extrabold text-brand-700">{tk(st.net)}</p>
               </div>
             </div>
-            {st.count === 0 ? <p className="text-center text-sm text-ink-3">No unpaid parcels.</p> : <StatementTable rows={st.parcels} />}
+            {st.count === 0 ? <p className="text-center text-sm text-ink-3">{t("No unpaid parcels.")}</p> : <StatementTable rows={st.parcels} />}
           </>
         )}
       </Card>
-      <h2 className="mb-3 font-bold">Payout history</h2>
+      <h2 className="mb-3 font-bold">{t("Payout history")}</h2>
       <PayoutHistory rows={history} />
     </>
   );
@@ -162,7 +163,7 @@ export function BulkUpload() {
   function load(text: string) {
     const table = parseCsv(text);
     if (table.length < 2) {
-      setProblems(["The file has no data rows."]);
+      setProblems([t("The file has no data rows.")]);
       setRows(null);
       return;
     }
@@ -171,7 +172,7 @@ export function BulkUpload() {
     const need = ["customer_name", "customer_phone", "address", "cod_amount"];
     const missing = need.filter((n) => col(n) < 0);
     if (missing.length) {
-      setProblems([`Missing column(s): ${missing.join(", ")}. Use the template.`]);
+      setProblems([t("Missing column(s): {cols}. Use the template.", { cols: missing.join(", ") })]);
       setRows(null);
       return;
     }
@@ -186,8 +187,8 @@ export function BulkUpload() {
       const cod = Number(get("cod_amount") || 0);
       const weight = Number(get("weight_kg") || 1);
       if (!get("customer_name") || !get("customer_phone") || !get("address")) issues.push(`Row ${i + 2}: name, phone and address are required.`);
-      if (!Number.isFinite(cod) || cod < 0) issues.push(`Row ${i + 2}: cod_amount must be a number.`);
-      if (!Number.isFinite(weight) || weight <= 0) issues.push(`Row ${i + 2}: weight_kg must be a positive number.`);
+      if (!Number.isFinite(cod) || cod < 0) issues.push(t("Row {row}: cod_amount must be a number.", { row: i + 2 }));
+      if (!Number.isFinite(weight) || weight <= 0) issues.push(t("Row {row}: weight_kg must be a positive number.", { row: i + 2 }));
       out.push({
         invoice: get("invoice") || undefined,
         recipientName: get("customer_name"),
@@ -218,9 +219,9 @@ export function BulkUpload() {
   return (
     <>
       <PageHeader
-        title="Bulk upload"
-        subtitle="Create up to 200 parcels at once from a CSV file (Excel → Save as CSV)."
-        actions={<Button variant="outline" icon={Download} onClick={downloadTemplate}>Download template</Button>}
+        title={t("Bulk upload")}
+        subtitle={t("Create up to 200 parcels at once from a CSV file (Excel → Save as CSV).")}
+        actions={<Button variant="outline" icon={Download} onClick={downloadTemplate}>{t("Download template")}</Button>}
       />
       {me.role === "admin" && (
         <Card className="mb-4 p-6">
@@ -230,7 +231,7 @@ export function BulkUpload() {
       <Card className="p-6">
         <label className="flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-line px-6 py-12 text-center transition hover:border-brand hover:bg-brand-50/40">
           <FileSpreadsheet className="size-10 text-brand" />
-          <span className="mt-3 font-bold">Choose a CSV file</span>
+          <span className="mt-3 font-bold">{t("Choose a CSV file")}</span>
           <span className="mt-1 text-sm text-ink-3">Columns: {TEMPLATE_HEADER.replaceAll(",", ", ")}</span>
           <input
             type="file"
@@ -261,11 +262,11 @@ export function BulkUpload() {
                 <thead className="sticky top-0 bg-page text-left text-xs font-bold text-ink-3 uppercase">
                   <tr>
                     <th className="px-3 py-2">#</th>
-                    <th className="px-3 py-2">Customer</th>
-                    <th className="px-3 py-2">Address</th>
-                    <th className="px-3 py-2">Zone</th>
-                    <th className="px-3 py-2 text-right">Kg</th>
-                    <th className="px-3 py-2 text-right">COD</th>
+                    <th className="px-3 py-2">{t("Customer")}</th>
+                    <th className="px-3 py-2">{t("Address")}</th>
+                    <th className="px-3 py-2">{t("Zone")}</th>
+                    <th className="px-3 py-2 text-right">{t("Kg")}</th>
+                    <th className="px-3 py-2 text-right">{t("COD")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -287,7 +288,7 @@ export function BulkUpload() {
             </div>
             <div className="mt-5 flex items-center justify-between gap-3">
               <p className="text-sm text-ink-2">
-                {rows.length} parcels · total COD {tk(rows.reduce((s, r) => s + r.codAmount, 0))}
+                {t("{n} parcels · total COD {amount}", { n: rows.length, amount: tk(rows.reduce((s, r) => s + r.codAmount, 0)) })}
               </p>
               <Button
                 size="lg"
@@ -298,7 +299,7 @@ export function BulkUpload() {
                   setBusy(true);
                   try {
                     const r = await createMany({ token, parcels: rows, merchantId: merchantId || undefined });
-                    toast.ok(`${r.length} parcels created.`);
+                    toast.ok(t("{n} parcels created.", { n: r.length }));
                     navigate("/app/parcels");
                   } catch (e) {
                     toast.error(e);
@@ -307,13 +308,13 @@ export function BulkUpload() {
                   }
                 }}
               >
-                Create {rows.length} parcels
+                {t("Create {n} parcels", { n: rows.length })}
               </Button>
             </div>
           </>
         )}
         {!rows && problems.length === 0 && (
-          <Empty icon={Clock} title="Waiting for a file" text="Tip: download the template, fill it in Excel or Google Sheets, then save as CSV." />
+          <Empty icon={Clock} title={t("Waiting for a file")} text={t("Tip: download the template, fill it in Excel or Google Sheets, then save as CSV.")} />
         )}
       </Card>
     </>

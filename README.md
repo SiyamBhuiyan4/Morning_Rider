@@ -9,14 +9,17 @@ Stack: Convex (backend/DB) · React + Vite + Tailwind · Vercel. One codebase bu
 
 ## Accounts
 - Merchants sign up on the main site and wait for admin approval.
-- Riders and extra admins are created by an admin (Riders & staff page).
-- The first admin is created from the command line only:
+- Riders are created by the admin (Riders page).
+- The admin site signs in with a single passcode (no phone). Set or reset it — this also clears the 1-hour lockout — from the command line only:
 
 ```
-npx convex run --prod auth:createAdmin '{"name":"Your Name","phone":"01XXXXXXXXX","password":"..."}'
+npx convex run --prod auth:setAdminPasscode '{"passcode":"..."}'
 ```
 
-Admins can only sign in on the admin site; merchants and riders only on the main site (enforced by the server).
+The admin passcode only works on the admin site; merchants and riders only sign in on the main site (enforced by the server).
+
+## Language & theme
+Bangla/English and night mode toggles are on every page. Translations live in `src/lib/bn.ts`, keyed by the English text — wrap new UI text in `t("...")` and add its Bangla there.
 
 ## Deploy
 ```

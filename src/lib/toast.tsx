@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { ConvexError } from "convex/values";
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import { t, translateServer } from "./prefs";
 
 type Toast = { id: number; kind: "ok" | "error"; text: string };
 const Ctx = createContext<(kind: Toast["kind"], text: string) => void>(() => {});
@@ -45,7 +46,7 @@ export function useToast() {
 }
 
 export function errorText(e: unknown) {
-  if (typeof e === "string") return e;
-  if (e instanceof ConvexError) return String(e.data);
-  return "Something went wrong. Please try again.";
+  if (typeof e === "string") return t(e);
+  if (e instanceof ConvexError) return translateServer(String(e.data));
+  return t("Something went wrong. Please try again.");
 }

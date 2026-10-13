@@ -26,11 +26,12 @@ import { navigate } from "../lib/router";
 import { PAYOUT_METHOD, STATUS, date, dateTime, num, startOfToday, tk } from "../lib/format";
 import { Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner, StatCard, StatusBadge } from "../components/ui";
 import { TrendChart } from "../components/TrendChart";
+import { t } from "../lib/prefs";
 
 /* -------------------------------------------------------------- dashboard */
 
 export function AdminDashboard() {
-  const { token, me } = useAuthed();
+  const { token } = useAuthed();
   const dayStart = useMemo(startOfToday, []);
   const d = useQuery(api.dashboard.admin, { token, dayStart });
   if (!d) return <Spinner />;
@@ -39,9 +40,9 @@ export function AdminDashboard() {
   return (
     <>
       <PageHeader
-        title={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, ${me.name.split(" ")[0]}`}
-        subtitle="Here's what's moving at Morning Rider today."
-        actions={<Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>New parcel</Button>}
+        title={t(new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening")}
+        subtitle={t("Here's what's moving at Morning Rider today.")}
+        actions={<Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>{t("New parcel")}</Button>}
       />
       {d.pendingMerchants > 0 && (
         <button
@@ -49,23 +50,23 @@ export function AdminDashboard() {
           className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-sun-100 px-5 py-3.5 text-left text-sm font-semibold text-amber-900 ring-1 ring-sun/50 hover:bg-sun/30"
         >
           <Store className="size-5" />
-          {d.pendingMerchants} merchant{d.pendingMerchants === 1 ? "" : "s"} waiting for approval →
+          {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
         </button>
       )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Booked today" value={num(d.todayCreated)} icon={Package} hint={`COD ${tk(d.todayCod)}`} />
-        <StatCard label="Revenue today" value={tk(d.todayRevenue)} icon={TrendingUp} accent="green" hint="Delivery + COD charges" />
-        <StatCard label="Cash with riders" value={tk(d.cashWithRiders)} icon={Banknote} accent="sun" hint="Collect from riders" />
-        <StatCard label="Payable to merchants" value={tk(d.payableToMerchants)} icon={Wallet} accent="brand" hint="Unpaid balance" />
+        <StatCard label={t("Booked today")} value={num(d.todayCreated)} icon={Package} hint={`COD ${tk(d.todayCod)}`} />
+        <StatCard label={t("Revenue today")} value={tk(d.todayRevenue)} icon={TrendingUp} accent="green" hint={t("Delivery + COD charges")} />
+        <StatCard label={t("Cash with riders")} value={tk(d.cashWithRiders)} icon={Banknote} accent="sun" hint={t("Collect from riders")} />
+        <StatCard label={t("Payable to merchants")} value={tk(d.payableToMerchants)} icon={Wallet} accent="brand" hint={t("Unpaid balance")} />
       </div>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Card className="p-6">
-          <h2 className="mb-4 font-bold">Last 14 days</h2>
+          <h2 className="mb-4 font-bold">{t("Last 14 days")}</h2>
           <TrendChart data={d.trend} />
         </Card>
         <Card className="p-6">
-          <h2 className="mb-4 font-bold">Parcel pipeline</h2>
+          <h2 className="mb-4 font-bold">{t("Parcel pipeline")}</h2>
           <div className="space-y-2">
             {[
               { s: "pending", icon: Clock },
@@ -120,11 +121,15 @@ export function Merchants() {
 
   return (
     <>
-      <PageHeader title="Merchants" subtitle="Businesses that send parcels with Morning Rider." actions={<Button icon={Plus} onClick={() => setCreating(true)}>Add merchant</Button>} />
+      <PageHeader title={t("Merchants")} subtitle={t("Businesses that send parcels with Morning Rider.")} actions={<Button icon={Plus} onClick={() => setCreating(true)}>{t("Add merchant")}</Button>} />
       <div className="mb-4 flex gap-2">
-        {(["active", "pending", "suspended"] as const).map((t) => (
-          <Button key={t} size="sm" variant={tab === t ? "dark" : "outline"} onClick={() => setTab(t)}>
-            {t === "pending" ? `Waiting approval${pending?.length ? ` (${pending.length})` : ""}` : t[0].toUpperCase() + t.slice(1)}
+        {(["active", "pending", "suspended"] as const).map((k) => (
+          <Button key={k} size="sm" variant={tab === k ? "dark" : "outline"} onClick={() => setTab(k)}>
+            {k === "pending"
+              ? `${t("Waiting approval")}${pending?.length ? ` (${pending.length})` : ""}`
+              : k === "active"
+                ? t("Active")
+                : t("Suspended")}
           </Button>
         ))}
       </div>
@@ -132,7 +137,7 @@ export function Merchants() {
         {!rows ? (
           <Spinner />
         ) : rows.length === 0 ? (
-          <Empty icon={Store} title="No merchants here" />
+          <Empty icon={Store} title={t("No merchants here")} />
         ) : (
           <div className="divide-y divide-line">
             {rows.map((m) => (
@@ -147,24 +152,24 @@ export function Merchants() {
                     {m.email && ` · ${m.email}`}
                   </p>
                   <p className="text-xs text-ink-3">
-                    {m.pickupAddress} · {m.payoutMethod ? PAYOUT_METHOD[m.payoutMethod] : ""} {m.payoutAccount} · joined {date(m.createdAt)}
+                    {m.pickupAddress} · {m.payoutMethod ? PAYOUT_METHOD[m.payoutMethod] : ""} {m.payoutAccount} · {t("joined")} {date(m.createdAt)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {m.status === "pending" && (
-                    <Button size="sm" icon={UserCheck} onClick={() => act(m._id, "active", `${m.businessName} approved.`)}>
-                      Approve
+                    <Button size="sm" icon={UserCheck} onClick={() => act(m._id, "active", t("{name} approved.", { name: m.businessName ?? m.name }))}>
+                      {t("Approve")}
                     </Button>
                   )}
                   {m.status === "suspended" && (
-                    <Button size="sm" variant="outline" icon={UserCheck} onClick={() => act(m._id, "active", "Merchant re-activated.")}>
-                      Activate
+                    <Button size="sm" variant="outline" icon={UserCheck} onClick={() => act(m._id, "active", t("Merchant re-activated."))}>
+                      {t("Activate")}
                     </Button>
                   )}
                   {m.status === "active" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/app/payouts?merchant=${m._id}`)}>
-                        Statement
+                        {t("Statement")}
                       </Button>
                       <Button
                         size="sm"
@@ -179,13 +184,13 @@ export function Merchants() {
                           }
                         }}
                       >
-                        Reset password
+                        {t("Reset password")}
                       </Button>
                     </>
                   )}
                   {m.status !== "suspended" && (
-                    <Button size="sm" variant="ghost" icon={UserX} onClick={() => act(m._id, "suspended", m.status === "pending" ? "Application rejected." : "Merchant suspended.")}>
-                      {m.status === "pending" ? "Reject" : "Suspend"}
+                    <Button size="sm" variant="ghost" icon={UserX} onClick={() => act(m._id, "suspended", m.status === "pending" ? t("Application rejected.") : t("Merchant suspended."))}>
+                      {m.status === "pending" ? t("Reject") : t("Suspend")}
                     </Button>
                   )}
                 </div>
@@ -202,17 +207,17 @@ export function Merchants() {
 
 function TempPasswordModal({ value, onClose }: { value: { name: string; password: string } | null; onClose: () => void }) {
   return (
-    <Modal open={!!value} onClose={onClose} title="Temporary password" footer={<Button onClick={onClose}>Done</Button>}>
+    <Modal open={!!value} onClose={onClose} title={t("Temporary password")} footer={<Button onClick={onClose}>{t("Done")}</Button>}>
       <p className="text-sm text-ink-2">
-        Give this password to <b>{value?.name}</b>. They have been signed out everywhere and should change it after signing in.
+        {t("Give this password to {name}. They have been signed out everywhere and should change it after signing in.", { name: value?.name ?? "" })}
       </p>
       <p className="mt-4 rounded-2xl bg-navy-50 py-4 text-center font-mono text-2xl font-bold tracking-wider select-all">{value?.password}</p>
-      <p className="mt-3 text-xs text-ink-3">This is shown only once.</p>
+      <p className="mt-3 text-xs text-ink-3">{t("This is shown only once.")}</p>
     </Modal>
   );
 }
 
-function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider" | "admin"; open: boolean; onClose: () => void }) {
+function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider"; open: boolean; onClose: () => void }) {
   const { token } = useAuthed();
   const toast = useToast();
   const create = useMutation(api.users.create);
@@ -225,7 +230,7 @@ function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider" |
     setBusy(true);
     try {
       await create({ token, role, ...f });
-      toast.ok(`${f.name} added.`);
+      toast.ok(t("{name} added.", { name: f.name }));
       setF({ name: "", phone: "", password: "", businessName: "", pickupAddress: "", riderArea: "" });
       onClose();
     } catch (err) {
@@ -238,22 +243,22 @@ function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider" |
   return (
     <Modal open={open} onClose={onClose} title={`Add ${role}`}>
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Full name">{(id) => <Input id={id} value={f.name} onChange={set("name")} required />}</Field>
-        <Field label="Phone number (login)">{(id) => <Input id={id} type="tel" placeholder="01XXXXXXXXX" value={f.phone} onChange={set("phone")} required />}</Field>
+        <Field label={t("Full name")}>{(id) => <Input id={id} value={f.name} onChange={set("name")} required />}</Field>
+        <Field label={t("Phone number (login)")}>{(id) => <Input id={id} type="tel" placeholder="01XXXXXXXXX" value={f.phone} onChange={set("phone")} required />}</Field>
         {role === "merchant" && (
           <>
-            <Field label="Business name">{(id) => <Input id={id} value={f.businessName} onChange={set("businessName")} required />}</Field>
-            <Field label="Pickup address">{(id) => <Input id={id} value={f.pickupAddress} onChange={set("pickupAddress")} />}</Field>
+            <Field label={t("Business name")}>{(id) => <Input id={id} value={f.businessName} onChange={set("businessName")} required />}</Field>
+            <Field label={t("Pickup address")}>{(id) => <Input id={id} value={f.pickupAddress} onChange={set("pickupAddress")} />}</Field>
           </>
         )}
         {role === "rider" && (
-          <Field label="Working area (optional)">{(id) => <Input id={id} value={f.riderArea} onChange={set("riderArea")} placeholder="e.g. Mirpur, Uttara" />}</Field>
+          <Field label={t("Working area (optional)")}>{(id) => <Input id={id} value={f.riderArea} onChange={set("riderArea")} placeholder={t("e.g. Mirpur, Uttara")} />}</Field>
         )}
-        <Field label="Password" hint="At least 8 characters with a letter and a number. Share it privately.">
+        <Field label={t("Password")} hint={t("At least 8 characters with a letter and a number. Share it privately.")}>
           {(id) => <Input id={id} type="text" autoComplete="off" value={f.password} onChange={set("password")} required minLength={8} />}
         </Field>
         <Button type="submit" loading={busy} className="w-full">
-          Create account
+          {t("Create account")}
         </Button>
       </form>
     </Modal>
@@ -266,29 +271,23 @@ export function Riders() {
   const { token } = useAuthed();
   const toast = useToast();
   const rows = useQuery(api.users.list, { token, role: "rider" });
-  const admins = useQuery(api.users.list, { token, role: "admin" });
   const setStatus = useMutation(api.users.setStatus);
   const resetPassword = useMutation(api.users.resetPassword);
-  const [creating, setCreating] = useState<"rider" | "admin" | null>(null);
+  const [creating, setCreating] = useState(false);
   const [reset, setReset] = useState<{ name: string; password: string } | null>(null);
 
   return (
     <>
       <PageHeader
-        title="Riders & staff"
-        subtitle="Delivery team and admin accounts."
-        actions={
-          <>
-            <Button variant="outline" icon={Plus} onClick={() => setCreating("admin")}>Add admin</Button>
-            <Button icon={Plus} onClick={() => setCreating("rider")}>Add rider</Button>
-          </>
-        }
+        title={t("Riders")}
+        subtitle={t("Your delivery team.")}
+        actions={<Button icon={Plus} onClick={() => setCreating(true)}>{t("Add rider")}</Button>}
       />
       {!rows ? (
         <Spinner />
       ) : rows.length === 0 ? (
         <Card>
-          <Empty icon={Bike} title="No riders yet" text="Add your first rider so you can assign pickups and deliveries." />
+          <Empty icon={Bike} title={t("No riders yet")} text={t("Add your first rider so you can assign pickups and deliveries.")} />
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -302,21 +301,21 @@ export function Riders() {
                   <p className="truncate font-bold">{r.name}</p>
                   <p className="text-sm text-ink-2">{r.phone}{r.riderArea && ` · ${r.riderArea}`}</p>
                 </div>
-                {r.status !== "active" && <Badge tone="red">Suspended</Badge>}
+                {r.status !== "active" && <Badge tone="red">{t("Suspended")}</Badge>}
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-page p-3">
-                  <p className="text-xs text-ink-3">Active tasks</p>
+                  <p className="text-xs text-ink-3">{t("Active tasks")}</p>
                   <p className="font-bold">{r.activeTasks}</p>
                 </div>
                 <div className="rounded-xl bg-sun-100/70 p-3">
-                  <p className="text-xs text-amber-800">Cash in hand</p>
+                  <p className="text-xs text-amber-800">{t("Cash in hand")}</p>
                   <p className="font-bold text-amber-900">{tk(r.cashInHand)}</p>
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {r.cashInHand > 0 && (
-                  <Button size="sm" variant="dark" onClick={() => navigate(`/app/cash?rider=${r._id}`)}>Receive cash</Button>
+                  <Button size="sm" variant="dark" onClick={() => navigate(`/app/cash?rider=${r._id}`)}>{t("Receive cash")}</Button>
                 )}
                 <Button
                   size="sm"
@@ -330,7 +329,7 @@ export function Riders() {
                     }
                   }}
                 >
-                  Reset password
+                  {t("Reset password")}
                 </Button>
                 <Button
                   size="sm"
@@ -343,7 +342,7 @@ export function Riders() {
                     }
                   }}
                 >
-                  {r.status === "active" ? "Suspend" : "Activate"}
+                  {r.status === "active" ? t("Suspend") : t("Activate")}
                 </Button>
               </div>
             </Card>
@@ -351,20 +350,7 @@ export function Riders() {
         </div>
       )}
 
-      <h2 className="mb-3 mt-10 font-bold">Admins</h2>
-      <Card className="divide-y divide-line">
-        {admins?.map((a) => (
-          <div key={a._id} className="flex items-center justify-between p-4 text-sm">
-            <div>
-              <p className="font-semibold">{a.name}</p>
-              <p className="text-ink-3">{a.phone}</p>
-            </div>
-            <Badge tone={a.status === "active" ? "green" : "red"}>{a.status}</Badge>
-          </div>
-        ))}
-      </Card>
-
-      <CreateUserModal role={creating ?? "rider"} open={!!creating} onClose={() => setCreating(null)} />
+      <CreateUserModal role="rider" open={creating} onClose={() => setCreating(false)} />
       <TempPasswordModal value={reset} onClose={() => setReset(null)} />
     </>
   );
@@ -382,13 +368,13 @@ export function Payouts() {
 
   return (
     <>
-      <PageHeader title="Merchant payouts" subtitle="Pay merchants their collected COD minus Morning Rider charges." />
+      <PageHeader title={t("Merchant payouts")} subtitle={t("Pay merchants their collected COD minus Morning Rider charges.")} />
       <Card className="overflow-hidden">
-        <div className="border-b border-line px-5 py-4 font-bold">Unpaid balances</div>
+        <div className="border-b border-line px-5 py-4 font-bold">{t("Unpaid balances")}</div>
         {!balances ? (
           <Spinner />
         ) : balances.length === 0 ? (
-          <Empty icon={CheckCircle2} title="All settled" text="No merchant has an unpaid balance right now." />
+          <Empty icon={CheckCircle2} title={t("All settled")} text={t("No merchant has an unpaid balance right now.")} />
         ) : (
           <div className="divide-y divide-line">
             {balances.map((b) => (
@@ -396,13 +382,13 @@ export function Payouts() {
                 <div className="min-w-48 flex-1">
                   <p className="font-bold">{b.merchantName}</p>
                   <p className="text-xs text-ink-3">
-                    {b.count} parcels · collected {tk(b.collected)} · charges {tk(b.charges)}
+                    {t("{n} parcels · collected {collected} · charges {charges}", { n: b.count, collected: tk(b.collected), charges: tk(b.charges) })}
                     {b.payoutMethod && ` · ${PAYOUT_METHOD[b.payoutMethod]} ${b.payoutAccount ?? ""}`}
                   </p>
                 </div>
                 <p className={`text-lg font-extrabold ${b.net < 0 ? "text-red-600" : "text-ink"}`}>{tk(b.net)}</p>
                 <Button size="sm" onClick={() => setPaying(b.merchantId)}>
-                  Review & pay
+                  {t("Review & pay")}
                 </Button>
               </div>
             ))}
@@ -410,7 +396,7 @@ export function Payouts() {
         )}
       </Card>
 
-      <h2 className="mb-3 mt-8 font-bold">Payout history</h2>
+      <h2 className="mb-3 mt-8 font-bold">{t("Payout history")}</h2>
       <PayoutHistory rows={history} showMerchant />
       <PayModal merchantId={paying} onClose={() => setPaying(null)} />
     </>
@@ -429,7 +415,7 @@ export function PayoutHistory({
       {!rows ? (
         <Spinner />
       ) : rows.length === 0 ? (
-        <Empty icon={Wallet} title="No payouts yet" />
+        <Empty icon={Wallet} title={t("No payouts yet")} />
       ) : (
         <div className="divide-y divide-line">
           {rows.map((p) => (
@@ -438,15 +424,15 @@ export function PayoutHistory({
                 <Wallet className="size-5" />
               </div>
               <div className="min-w-40 flex-1">
-                <p className="font-semibold">{showMerchant ? p.merchantName : `${PAYOUT_METHOD[p.method]} payment`}</p>
+                <p className="font-semibold">{showMerchant ? p.merchantName : `${PAYOUT_METHOD[p.method]} ${t("payment")}`}</p>
                 <p className="text-xs text-ink-3">
-                  {dateTime(p.createdAt)} · {p.parcelCount} parcels · {PAYOUT_METHOD[p.method]}
-                  {p.reference && ` · Ref ${p.reference}`}
+                  {dateTime(p.createdAt)} · {t("{n} parcels", { n: p.parcelCount })} · {PAYOUT_METHOD[p.method]}
+                  {p.reference && ` · ${t("Ref")} ${p.reference}`}
                 </p>
               </div>
               <p className="font-extrabold">{tk(p.amount)}</p>
               <Button size="sm" variant="outline" icon={Printer} onClick={() => window.open(`/print/payout/${p._id}`, "_blank", "noopener")}>
-                Invoice
+                {t("Invoice")}
               </Button>
             </div>
           ))}
@@ -473,7 +459,7 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
       open={!!merchantId}
       onClose={onClose}
       wide
-      title={`Pay ${info?.merchantName ?? "merchant"}`}
+      title={t("Pay {name}", { name: info?.merchantName ?? t("merchant") })}
       footer={
         st && st.count > 0 ? (
           <Button
@@ -483,7 +469,7 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
               setBusy(true);
               try {
                 await pay({ token, merchantId: merchantId!, method: chosen, reference: reference || undefined, expectedAmount: st.net });
-                toast.ok(`Payout of ${tk(st.net)} recorded.`);
+                toast.ok(t("Payout of {amount} recorded.", { amount: tk(st.net) }));
                 onClose();
               } catch (e) {
                 toast.error(e);
@@ -492,7 +478,7 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
               }
             }}
           >
-            Confirm payment of {tk(st.net)}
+            {t("Confirm payment of {amount}", { amount: tk(st.net) })}
           </Button>
         ) : undefined
       }
@@ -500,26 +486,26 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
       {!st ? (
         <Spinner />
       ) : st.count === 0 ? (
-        <p className="py-8 text-center text-ink-2">Nothing to pay for this merchant.</p>
+        <p className="py-8 text-center text-ink-2">{t("Nothing to pay for this merchant.")}</p>
       ) : (
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-2xl bg-page p-3">
-              <p className="text-xs text-ink-3">Collected</p>
+              <p className="text-xs text-ink-3">{t("Collected")}</p>
               <p className="font-bold">{tk(st.collected)}</p>
             </div>
             <div className="rounded-2xl bg-page p-3">
-              <p className="text-xs text-ink-3">Charges</p>
+              <p className="text-xs text-ink-3">{t("Charges")}</p>
               <p className="font-bold">− {tk(st.charges)}</p>
             </div>
             <div className="rounded-2xl bg-brand-50 p-3">
-              <p className="text-xs text-brand-700">Pay</p>
+              <p className="text-xs text-brand-700">{t("Pay")}</p>
               <p className="font-extrabold text-brand-700">{tk(st.net)}</p>
             </div>
           </div>
-          {st.net <= 0 && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">The balance is zero or negative (return charges exceed collections), so there is nothing to pay yet.</p>}
+          {st.net <= 0 && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{t("The balance is zero or negative (return charges exceed collections), so there is nothing to pay yet.")}</p>}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Paid via">
+            <Field label={t("Paid via")}>
               {(id) => (
                 <Select id={id} value={chosen} onChange={(e) => setMethod(e.target.value as keyof typeof PAYOUT_METHOD)}>
                   {Object.entries(PAYOUT_METHOD).map(([k, l]) => (
@@ -528,8 +514,8 @@ function PayModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onC
                 </Select>
               )}
             </Field>
-            <Field label="Transaction ID / reference">
-              {(id) => <Input id={id} value={reference} onChange={(e) => setReference(e.target.value)} placeholder={info?.payoutAccount ? `To ${info.payoutAccount}` : ""} />}
+            <Field label={t("Transaction ID / reference")}>
+              {(id) => <Input id={id} value={reference} onChange={(e) => setReference(e.target.value)} placeholder={info?.payoutAccount ? `${t("To")} ${info.payoutAccount}` : ""} />}
             </Field>
           </div>
           <StatementTable rows={st.parcels} />
@@ -545,11 +531,11 @@ export function StatementTable({ rows }: { rows: (typeof api.money.statement._re
       <table className="w-full text-sm">
         <thead className="sticky top-0 bg-page text-left text-xs font-bold text-ink-3 uppercase">
           <tr>
-            <th className="px-3 py-2">Parcel</th>
-            <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2 text-right">Collected</th>
-            <th className="px-3 py-2 text-right">Charges</th>
-            <th className="px-3 py-2 text-right">Net</th>
+            <th className="px-3 py-2">{t("Parcel")}</th>
+            <th className="px-3 py-2">{t("Status")}</th>
+            <th className="px-3 py-2 text-right">{t("Collected")}</th>
+            <th className="px-3 py-2 text-right">{t("Charges")}</th>
+            <th className="px-3 py-2 text-right">{t("Net")}</th>
           </tr>
         </thead>
         <tbody>
@@ -587,14 +573,14 @@ export function RiderCashAdmin() {
 
   return (
     <>
-      <PageHeader title="Rider cash" subtitle="COD money riders have collected and must hand over to the office." />
+      <PageHeader title={t("Rider cash")} subtitle={t("COD money riders have collected and must hand over to the office.")} />
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <Card className="h-fit overflow-hidden">
-          <div className="border-b border-line px-5 py-4 font-bold">Riders holding cash</div>
+          <div className="border-b border-line px-5 py-4 font-bold">{t("Riders holding cash")}</div>
           {!riders ? (
             <Spinner />
           ) : withCash.length === 0 ? (
-            <p className="p-6 text-center text-sm text-ink-3">No rider is holding cash.</p>
+            <p className="p-6 text-center text-sm text-ink-3">{t("No rider is holding cash.")}</p>
           ) : (
             withCash.map((r) => (
               <button
@@ -610,14 +596,14 @@ export function RiderCashAdmin() {
         </Card>
         <Card className="p-6">
           {!riderId ? (
-            <Empty icon={Banknote} title="Choose a rider" text="Pick a rider on the left to see the parcels behind their cash." />
+            <Empty icon={Banknote} title={t("Choose a rider")} text={t("Pick a rider on the left to see the parcels behind their cash.")} />
           ) : !cash ? (
             <Spinner />
           ) : (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm text-ink-3">Cash to receive</p>
+                  <p className="text-sm text-ink-3">{t("Cash to receive")}</p>
                   <p className="text-3xl font-extrabold">{tk(cash.total)}</p>
                 </div>
                 {cash.total > 0 && (
@@ -628,7 +614,7 @@ export function RiderCashAdmin() {
                       setBusy(true);
                       try {
                         const r = await receive({ token, riderId: riderId as Id<"users">, expectedAmount: cash.total });
-                        toast.ok(`Received ${tk(r.amount)}.`);
+                        toast.ok(t("Received {amount}.", { amount: tk(r.amount) }));
                       } catch (e) {
                         toast.error(e);
                       } finally {
@@ -636,7 +622,7 @@ export function RiderCashAdmin() {
                       }
                     }}
                   >
-                    Mark {tk(cash.total)} received
+                    {t("Mark {amount} received", { amount: tk(cash.total) })}
                   </Button>
                 )}
               </div>
@@ -649,14 +635,14 @@ export function RiderCashAdmin() {
                     <span className="font-bold">{tk(p.collectedAmount)}</span>
                   </div>
                 ))}
-                {cash.parcels.length === 0 && <p className="p-4 text-center text-sm text-ink-3">Nothing pending.</p>}
+                {cash.parcels.length === 0 && <p className="p-4 text-center text-sm text-ink-3">{t("Nothing pending.")}</p>}
               </div>
               {cash.deposits.length > 0 && (
                 <>
-                  <p className="mb-2 mt-6 text-sm font-bold">Recent hand-overs</p>
+                  <p className="mb-2 mt-6 text-sm font-bold">{t("Recent hand-overs")}</p>
                   {cash.deposits.map((d) => (
                     <p key={d._id} className="text-sm text-ink-2">
-                      {dateTime(d.createdAt)} — {tk(d.amount)} ({d.parcelCount} parcels)
+                      {dateTime(d.createdAt)} — {tk(d.amount)} ({t("{n} parcels", { n: d.parcelCount })})
                     </p>
                   ))}
                 </>
@@ -704,7 +690,7 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
 
   return (
     <>
-      <PageHeader title="Delivery rates" subtitle="New parcels are charged with these rates. Existing parcels keep the charge they were booked with." />
+      <PageHeader title={t("Delivery rates")} subtitle={t("New parcels are charged with these rates. Existing parcels keep the charge they were booked with.")} />
       <Card className="max-w-2xl p-6">
         <form
           onSubmit={async (e) => {
@@ -712,7 +698,7 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
             setBusy(true);
             try {
               await save({ token, ...(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, Number(v)])) as Record<keyof typeof f, number>) });
-              toast.ok("Rates saved.");
+              toast.ok(t("Rates saved."));
             } catch (err) {
               toast.error(err);
             } finally {
@@ -722,12 +708,12 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
           className="grid gap-4 sm:grid-cols-2"
         >
           {fields.map(([k, label, unit]) => (
-            <Field key={k} label={`${label} (${unit})`}>
+            <Field key={k} label={`${t(label)} (${unit})`}>
               {(id) => <Input id={id} type="number" min={0} step="any" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} required />}
             </Field>
           ))}
           <Button type="submit" loading={busy} className="sm:col-span-2">
-            Save rates
+            {t("Save rates")}
           </Button>
         </form>
       </Card>

@@ -9,6 +9,7 @@ import { navigate } from "../lib/router";
 import { STATUS, STATUS_ORDER, dateTime, tk, type Status } from "../lib/format";
 import { Button, Card, Empty, Input, Select, Spinner, StatusBadge, cx } from "./ui";
 import { ParcelDetail, RiderSelect } from "./ParcelDetail";
+import { t } from "../lib/prefs";
 
 export function ParcelList() {
   const { token, me } = useAuthed();
@@ -58,7 +59,7 @@ export function ParcelList() {
       const ids = [...selected];
       if (kind === "pickup") {
         const r = await assignPickup({ token, ids, riderId: bulkRider as Id<"users"> });
-        toast.ok(`Pickup assigned for ${r.done} parcel(s).`);
+        toast.ok(t("Pickup assigned for {n} parcel(s).", { n: r.done }));
       } else {
         const r = await bulkStatus({
           token,
@@ -66,7 +67,11 @@ export function ParcelList() {
           to: kind,
           deliveryRiderId: kind === "out_for_delivery" ? (bulkRider as Id<"users">) : undefined,
         });
-        toast.ok(`${r.done} updated${r.skipped.length ? `, ${r.skipped.length} skipped (not allowed from their status)` : ""}.`);
+        toast.ok(
+          r.skipped.length
+            ? t("{done} updated, {skipped} skipped (not allowed from their status).", { done: r.done, skipped: r.skipped.length })
+            : t("{done} updated.", { done: r.done }),
+        );
       }
       setSelected(new Set());
     } catch (e) {
@@ -85,13 +90,13 @@ export function ParcelList() {
             <Input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search tracking ID, customer name, phone, invoice…"
+              placeholder={t("Search tracking ID, customer name, phone, invoice…")}
               className="pl-10"
             />
           </div>
           {isAdmin && (
             <Select value={merchantId} onChange={(e) => setMerchantId(e.target.value as Id<"users">)} className="w-auto min-w-48">
-              <option value="">All merchants</option>
+              <option value="">{t("All merchants")}</option>
               {merchants?.map((m) => (
                 <option key={m._id} value={m._id}>
                   {m.label}
@@ -111,7 +116,7 @@ export function ParcelList() {
                   status === s ? "bg-navy-900 text-white" : "bg-page text-ink-2 hover:bg-navy-50",
                 )}
               >
-                {s ? STATUS[s].label : "All"}
+                {s ? STATUS[s].label : t("All")}
               </button>
             ))}
           </div>
@@ -120,9 +125,9 @@ export function ParcelList() {
 
       {selected.size > 0 && (
         <Card className="animate-rise sticky top-16 z-20 mb-4 flex flex-wrap items-center gap-2 border-brand/40 bg-brand-50 p-3 lg:top-4">
-          <span className="px-2 text-sm font-bold text-brand-700">{selected.size} selected</span>
+          <span className="px-2 text-sm font-bold text-brand-700">{t("{n} selected", { n: selected.size })}</span>
           <Button size="sm" variant="outline" icon={Printer} onClick={() => window.open(`/print/labels?ids=${[...selected].join(",")}`, "_blank", "noopener")}>
-            Print labels
+            {t("Print labels")}
           </Button>
           {isAdmin && (
             <>
@@ -130,20 +135,20 @@ export function ParcelList() {
                 <RiderSelect value={bulkRider} onChange={setBulkRider} />
               </div>
               <Button size="sm" disabled={!bulkRider} loading={bulkBusy} onClick={() => runBulk("pickup")}>
-                Assign pickup
+                {t("Assign pickup")}
               </Button>
               <Button size="sm" disabled={!bulkRider} loading={bulkBusy} onClick={() => runBulk("out_for_delivery")}>
-                Send out for delivery
+                {t("Send out for delivery")}
               </Button>
               <Button size="sm" variant="dark" loading={bulkBusy} onClick={() => runBulk("picked_up")}>
-                Mark picked up
+                {t("Mark picked up")}
               </Button>
               <Button size="sm" variant="dark" loading={bulkBusy} onClick={() => runBulk("at_hub")}>
-                Mark at hub
+                {t("Mark at hub")}
               </Button>
             </>
           )}
-          <button onClick={() => setSelected(new Set())} className="ml-auto rounded-lg p-1.5 text-ink-2 hover:bg-white" aria-label="Clear selection">
+          <button onClick={() => setSelected(new Set())} className="ml-auto rounded-lg p-1.5 text-ink-2 hover:bg-white" aria-label={t("Clear selection")}>
             <X className="size-4" />
           </button>
         </Card>
@@ -155,9 +160,9 @@ export function ParcelList() {
         ) : results.length === 0 ? (
           <Empty
             icon={Package}
-            title="No parcels here"
-            text={search ? "Nothing matches your search." : "Parcels will show up here once they are created."}
-            action={!search && <Button icon={PackagePlus} onClick={() => navigate("/app/parcels/new")}>Create parcel</Button>}
+            title={t("No parcels here")}
+            text={search ? t("Nothing matches your search.") : t("Parcels will show up here once they are created.")}
+            action={!search && <Button icon={PackagePlus} onClick={() => navigate("/app/parcels/new")}>{t("Create parcel")}</Button>}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -170,15 +175,15 @@ export function ParcelList() {
                       className="size-4 accent-[var(--color-brand)]"
                       checked={allSelected}
                       onChange={() => setSelected(allSelected ? new Set() : new Set(results.map((p) => p._id)))}
-                      aria-label="Select all"
+                      aria-label={t("Select all")}
                     />
                   </th>
-                  <th className="px-3 py-3">Parcel</th>
-                  <th className="px-3 py-3">Customer</th>
-                  {isAdmin && <th className="px-3 py-3">Merchant</th>}
-                  <th className="px-3 py-3 text-right">COD</th>
-                  <th className="px-3 py-3 text-right">Charge</th>
-                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3">{t("Parcel")}</th>
+                  <th className="px-3 py-3">{t("Customer")}</th>
+                  {isAdmin && <th className="px-3 py-3">{t("Merchant")}</th>}
+                  <th className="px-3 py-3 text-right">{t("COD")}</th>
+                  <th className="px-3 py-3 text-right">{t("Charge")}</th>
+                  <th className="px-3 py-3">{t("Status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -220,7 +225,7 @@ export function ParcelList() {
         {loadState === "CanLoadMore" && (
           <div className="border-t border-line p-3 text-center">
             <Button variant="ghost" onClick={() => loadMore(50)}>
-              Load more
+              {t("Load more")}
             </Button>
           </div>
         )}

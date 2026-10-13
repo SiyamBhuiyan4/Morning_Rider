@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import { useAuthed } from "../lib/session";
 import { date } from "../lib/format";
 import { cx } from "./ui";
+import { t } from "../lib/prefs";
 
 /** A customer's delivery record across Morning Rider, by phone number. */
 export function FraudSummary({ phone, compact }: { phone: string; compact?: boolean }) {
@@ -32,11 +33,11 @@ export function FraudSummary({ phone, compact }: { phone: string; compact?: bool
       <div className="flex items-center gap-3">
         <Icon className="size-6 shrink-0" />
         <div className="flex-1">
-          <p className="font-bold">{headline}</p>
+          <p className="font-bold">{t(headline)}</p>
           {r.successRate !== null && (
             <p className="text-sm opacity-80">
-              {r.successRate}% success · {r.total} parcel{r.total === 1 ? "" : "s"}
-              {r.lastOrderAt && ` · last ${date(r.lastOrderAt)}`}
+              {t("{rate}% success · {n} parcels", { rate: r.successRate, n: r.total })}
+              {r.lastOrderAt && ` · ${t("last")} ${date(r.lastOrderAt)}`}
             </p>
           )}
         </div>
@@ -49,9 +50,9 @@ export function FraudSummary({ phone, compact }: { phone: string; compact?: bool
             ["Returned", r.returned],
             ["Cancelled", r.cancelled],
           ].map(([l, n]) => (
-            <div key={l} className="rounded-xl bg-white/70 py-3">
+            <div key={l} className="rounded-xl bg-white/70 py-3 dark:bg-white/5">
               <p className="text-xl font-extrabold">{n}</p>
-              <p className="text-xs font-medium opacity-70">{l}</p>
+              <p className="text-xs font-medium opacity-70">{t(String(l))}</p>
             </div>
           ))}
         </div>

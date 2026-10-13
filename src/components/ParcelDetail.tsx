@@ -8,6 +8,7 @@ import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
 import { STATUS, ZONE, dateTime, tk, type Status } from "../lib/format";
 import { Button, Field, Input, Modal, Select, Spinner, StatusBadge, cx } from "./ui";
+import { t } from "../lib/prefs";
 
 const MOVE_STYLE: Partial<Record<Status, "primary" | "dark" | "outline" | "danger">> = {
   delivered: "primary",
@@ -26,7 +27,7 @@ export function RiderSelect({ value, onChange }: { value: string; onChange: (v: 
   const riders = useQuery(api.users.options, { token, role: "rider" });
   return (
     <Select value={value} onChange={(e) => onChange(e.target.value as Id<"users">)}>
-      <option value="">Choose rider…</option>
+      <option value="">{t("Choose rider…")}</option>
       {riders?.map((r) => (
         <option key={r._id} value={r._id}>
           {r.label} {r.area ? `(${r.area})` : ""} — {r.phone}
@@ -77,7 +78,7 @@ export function StatusActions({
         collectedAmount: move === "partial_delivered" ? Number(amount) : undefined,
         deliveryRiderId: move === "out_for_delivery" && rider ? (rider as Id<"users">) : undefined,
       });
-      toast.ok(`Marked as ${STATUS[move].label.toLowerCase()}.`);
+      toast.ok(t("Marked as {status}.", { status: STATUS[move].label }));
       setMove(null);
       setNote("");
       setAmount("");
@@ -99,42 +100,42 @@ export function StatusActions({
             variant={move === m ? "dark" : (MOVE_STYLE[m] ?? "outline")}
             onClick={() => setMove(move === m ? null : m)}
           >
-            {m === "out_for_delivery" && me.role === "rider" ? "Retry delivery" : STATUS[m].label}
+            {m === "out_for_delivery" && me.role === "rider" ? t("Retry delivery") : STATUS[m].label}
           </Button>
         ))}
       </div>
       {move && (
         <div className="animate-rise mt-3 space-y-3 rounded-2xl border border-line bg-page p-4">
           {move === "out_for_delivery" && me.role === "admin" && (
-            <Field label="Delivery rider">{() => <RiderSelect value={rider} onChange={setRider} />}</Field>
+            <Field label={t("Delivery rider")}>{() => <RiderSelect value={rider} onChange={setRider} />}</Field>
           )}
           {move === "partial_delivered" && (
-            <Field label={`Amount collected (less than ${tk(codAmount)})`}>
+            <Field label={t("Amount collected (less than {amount})", { amount: tk(codAmount) })}>
               {(id) => <Input id={id} type="number" min={0} max={codAmount - 1} value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />}
             </Field>
           )}
           {move === "delivered" && codAmount > 0 && (
             <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">
-              Collect {tk(codAmount)} from the customer.
+              {t("Collect {amount} from the customer.", { amount: tk(codAmount) })}
             </p>
           )}
-          <Field label="Note (optional)">
+          <Field label={t("Note (optional)")}>
             {(id) => (
               <Input
                 id={id}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={300}
-                placeholder={move === "returning" || move === "hold" ? "Reason, e.g. customer not answering" : ""}
+                placeholder={move === "returning" || move === "hold" ? t("Reason, e.g. customer not answering") : ""}
               />
             )}
           </Field>
           <div className="flex gap-2">
             <Button onClick={confirm} loading={busy} variant={move === "cancelled" ? "danger" : "primary"}>
-              Confirm: {STATUS[move].label}
+              {t("Confirm")}: {STATUS[move].label}
             </Button>
             <Button variant="ghost" onClick={() => setMove(null)}>
-              Back
+              {t("Back")}
             </Button>
           </div>
         </div>
@@ -151,38 +152,38 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
   const [pickupRider, setPickupRider] = useState("");
 
   return (
-    <Modal open={!!id} onClose={onClose} title="Parcel details" wide>
+    <Modal open={!!id} onClose={onClose} title={t("Parcel details")} wide>
       {data === undefined ? (
         <Spinner />
       ) : data === null ? (
-        <p className="py-10 text-center text-ink-2">Parcel not found.</p>
+        <p className="py-10 text-center text-ink-2">{t("Parcel not found.")}</p>
       ) : (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-mono text-xl font-bold">{data.parcel.trackingCode}</p>
               <p className="text-sm text-ink-3">
-                Created {dateTime(data.parcel.createdAt)}
-                {data.parcel.invoice && ` · Invoice ${data.parcel.invoice}`}
+                {t("Created")} {dateTime(data.parcel.createdAt)}
+                {data.parcel.invoice && ` · ${t("Invoice")} ${data.parcel.invoice}`}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <StatusBadge status={data.parcel.status} className="px-3 py-1.5 text-sm" />
               {me.role !== "rider" && (
                 <Button size="sm" variant="outline" icon={Printer} onClick={() => window.open(`/print/labels?ids=${data.parcel._id}`, "_blank", "noopener")}>
-                  Label
+                  {t("Label")}
                 </Button>
               )}
               {data.canEdit && (
                 <Button size="sm" variant="outline" icon={Pencil} onClick={() => navigate(`/app/parcels/edit/${data.parcel._id}`)}>
-                  Edit
+                  {t("Edit")}
                 </Button>
               )}
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <InfoBlock icon={User} title="Customer">
+            <InfoBlock icon={User} title={t("Customer")}>
               <p className="font-semibold">{data.parcel.recipientName}</p>
               <a href={`tel:${data.parcel.recipientPhone}`} className="font-medium text-brand hover:underline">
                 {data.parcel.recipientPhone}
@@ -192,7 +193,7 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
                 {data.parcel.district} · {ZONE[data.parcel.zone]}
               </p>
             </InfoBlock>
-            <InfoBlock icon={Store} title="Merchant">
+            <InfoBlock icon={Store} title={t("Merchant")}>
               <p className="font-semibold">{data.merchant?.businessName ?? data.merchant?.name}</p>
               <p className="text-ink-2">{data.merchant?.phone}</p>
               <p className="text-ink-3">{data.merchant?.pickupAddress}</p>
@@ -200,25 +201,25 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Money label="COD" value={tk(data.parcel.codAmount)} />
-            <Money label="Collected" value={tk(data.parcel.collectedAmount)} />
-            <Money label="Delivery charge" value={tk(data.parcel.deliveryCharge)} />
-            <Money label="COD charge" value={tk(data.parcel.codCharge)} />
+            <Money label={t("COD")} value={tk(data.parcel.codAmount)} />
+            <Money label={t("Collected")} value={tk(data.parcel.collectedAmount)} />
+            <Money label={t("Delivery charge")} value={tk(data.parcel.deliveryCharge)} />
+            <Money label={t("COD charge")} value={tk(data.parcel.codCharge)} />
           </div>
           <p className="-mt-3 text-xs text-ink-3">
-            {data.parcel.weightKg} kg{data.parcel.itemDescription && ` · ${data.parcel.itemDescription}`}
-            {data.parcel.note && ` · Note: ${data.parcel.note}`}
-            {data.parcel.settlement === "paid" && " · Paid to merchant"}
+            {data.parcel.weightKg} {t("kg")}{data.parcel.itemDescription && ` · ${data.parcel.itemDescription}`}
+            {data.parcel.note && ` · ${t("Note")}: ${data.parcel.note}`}
+            {data.parcel.settlement === "paid" && ` · ${t("Paid to merchant")}`}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <InfoBlock icon={Bike} title="Pickup rider">
+            <InfoBlock icon={Bike} title={t("Pickup rider")}>
               {data.pickupRider ? (
                 <p>
                   {data.pickupRider.name} · <a className="text-brand" href={`tel:${data.pickupRider.phone}`}>{data.pickupRider.phone}</a>
                 </p>
               ) : (
-                <p className="text-ink-3">Not assigned</p>
+                <p className="text-ink-3">{t("Not assigned")}</p>
               )}
               {me.role === "admin" && data.parcel.status === "pending" && (
                 <div className="mt-2 flex gap-2">
@@ -230,31 +231,31 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
                     onClick={async () => {
                       try {
                         await assignPickup({ token, ids: [data.parcel._id], riderId: pickupRider as Id<"users"> });
-                        toast.ok("Pickup rider assigned.");
+                        toast.ok(t("Pickup rider assigned."));
                       } catch (e) {
                         toast.error(e);
                       }
                     }}
                   >
-                    Assign
+                    {t("Assign")}
                   </Button>
                 </div>
               )}
             </InfoBlock>
-            <InfoBlock icon={Bike} title="Delivery rider">
+            <InfoBlock icon={Bike} title={t("Delivery rider")}>
               {data.deliveryRider ? (
                 <p>
                   {data.deliveryRider.name} · <a className="text-brand" href={`tel:${data.deliveryRider.phone}`}>{data.deliveryRider.phone}</a>
                 </p>
               ) : (
-                <p className="text-ink-3">Not assigned</p>
+                <p className="text-ink-3">{t("Not assigned")}</p>
               )}
             </InfoBlock>
           </div>
 
           {data.moves.length > 0 && (
             <div>
-              <p className="mb-2 text-sm font-bold">Update status</p>
+              <p className="mb-2 text-sm font-bold">{t("Update status")}</p>
               <StatusActions
                 parcelId={data.parcel._id}
                 moves={data.moves}
@@ -265,7 +266,7 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
           )}
 
           <div>
-            <p className="mb-3 text-sm font-bold">History</p>
+            <p className="mb-3 text-sm font-bold">{t("History")}</p>
             <ol>
               {data.events.map((e, i) => (
                 <li key={i} className="relative flex gap-3 pb-4 last:pb-0">
@@ -274,7 +275,7 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
                   <div className="text-sm">
                     <p className="font-semibold">
                       {STATUS[e.status].label}
-                      {e.byRole && <span className="font-normal text-ink-3"> · by {e.byRole}</span>}
+                      {e.byRole && <span className="font-normal text-ink-3"> · {t(e.byRole === "admin" ? "Admin" : e.byRole === "merchant" ? "Merchant" : "Rider")}</span>}
                     </p>
                     {e.note && <p className="text-ink-2">{e.note}</p>}
                     <p className="text-xs text-ink-3">{dateTime(e.at)}</p>

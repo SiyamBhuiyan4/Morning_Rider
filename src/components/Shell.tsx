@@ -20,6 +20,8 @@ import {
 import { Link, useLocation } from "../lib/router";
 import { useAuthed, useSession } from "../lib/session";
 import { Logo, Wordmark, cx } from "./ui";
+import { Prefs } from "./Prefs";
+import { t } from "../lib/prefs";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -71,14 +73,14 @@ export function Shell({ children }: { children: ReactNode }) {
             )}
           >
             <it.icon className={cx("size-[18px]", active ? "text-white" : "text-white/50 group-hover:text-sun")} />
-            {it.label}
+            {t(it.label)}
           </Link>
         );
       })}
     </nav>
   );
 
-  const roleLabel = me.role === "admin" ? "Admin" : me.role === "merchant" ? "Merchant" : "Rider";
+  const roleLabel = me.role === "admin" ? t("Admin") : me.role === "merchant" ? t("Merchant") : t("Rider");
 
   const sidebar = (
     <div className="sunrise flex h-full flex-col">
@@ -87,9 +89,10 @@ export function Shell({ children }: { children: ReactNode }) {
         <Wordmark dark />
       </div>
       {me.role === "admin" && (
-        <p className="-mt-3 mb-4 px-5 text-[11px] font-bold tracking-[0.2em] text-sun">ADMIN PANEL</p>
+        <p className="-mt-3 mb-4 px-5 text-[11px] font-bold tracking-[0.2em] text-sun">{t("ADMIN PANEL")}</p>
       )}
       {nav}
+      <Prefs onDark className="mx-5 mt-4" />
       <div className="m-3 rounded-2xl bg-white/6 p-3">
         <div className="flex items-center gap-3">
           <div className="grid size-9 place-items-center rounded-full bg-sun font-bold text-navy-900">
@@ -102,8 +105,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <button
             onClick={() => void signOut()}
             className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
-            title="Sign out"
-            aria-label="Sign out"
+            title={t("Sign out")}
+            aria-label={t("Sign out")}
           >
             <LogOut className="size-4" />
           </button>
@@ -118,11 +121,12 @@ export function Shell({ children }: { children: ReactNode }) {
 
       {/* Mobile top bar */}
       <header className="no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
-        <button onClick={() => setOpen(true)} className="rounded-lg p-1.5 hover:bg-navy-50" aria-label="Menu">
+        <button onClick={() => setOpen(true)} className="rounded-lg p-1.5 hover:bg-navy-50" aria-label={t("Menu")}>
           <Menu className="size-6" />
         </button>
         <Logo size={32} />
         <Wordmark />
+        <Prefs className="ml-auto" />
       </header>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -132,7 +136,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <button
               onClick={() => setOpen(false)}
               className="absolute right-3 top-3 rounded-lg p-1.5 text-white/70 hover:bg-white/10"
-              aria-label="Close menu"
+              aria-label={t("Close menu")}
             >
               <X className="size-5" />
             </button>

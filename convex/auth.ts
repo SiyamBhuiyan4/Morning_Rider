@@ -13,6 +13,8 @@ import {
   timingSafeEqual,
   PBKDF2_ITERATIONS,
   ADMIN_SESSION_TTL_MS,
+  ADMIN_LOGIN_ID,
+  randomHex,
   type Role,
 } from "./lib/auth";
 import { payoutMethod } from "./schema";
@@ -46,11 +48,72 @@ export const login = mutation({
   handler: async (ctx, args): Promise<LoginResult> => attemptLogin(ctx, args, ["merchant", "rider"]),
 });
 
-/** Admin website only. */
+/*
+  The admin website signs in with a single passcode, no phone number (Siyam's
+  choice). It is stored like a password — PBKDF2 hash on one "Admin" account
+  whose phone field holds ADMIN_LOGIN_ID, which can never be a real phone
+  number, so no merchant or rider can ever collide with it.
+
+  A short numeric passcode is easier to guess than a password, so this door
+  locks harder: 5 wrong tries lock it for a full hour. Running
+  `auth:setAdminPasscode` from the CLI clears the lock.
+*/
+const ADMIN_MAX_FAILURES = 5;
+const ADMIN_LOCK_MS = 60 * 60 * 1000;
+
 export const adminLogin = mutation({
-  args: { phone: v.string(), password: v.string() },
-  handler: async (ctx, args): Promise<LoginResult> => attemptLogin(ctx, args, ["admin"]),
+  args: { passcode: v.string() },
+  handler: async (ctx, args): Promise<LoginResult> => {
+    const now = Date.now();
+    const since = now - ADMIN_LOCK_MS;
+    const recent = await ctx.db
+      .query("loginFailures")
+      .withIndex("by_phone_and_at", (q) => q.eq("phone", ADMIN_LOGIN_ID).gte("at", since))
+      .take(ADMIN_MAX_FAILURES + 1);
+    if (recent.length >= ADMIN_MAX_FAILURES) {
+      return { ok: false, error: "Too many wrong attempts. The admin panel is locked for 1 hour." };
+    }
+    const admin = await adminAccount(ctx);
+    if (!admin) return { ok: false, error: "The admin passcode has not been set up yet." };
+
+    const candidate = await derive(args.passcode.slice(0, 128), admin.passwordSalt, admin.passwordIterations);
+    if (!timingSafeEqual(candidate, admin.passwordHash)) {
+      await ctx.db.insert("loginFailures", { phone: ADMIN_LOGIN_ID, at: now });
+      const left = ADMIN_MAX_FAILURES - recent.length - 1;
+      return {
+        ok: false,
+        error:
+          left > 0
+            ? `Wrong passcode. ${left} ${left === 1 ? "try" : "tries"} left.`
+            : "Too many wrong attempts. The admin panel is locked for 1 hour.",
+      };
+    }
+    for (const f of recent) await ctx.db.delete("loginFailures", f._id);
+    return { ok: true, ...(await issueSession(ctx, admin._id, ADMIN_SESSION_TTL_MS)) };
+  },
 });
+
+async function adminAccount(ctx: MutationCtx) {
+  return await ctx.db
+    .query("users")
+    .withIndex("by_phone", (q) => q.eq("phone", ADMIN_LOGIN_ID))
+    .unique();
+}
+
+function checkAdminPasscode(passcode: string) {
+  if (passcode.length < 6) throw new ConvexError("Passcode must be at least 6 characters.");
+  if (passcode.length > 64) throw new ConvexError("Passcode is too long.");
+}
+
+async function hashAdminPasscode(passcode: string) {
+  checkAdminPasscode(passcode);
+  const passwordSalt = randomHex(16);
+  return {
+    passwordSalt,
+    passwordIterations: PBKDF2_ITERATIONS,
+    passwordHash: await derive(passcode, passwordSalt, PBKDF2_ITERATIONS),
+  };
+}
 
 async function attemptLogin(
   ctx: MutationCtx,
@@ -212,7 +275,11 @@ export const changePassword = mutation({
     if (!timingSafeEqual(candidate, user.passwordHash)) {
       throw new ConvexError("Current password is wrong.");
     }
-    await ctx.db.patch("users", user._id, await hashPassword(args.newPassword));
+    await ctx.db.patch(
+      "users",
+      user._id,
+      user.role === "admin" ? await hashAdminPasscode(args.newPassword) : await hashPassword(args.newPassword),
+    );
     // Sign out every other device; this one gets a fresh session.
     await revokeSessions(ctx, user._id);
     return await issueSession(ctx, user._id, user.role === "admin" ? ADMIN_SESSION_TTL_MS : undefined);
@@ -220,31 +287,34 @@ export const changePassword = mutation({
 });
 
 /**
- * Creates (or resets) an admin. Internal on purpose — there is no public way
- * to become an admin. Run with the Convex CLI:
+ * Sets (or resets) the admin panel passcode. Internal on purpose — there is no
+ * public way to set it. Also clears the lockout and signs every admin out.
  *
- *   npx convex run --prod auth:createAdmin '{"name":"Siyam","phone":"01XXXXXXXXX","password":"..."}'
+ *   npx convex run --prod auth:setAdminPasscode '{"passcode":"..."}'
  */
-export const createAdmin = internalMutation({
-  args: { name: v.string(), phone: v.string(), password: v.string() },
+export const setAdminPasscode = internalMutation({
+  args: { passcode: v.string() },
   handler: async (ctx, args) => {
-    const phone = normalisePhone(args.phone);
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_phone", (q) => q.eq("phone", phone))
-      .unique();
-    const fields = {
-      name: required(args.name, 80, "Name"),
-      role: "admin" as const,
-      status: "active" as const,
-      ...(await hashPassword(args.password)),
-    };
+    const fields = await hashAdminPasscode(args.passcode);
+    const existing = await adminAccount(ctx);
     if (existing) {
-      await ctx.db.patch("users", existing._id, fields);
+      await ctx.db.patch("users", existing._id, { ...fields, status: "active" });
       await revokeSessions(ctx, existing._id);
-      return `Admin ${phone} updated.`;
+    } else {
+      await ctx.db.insert("users", {
+        name: "Admin",
+        phone: ADMIN_LOGIN_ID,
+        role: "admin",
+        status: "active",
+        ...fields,
+        createdAt: Date.now(),
+      });
     }
-    await ctx.db.insert("users", { ...fields, phone, createdAt: Date.now() });
-    return `Admin ${phone} created.`;
+    const fails = await ctx.db
+      .query("loginFailures")
+      .withIndex("by_phone_and_at", (q) => q.eq("phone", ADMIN_LOGIN_ID))
+      .take(500);
+    for (const f of fails) await ctx.db.delete("loginFailures", f._id);
+    return existing ? "Admin passcode changed." : "Admin passcode set.";
   },
 });

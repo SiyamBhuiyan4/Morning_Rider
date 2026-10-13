@@ -91,11 +91,11 @@ export const setStatus = mutation({
   },
 });
 
-/** Admin creates a rider or another admin. Merchants sign up themselves (or are created here too). */
+/** Admin creates a rider or a merchant. There is one admin account, set from the CLI. */
 export const create = mutation({
   args: {
     token: v.string(),
-    role,
+    role: v.union(v.literal("merchant"), v.literal("rider")),
     name: v.string(),
     phone: v.string(),
     password: v.string(),

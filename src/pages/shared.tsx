@@ -11,15 +11,16 @@ import { Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner }
 import { MerchantPicker, ParcelForm, type ParcelFields } from "../components/ParcelForm";
 import { ParcelList } from "../components/ParcelList";
 import { FraudSummary } from "../components/FraudSummary";
+import { t } from "../lib/prefs";
 
 export function ParcelsPage() {
   const { me } = useAuthed();
   return (
     <>
       <PageHeader
-        title={me.role === "admin" ? "All parcels" : "My parcels"}
-        subtitle="Click a parcel for details, history and actions. Tick parcels to print labels in bulk."
-        actions={<Button onClick={() => navigate("/app/parcels/new")}>Create parcel</Button>}
+        title={me.role === "admin" ? t("All parcels") : t("My parcels")}
+        subtitle={t("Click a parcel for details, history and actions. Tick parcels to print labels in bulk.")}
+        actions={<Button onClick={() => navigate("/app/parcels/new")}>{t("Create parcel")}</Button>}
       />
       <ParcelList />
     </>
@@ -35,10 +36,10 @@ export function NewParcel() {
 
   return (
     <>
-      <PageHeader title="Create parcel" subtitle="Fill in the customer and parcel details — we'll calculate the charges." />
+      <PageHeader title={t("Create parcel")} subtitle={t("Fill in the customer and parcel details — we'll calculate the charges.")} />
       <ParcelForm
         key={formKey}
-        submitLabel="Create parcel"
+        submitLabel={t("Create parcel")}
         merchantPicker={me.role === "admin" ? <MerchantPicker value={merchantId} onChange={setMerchantId} /> : undefined}
         onSubmit={async (parcel) => {
           const r = await create({ token, parcel, merchantId: merchantId || undefined });
@@ -51,15 +52,15 @@ export function NewParcel() {
           setCreated(null);
           setFormKey((k) => k + 1);
         }}
-        title="Parcel created"
+        title={t("Parcel created")}
       >
         <div className="text-center">
           <CheckCircle2 className="mx-auto size-14 text-emerald-500" />
-          <p className="mt-3 text-sm text-ink-2">Tracking ID</p>
+          <p className="mt-3 text-sm text-ink-2">{t("Tracking ID")}</p>
           <p className="font-mono text-2xl font-extrabold tracking-wider">{created?.trackingCode}</p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Button variant="outline" icon={Printer} onClick={() => window.open(`/print/labels?ids=${created?.id}`, "_blank", "noopener")}>
-              Print label
+              {t("Print label")}
             </Button>
             <Button
               onClick={() => {
@@ -67,10 +68,10 @@ export function NewParcel() {
                 setFormKey((k) => k + 1);
               }}
             >
-              Create another
+              {t("Create another")}
             </Button>
             <Button variant="ghost" onClick={() => navigate("/app/parcels")}>
-              View parcels
+              {t("View parcels")}
             </Button>
           </div>
         </div>
@@ -88,7 +89,7 @@ export function EditParcel({ id }: { id: Id<"parcels"> }) {
   if (data === null || !data.canEdit) {
     return (
       <Card>
-        <Empty icon={ShieldCheck} title="This parcel can't be edited" text="Only parcels that are not yet delivered or returned can be changed." />
+        <Empty icon={ShieldCheck} title={t("This parcel can't be edited")} text={t("Only parcels that are not yet delivered or returned can be changed.")} />
       </Card>
     );
   }
@@ -110,10 +111,10 @@ export function EditParcel({ id }: { id: Id<"parcels"> }) {
       <PageHeader title={`Edit ${p.trackingCode}`} />
       <ParcelForm
         initial={initial}
-        submitLabel="Save changes"
+        submitLabel={t("Save changes")}
         onSubmit={async (parcel) => {
           await update({ token, id, parcel });
-          toast.ok("Parcel updated.");
+          toast.ok(t("Parcel updated."));
           navigate("/app/parcels");
         }}
       />
@@ -126,7 +127,7 @@ export function FraudCheck() {
   const [phone, setPhone] = useState("");
   return (
     <>
-      <PageHeader title="Fraud check" subtitle="See a customer's delivery record across Morning Rider before you ship." />
+      <PageHeader title={t("Fraud check")} subtitle={t("See a customer's delivery record across Morning Rider before you ship.")} />
       <Card className="max-w-2xl p-6">
         <form
           onSubmit={(e) => {
@@ -135,9 +136,9 @@ export function FraudCheck() {
           }}
           className="flex gap-2"
         >
-          <Input type="tel" placeholder="Customer phone, 01XXXXXXXXX" value={input} onChange={(e) => setInput(e.target.value)} />
+          <Input type="tel" placeholder={t("Customer phone, 01XXXXXXXXX")} value={input} onChange={(e) => setInput(e.target.value)} />
           <Button type="submit" icon={Search}>
-            Check
+            {t("Check")}
           </Button>
         </form>
         {phone && (
@@ -154,7 +155,7 @@ function FraudResult({ phone }: { phone: string }) {
   const { token } = useAuthed();
   const r = useQuery(api.parcels.fraudCheck, { token, phone });
   if (r === undefined) return <Spinner className="py-6" />;
-  if (r === null) return <p className="text-sm font-medium text-red-600">Enter a valid Bangladeshi mobile number.</p>;
+  if (r === null) return <p className="text-sm font-medium text-red-600">{t("Enter a valid Bangladeshi mobile number.")}</p>;
   return <FraudSummary phone={phone} />;
 }
 
@@ -174,6 +175,7 @@ export function Account() {
     riderArea: me.riderArea ?? "",
   });
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
+  const isAdmin = me.role === "admin";
   const [busy, setBusy] = useState<"profile" | "pw" | null>(null);
   const set = (k: keyof typeof p) => (e: { target: { value: string } }) => setP({ ...p, [k]: e.target.value });
 
@@ -191,7 +193,7 @@ export function Account() {
         payoutAccount: p.payoutAccount || undefined,
         riderArea: p.riderArea || undefined,
       });
-      toast.ok("Profile saved.");
+      toast.ok(t("Profile saved."));
     } catch (err) {
       toast.error(err);
     } finally {
@@ -201,13 +203,13 @@ export function Account() {
 
   async function savePassword(e: FormEvent) {
     e.preventDefault();
-    if (pw.next !== pw.confirm) return toast.error("New passwords do not match.");
+    if (pw.next !== pw.confirm) return toast.error(isAdmin ? t("New passcodes do not match.") : t("New passwords do not match."));
     setBusy("pw");
     try {
       const s = await changePassword({ token, currentPassword: pw.current, newPassword: pw.next });
       signIn(s.token, s.expiresAt);
       setPw({ current: "", next: "", confirm: "" });
-      toast.ok("Password changed. Other devices have been signed out.");
+      toast.ok(isAdmin ? t("Passcode changed. Other devices have been signed out.") : t("Password changed. Other devices have been signed out."));
     } catch (err) {
       toast.error(err);
     } finally {
@@ -217,19 +219,19 @@ export function Account() {
 
   return (
     <>
-      <PageHeader title="Account" subtitle={`Signed in as ${me.phone}`} />
+      <PageHeader title={t("Account")} subtitle={me.role === "admin" ? t("Admin panel") : t("Signed in as {phone}", { phone: me.phone })} />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">
-          <h2 className="mb-4 font-bold">Profile</h2>
+          <h2 className="mb-4 font-bold">{t("Profile")}</h2>
           <form onSubmit={saveProfile} className="space-y-4">
-            <Field label="Name">{(id) => <Input id={id} value={p.name} onChange={set("name")} required />}</Field>
-            <Field label="Email (optional)">{(id) => <Input id={id} type="email" value={p.email} onChange={set("email")} />}</Field>
+            <Field label={t("Name")}>{(id) => <Input id={id} value={p.name} onChange={set("name")} required />}</Field>
+            <Field label={t("Email (optional)")}>{(id) => <Input id={id} type="email" value={p.email} onChange={set("email")} />}</Field>
             {me.role === "merchant" && (
               <>
-                <Field label="Business name">{(id) => <Input id={id} value={p.businessName} onChange={set("businessName")} required />}</Field>
-                <Field label="Pickup address">{(id) => <Input id={id} value={p.pickupAddress} onChange={set("pickupAddress")} required />}</Field>
+                <Field label={t("Business name")}>{(id) => <Input id={id} value={p.businessName} onChange={set("businessName")} required />}</Field>
+                <Field label={t("Pickup address")}>{(id) => <Input id={id} value={p.pickupAddress} onChange={set("pickupAddress")} required />}</Field>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Get paid by">
+                  <Field label={t("Get paid by")}>
                     {(id) => (
                       <Select id={id} value={p.payoutMethod} onChange={set("payoutMethod")}>
                         {Object.entries(PAYOUT_METHOD).map(([k, l]) => (
@@ -238,23 +240,26 @@ export function Account() {
                       </Select>
                     )}
                   </Field>
-                  <Field label="Account">{(id) => <Input id={id} value={p.payoutAccount} onChange={set("payoutAccount")} />}</Field>
+                  <Field label={t("Account")}>{(id) => <Input id={id} value={p.payoutAccount} onChange={set("payoutAccount")} />}</Field>
                 </div>
               </>
             )}
-            {me.role === "rider" && <Field label="Working area">{(id) => <Input id={id} value={p.riderArea} onChange={set("riderArea")} />}</Field>}
-            <Button type="submit" loading={busy === "profile"}>Save profile</Button>
+            {me.role === "rider" && <Field label={t("Working area")}>{(id) => <Input id={id} value={p.riderArea} onChange={set("riderArea")} />}</Field>}
+            <Button type="submit" loading={busy === "profile"}>{t("Save profile")}</Button>
           </form>
         </Card>
         <Card className="h-fit p-6">
-          <h2 className="mb-4 font-bold">Change password</h2>
+          <h2 className="mb-4 font-bold">{isAdmin ? t("Change admin passcode") : t("Change password")}</h2>
           <form onSubmit={savePassword} className="space-y-4">
-            <Field label="Current password">{(id) => <Input id={id} type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required />}</Field>
-            <Field label="New password" hint="At least 8 characters with a letter and a number.">
-              {(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required minLength={8} />}
+            <Field label={isAdmin ? t("Current passcode") : t("Current password")}>{(id) => <Input id={id} type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required />}</Field>
+            <Field
+              label={isAdmin ? t("New passcode") : t("New password")}
+              hint={isAdmin ? t("At least 6 characters.") : t("At least 8 characters with a letter and a number.")}
+            >
+              {(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required minLength={isAdmin ? 6 : 8} />}
             </Field>
-            <Field label="Confirm new password">{(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required />}</Field>
-            <Button type="submit" variant="dark" loading={busy === "pw"}>Change password</Button>
+            <Field label={isAdmin ? t("Confirm new passcode") : t("Confirm new password")}>{(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required />}</Field>
+            <Button type="submit" variant="dark" loading={busy === "pw"}>{isAdmin ? t("Change passcode") : t("Change password")}</Button>
           </form>
         </Card>
       </div>

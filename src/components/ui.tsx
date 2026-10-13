@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Loader2, X, type LucideIcon } from "lucide-react";
 import { STATUS, type Status } from "../lib/format";
+import { t } from "../lib/prefs";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 export { cx };
@@ -39,7 +40,7 @@ export function Button({
         size === "md" && "h-10 px-4 text-sm",
         size === "lg" && "h-12 px-6 text-[15px]",
         variant === "primary" && "bg-brand text-white shadow-sm shadow-brand/30 hover:bg-brand-600",
-        variant === "dark" && "bg-navy-900 text-white hover:bg-navy-800",
+        variant === "dark" && "bg-navy-900 text-white hover:bg-navy-800 dark:bg-navy-600 dark:hover:bg-navy-800",
         variant === "outline" && "border border-line bg-surface text-ink hover:border-navy-100 hover:bg-navy-50",
         variant === "ghost" && "text-ink-2 hover:bg-navy-50 hover:text-ink",
         variant === "danger" && "bg-red-600 text-white hover:bg-red-700",
@@ -229,7 +230,7 @@ export function Modal({
       >
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 className="text-lg font-bold tracking-tight">{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-3 hover:bg-navy-50 hover:text-ink" aria-label="Close">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-3 hover:bg-navy-50 hover:text-ink" aria-label={t("Close")}>
             <X className="size-5" />
           </button>
         </div>
@@ -276,11 +277,11 @@ export function Logo({ size = 40, className }: { size?: number; className?: stri
 export function Wordmark({ dark }: { dark?: boolean }) {
   return (
     <div className="leading-none">
-      <div className={cx("text-[17px] font-extrabold italic tracking-tight", dark ? "text-white" : "text-navy-900")}>
-        MORNING <span className="text-brand">RIDER</span>
+      <div className={cx("text-[17px] font-extrabold italic tracking-tight", dark ? "text-white" : "text-navy-900 dark:text-white")}>
+        MORNING <span className="text-brand">{t("RIDER")}</span>
       </div>
       <div className={cx("mt-1 text-[10px] font-semibold tracking-[0.2em]", dark ? "text-white/60" : "text-ink-3")}>
-        COURIER SERVICE
+        {t("COURIER SERVICE")}
       </div>
     </div>
   );

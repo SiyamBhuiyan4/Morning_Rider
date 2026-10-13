@@ -20,6 +20,8 @@ export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Admins hold the keys to money and accounts, so their sessions are short. */
 export const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 export const PBKDF2_ITERATIONS = 210_000;
+/** Stored in the admin account's phone field. Not a phone number, so it never collides. */
+export const ADMIN_LOGIN_ID = "admin";
 export const MIN_PASSWORD_LENGTH = 8;
 
 export type Role = Doc<"users">["role"];

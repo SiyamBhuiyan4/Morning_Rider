@@ -8,6 +8,7 @@ import { useToast } from "../lib/toast";
 import { DISTRICTS, ZONE, tk, zoneFor, type Zone } from "../lib/format";
 import { Button, Card, Field, Input, Select, Textarea } from "./ui";
 import { FraudSummary } from "./FraudSummary";
+import { t } from "../lib/prefs";
 
 export type ParcelFields = {
   invoice: string;
@@ -97,18 +98,18 @@ export function ParcelForm({
       <div className="space-y-6">
         {merchantPicker && <Card className="p-6">{merchantPicker}</Card>}
         <Card className="p-6">
-          <h2 className="font-bold">Customer</h2>
+          <h2 className="font-bold">{t("Customer")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Customer name">
+            <Field label={t("Customer name")}>
               {(id) => <Input id={id} value={f.recipientName} onChange={set("recipientName")} required maxLength={80} />}
             </Field>
-            <Field label="Customer phone">
+            <Field label={t("Customer phone")}>
               {(id) => <Input id={id} type="tel" placeholder="01XXXXXXXXX" value={f.recipientPhone} onChange={set("recipientPhone")} required />}
             </Field>
-            <Field label="Full address" className="sm:col-span-2">
-              {(id) => <Textarea id={id} value={f.recipientAddress} onChange={set("recipientAddress")} required maxLength={300} placeholder="House, road, area, thana" />}
+            <Field label={t("Full address")} className="sm:col-span-2">
+              {(id) => <Textarea id={id} value={f.recipientAddress} onChange={set("recipientAddress")} required maxLength={300} placeholder={t("House, road, area, thana")} />}
             </Field>
-            <Field label="District">
+            <Field label={t("District")}>
               {(id) => (
                 <Select
                   id={id}
@@ -121,7 +122,7 @@ export function ParcelForm({
                 </Select>
               )}
             </Field>
-            <Field label="Delivery zone">
+            <Field label={t("Delivery zone")}>
               {(id) => (
                 <Select id={id} value={f.zone} onChange={set("zone")}>
                   {Object.entries(ZONE).map(([k, label]) => (
@@ -141,22 +142,22 @@ export function ParcelForm({
         </Card>
 
         <Card className="p-6">
-          <h2 className="font-bold">Parcel</h2>
+          <h2 className="font-bold">{t("Parcel")}</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Cash to collect (COD)" hint="Enter 0 if already paid.">
+            <Field label={t("Cash to collect (COD)")} hint={t("Enter 0 if already paid.")}>
               {(id) => <Input id={id} type="number" min={0} step={1} inputMode="numeric" value={f.codAmount} onChange={set("codAmount")} required placeholder="0" />}
             </Field>
-            <Field label="Weight (kg)">
+            <Field label={t("Weight (kg)")}>
               {(id) => <Input id={id} type="number" min={0.1} max={50} step={0.1} value={f.weightKg} onChange={set("weightKg")} required />}
             </Field>
-            <Field label="Invoice / order ID (optional)">
+            <Field label={t("Invoice / order ID (optional)")}>
               {(id) => <Input id={id} value={f.invoice} onChange={set("invoice")} maxLength={60} />}
             </Field>
-            <Field label="Item description (optional)">
-              {(id) => <Input id={id} value={f.itemDescription} onChange={set("itemDescription")} maxLength={120} placeholder="e.g. 2 T-shirts" />}
+            <Field label={t("Item description (optional)")}>
+              {(id) => <Input id={id} value={f.itemDescription} onChange={set("itemDescription")} maxLength={120} placeholder={t("e.g. 2 T-shirts")} />}
             </Field>
-            <Field label="Note for rider (optional)" className="sm:col-span-2">
-              {(id) => <Input id={id} value={f.note} onChange={set("note")} maxLength={300} placeholder="e.g. Call before delivery" />}
+            <Field label={t("Note for rider (optional)")} className="sm:col-span-2">
+              {(id) => <Input id={id} value={f.note} onChange={set("note")} maxLength={300} placeholder={t("e.g. Call before delivery")} />}
             </Field>
           </div>
         </Card>
@@ -166,14 +167,14 @@ export function ParcelForm({
         <Card className="overflow-hidden">
           <div className="sunrise flex items-center gap-2 px-5 py-4 text-white">
             <Calculator className="size-5 text-sun" />
-            <span className="font-bold">Charge summary</span>
+            <span className="font-bold">{t("Charge summary")}</span>
           </div>
           <dl className="space-y-3 p-5 text-sm">
-            <Row label="Cash collection" value={tk(cod)} />
-            <Row label="Delivery charge" value={quote ? `− ${tk(quote.deliveryCharge)}` : "…"} />
-            <Row label="COD charge" value={quote ? `− ${tk(quote.codCharge)}` : "…"} />
+            <Row label={t("Cash collection")} value={tk(cod)} />
+            <Row label={t("Delivery charge")} value={quote ? `− ${tk(quote.deliveryCharge)}` : "…"} />
+            <Row label={t("COD charge")} value={quote ? `− ${tk(quote.codCharge)}` : "…"} />
             <div className="border-t border-dashed border-line pt-3">
-              <Row label={<span className="font-bold text-ink">You will receive</span>} value={<span className="text-lg font-extrabold text-brand">{quote ? tk(cod - quote.deliveryCharge - quote.codCharge) : "…"}</span>} />
+              <Row label={<span className="font-bold text-ink">{t("You will receive")}</span>} value={<span className="text-lg font-extrabold text-brand">{quote ? tk(cod - quote.deliveryCharge - quote.codCharge) : "…"}</span>} />
             </div>
           </dl>
           <div className="px-5 pb-5">
@@ -181,7 +182,7 @@ export function ParcelForm({
               {submitLabel}
             </Button>
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-3">
-              <ShieldCheck className="size-3.5" /> Charges are calculated by Morning Rider
+              <ShieldCheck className="size-3.5" /> {t("Charges are calculated by Morning Rider")}
             </p>
           </div>
         </Card>
@@ -203,10 +204,10 @@ export function MerchantPicker({ value, onChange }: { value: Id<"users"> | ""; o
   const { token } = useAuthed();
   const merchants = useQuery(api.users.options, { token, role: "merchant" });
   return (
-    <Field label="Merchant">
+    <Field label={t("Merchant")}>
       {(id) => (
         <Select id={id} value={value} onChange={(e) => onChange(e.target.value as Id<"users">)} required>
-          <option value="">Choose merchant…</option>
+          <option value="">{t("Choose merchant…")}</option>
           {merchants?.map((m) => (
             <option key={m._id} value={m._id}>
               {m.label} — {m.phone}
