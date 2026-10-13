@@ -568,7 +568,6 @@ export const BN: Record<string, string> = {
   "Merchants and riders can track their own parcels after logging in.": "লগইন করে মার্চেন্ট ও রাইডাররা নিজেদের পার্সেল ট্র্যাক করতে পারবেন।",
   "Morning Rider delivers parcels, food, medicine, frozen items and more across Dhaka, Gazipur and Narayanganj — 7 days a week, starting at 6 AM.":
     "Morning Rider ঢাকা, গাজীপুর ও নারায়ণগঞ্জে পার্সেল, খাবার, ঔষধ, ফ্রোজেন আইটেমসহ সব পণ্য ডেলিভারি করে — সপ্তাহে ৭ দিন, সকাল ৬টা থেকে।",
-  "Order on WhatsApp": "WhatsApp-এ অর্ডার করুন",
   "7 days a week": "সপ্তাহে ৭ দিন",
   "Delivery every day": "প্রতিদিন ডেলিভারি",
   "From 6 AM": "সকাল ৬টা থেকে",

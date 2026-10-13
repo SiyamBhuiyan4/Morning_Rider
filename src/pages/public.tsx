@@ -196,11 +196,6 @@ export function Home() {
               <Button size="lg" onClick={() => navigate("/register")}>
                 {t("Become a merchant")} <ArrowRight className="size-4" />
               </Button>
-              <a href={CONTACT.whatsapp} target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" icon={MessageCircle} className="border-white/20 bg-white/5 text-white hover:bg-white/10">
-                  {t("Order on WhatsApp")}
-                </Button>
-              </a>
             </div>
           </div>
           <div className="relative mx-auto hidden w-full max-w-md lg:block">
