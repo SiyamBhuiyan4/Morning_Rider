@@ -142,7 +142,7 @@ export function FraudCheck() {
           className="flex gap-2"
         >
           <Input type="tel" placeholder={t("Customer phone, 01XXXXXXXXX")} value={input} onChange={(e) => setInput(e.target.value)} />
-          <Button type="submit" icon={Search}>
+          <Button type="submit" icon={Search} className="shrink-0 whitespace-nowrap">
             {t("Check")}
           </Button>
         </form>
