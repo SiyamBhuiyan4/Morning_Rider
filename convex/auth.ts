@@ -29,6 +29,14 @@ import { payoutMethod } from "./schema";
 */
 const MAX_FAILURES = 5;
 const FAILURE_WINDOW_MS = 15 * 60 * 1000;
+/*
+  Site-wide ceiling. The per-phone lock stops guessing one account; this stops
+  "password spraying" — one common password tried against many numbers —
+  which never trips any single account's lock.
+*/
+const GLOBAL_MAX_FAILURES = 300;
+/** Public sign-ups allowed per hour, so nobody can flood the approval queue. */
+const MAX_SIGNUPS_PER_HOUR = 30;
 
 /** A fixed salt for the decoy derivation when the phone has no account. */
 const DECOY_SALT = "6d6f726e696e67726964657264656379";
@@ -140,6 +148,13 @@ async function attemptLogin(
       error: "Too many wrong attempts. This account is locked for 15 minutes.",
     };
   }
+  const siteWide = await ctx.db
+    .query("loginFailures")
+    .withIndex("by_at", (q) => q.gte("at", since))
+    .take(GLOBAL_MAX_FAILURES);
+  if (siteWide.length >= GLOBAL_MAX_FAILURES) {
+    return { ok: false, error: "Too many login attempts right now. Please try again in a few minutes." };
+  }
 
   const user = await ctx.db
     .query("users")
@@ -239,6 +254,16 @@ export const registerMerchant = mutation({
       .withIndex("by_phone", (q) => q.eq("phone", phone))
       .unique();
     if (existing) throw new ConvexError("An account with this phone number already exists.");
+
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    const recentSignups = await ctx.db
+      .query("users")
+      .withIndex("by_role_and_status", (q) => q.eq("role", "merchant").eq("status", "pending"))
+      .order("desc")
+      .take(MAX_SIGNUPS_PER_HOUR * 2);
+    if (recentSignups.filter((u) => u.createdAt > hourAgo).length >= MAX_SIGNUPS_PER_HOUR) {
+      throw new ConvexError("Too many sign-ups right now. Please try again in an hour.");
+    }
 
     const email = clean(args.email, 120, "Email");
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

@@ -219,7 +219,9 @@ export const get = query({
 function canSee(p: Doc<"parcels">, user: Doc<"users">) {
   if (user.role === "admin") return true;
   if (user.role === "merchant") return p.merchantId === user._id;
-  return p.pickupRiderId === user._id || p.deliveryRiderId === user._id;
+  // Riders only see a parcel (and the customer's phone) while it is theirs to work on.
+  if (p.pickupRiderId === user._id && p.status === "pending") return true;
+  return p.deliveryRiderId === user._id && (p.status === "out_for_delivery" || p.status === "hold");
 }
 
 function canEdit(p: Doc<"parcels">, user: Doc<"users">) {

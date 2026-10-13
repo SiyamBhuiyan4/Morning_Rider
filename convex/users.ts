@@ -3,6 +3,8 @@ import { ConvexError, v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import {
   clean,
+  derive,
+  timingSafeEqual,
   hashPassword,
   normalisePhone,
   required,
@@ -169,10 +171,25 @@ function profilePatch(user: Doc<"users">, args: typeof profileArgs.type) {
 }
 
 export const updateProfile = mutation({
-  args: { token: v.string(), ...profileFields },
+  args: { token: v.string(), currentPassword: v.optional(v.string()), ...profileFields },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.token, ["admin", "merchant", "rider"]);
-    await ctx.db.patch("users", user._id, profilePatch(user, args));
+    const patch = profilePatch(user, args);
+    /*
+      Where the money goes is the one profile field worth stealing a session
+      for: change it and the next payout lands in someone else's wallet. So it
+      needs the account password, not just a live session.
+    */
+    const payoutChanged =
+      user.role === "merchant" &&
+      (patch.payoutMethod !== user.payoutMethod || patch.payoutAccount !== user.payoutAccount);
+    if (payoutChanged) {
+      const candidate = await derive((args.currentPassword ?? "").slice(0, 128), user.passwordSalt, user.passwordIterations);
+      if (!timingSafeEqual(candidate, user.passwordHash)) {
+        throw new ConvexError("Enter your current password to change payment details.");
+      }
+    }
+    await ctx.db.patch("users", user._id, patch);
     return null;
   },
 });

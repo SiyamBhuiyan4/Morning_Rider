@@ -56,6 +56,7 @@ export default defineSchema({
     payoutAccount: v.optional(v.string()),
     // rider profile
     riderArea: v.optional(v.string()),
+    demo: v.optional(v.boolean()), // sample data, removable from the admin dashboard
     createdAt: v.number(),
   })
     .index("by_phone", ["phone"])
@@ -164,6 +165,7 @@ export default defineSchema({
     collected: v.number(),
     charges: v.number(),
     method: payoutMethod,
+    payoutAccount: v.optional(v.string()), // where it was sent, as it was at the time
     reference: v.optional(v.string()),
     note: v.optional(v.string()),
     createdBy: v.id("users"),

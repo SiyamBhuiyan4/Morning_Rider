@@ -173,7 +173,11 @@ export function Account() {
     payoutMethod: me.payoutMethod ?? "bkash",
     payoutAccount: me.payoutAccount ?? "",
     riderArea: me.riderArea ?? "",
+    currentPassword: "",
   });
+  const payoutChanged =
+    me.role === "merchant" &&
+    (p.payoutMethod !== (me.payoutMethod ?? "bkash") || p.payoutAccount !== (me.payoutAccount ?? ""));
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const isAdmin = me.role === "admin";
   const [busy, setBusy] = useState<"profile" | "pw" | null>(null);
@@ -191,9 +195,11 @@ export function Account() {
         pickupAddress: p.pickupAddress || undefined,
         payoutMethod: me.role === "merchant" ? p.payoutMethod : undefined,
         payoutAccount: p.payoutAccount || undefined,
+        currentPassword: payoutChanged ? p.currentPassword : undefined,
         riderArea: p.riderArea || undefined,
       });
       toast.ok(t("Profile saved."));
+      setP((x) => ({ ...x, currentPassword: "" }));
     } catch (err) {
       toast.error(err);
     } finally {
@@ -242,6 +248,13 @@ export function Account() {
                   </Field>
                   <Field label={t("Account")}>{(id) => <Input id={id} value={p.payoutAccount} onChange={set("payoutAccount")} />}</Field>
                 </div>
+                {payoutChanged && (
+                  <Field label={t("Current password")} hint={t("Needed to change where your payments are sent.")}>
+                    {(id) => (
+                      <Input id={id} type="password" autoComplete="current-password" value={p.currentPassword} onChange={set("currentPassword")} required />
+                    )}
+                  </Field>
+                )}
               </>
             )}
             {me.role === "rider" && <Field label={t("Working area")}>{(id) => <Input id={id} value={p.riderArea} onChange={set("riderArea")} />}</Field>}

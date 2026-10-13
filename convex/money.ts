@@ -123,6 +123,7 @@ export const createPayout = mutation({
       collected: t.collected,
       charges: t.charges,
       method: args.method,
+      payoutAccount: merchant.payoutAccount,
       reference: clean(args.reference, 100, "Reference") || undefined,
       note: clean(args.note, 300, "Note") || undefined,
       createdBy: admin._id,
@@ -173,7 +174,7 @@ export const payout = query({
         name: merchant.name,
         businessName: merchant.businessName,
         phone: merchant.phone,
-        payoutAccount: merchant.payoutAccount,
+        payoutAccount: payout.payoutAccount ?? merchant.payoutAccount,
       },
       parcels: parcels.map((p) => ({
         trackingCode: p.trackingCode,

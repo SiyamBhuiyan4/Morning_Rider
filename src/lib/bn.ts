@@ -469,4 +469,25 @@ export const BN: Record<string, string> = {
   "Each extra kg — inside Dhaka": "প্রতি অতিরিক্ত কেজি — ঢাকার ভিতরে",
   "Each extra kg — sub-area & outside": "প্রতি অতিরিক্ত কেজি — সাব-এরিয়া ও ঢাকার বাইরে",
   "Return charge (of delivery charge)": "রিটার্ন চার্জ (ডেলিভারি চার্জের)",
+  "Needed to change where your payments are sent.": "পেমেন্ট কোথায় যাবে তা পরিবর্তন করতে লাগবে।",
+  "Enter your current password to change payment details.": "পেমেন্টের তথ্য পরিবর্তন করতে বর্তমান পাসওয়ার্ড দিন।",
+  "Too many login attempts right now. Please try again in a few minutes.": "এই মুহূর্তে অনেক লগইন চেষ্টা হচ্ছে। কয়েক মিনিট পর আবার চেষ্টা করুন।",
+  "Too many sign-ups right now. Please try again in an hour.": "এই মুহূর্তে অনেক সাইন-আপ হচ্ছে। এক ঘণ্টা পর আবার চেষ্টা করুন।",
+
+  // ---- demo data
+  Demo: "ডেমো",
+  "Want to see how everything works? Load sample merchants, riders and parcels.": "সবকিছু কীভাবে কাজ করে দেখতে চান? নমুনা মার্চেন্ট, রাইডার ও পার্সেল লোড করুন।",
+  "Load demo data": "ডেমো ডাটা লোড করুন",
+  "Demo data loaded.": "ডেমো ডাটা লোড হয়েছে।",
+  "Demo data is on": "ডেমো ডাটা চালু আছে",
+  "{m} demo merchants, {r} demo riders and their sample parcels, payouts and cash are filling every page so you can see how it all works. Anything named “Demo” is a sample.":
+    "{m}টি ডেমো মার্চেন্ট, {r} জন ডেমো রাইডার এবং তাদের নমুনা পার্সেল, পেমেন্ট ও ক্যাশ দিয়ে প্রতিটি পেজ সাজানো আছে, যাতে সব কীভাবে কাজ করে দেখতে পারেন। “Demo” নামের সবকিছুই নমুনা।",
+  "To see the merchant or rider panel: open Merchants or Riders, press “Reset password” on a Demo account, then sign in on the main website with its phone number.":
+    "মার্চেন্ট বা রাইডার প্যানেল দেখতে: মার্চেন্ট বা রাইডার পেজে গিয়ে কোনো Demo অ্যাকাউন্টে “পাসওয়ার্ড রিসেট” চাপুন, তারপর সেই ফোন নম্বর দিয়ে মূল ওয়েবসাইটে লগইন করুন।",
+  "Clear demo data": "ডেমো ডাটা মুছুন",
+  "Demo data cleared.": "ডেমো ডাটা মুছে ফেলা হয়েছে।",
+  "This deletes every demo merchant, demo rider and all their sample parcels, payouts and cash records. Your real data is not touched.":
+    "এটি সব ডেমো মার্চেন্ট, ডেমো রাইডার এবং তাদের নমুনা পার্সেল, পেমেন্ট ও ক্যাশের রেকর্ড মুছে দেবে। আপনার আসল ডাটা অক্ষত থাকবে।",
+  "Demo data is already loaded.": "ডেমো ডাটা আগে থেকেই লোড করা আছে।",
+  "There is no demo data to clear.": "মোছার মতো কোনো ডেমো ডাটা নেই।",
 };

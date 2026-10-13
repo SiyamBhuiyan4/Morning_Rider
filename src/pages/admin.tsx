@@ -17,6 +17,7 @@ import {
   UserX,
   Wallet,
   TrendingUp,
+  FlaskConical,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -44,6 +45,7 @@ export function AdminDashboard() {
         subtitle={t("Here's what's moving at Morning Rider today.")}
         actions={<Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>{t("New parcel")}</Button>}
       />
+      <DemoCard />
       {d.pendingMerchants > 0 && (
         <button
           onClick={() => navigate("/app/merchants")}
@@ -97,6 +99,86 @@ export function AdminDashboard() {
   );
 }
 
+function DemoCard() {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const demo = useQuery(api.demo.status, { token });
+  const load = useMutation(api.demo.load);
+  const remove = useMutation(api.demo.remove);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  if (!demo) return null;
+
+  const run = async (fn: () => Promise<unknown>, msg: string) => {
+    setBusy(true);
+    try {
+      await fn();
+      toast.ok(msg);
+      setConfirm(false);
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!demo.loaded) {
+    return (
+      <Card className="mb-4 flex flex-wrap items-center gap-3 p-4">
+        <FlaskConical className="size-5 text-brand" />
+        <p className="flex-1 text-sm text-ink-2">{t("Want to see how everything works? Load sample merchants, riders and parcels.")}</p>
+        <Button size="sm" variant="outline" loading={busy} onClick={() => run(() => load({ token }), t("Demo data loaded."))}>
+          {t("Load demo data")}
+        </Button>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-4 rounded-2xl bg-brand-50 p-4 ring-1 ring-brand/30">
+        <div className="flex flex-wrap items-start gap-3">
+          <FlaskConical className="mt-0.5 size-5 shrink-0 text-brand" />
+          <div className="min-w-60 flex-1 text-sm">
+            <p className="font-bold text-brand-700">{t("Demo data is on")}</p>
+            <p className="mt-1 text-ink-2">
+              {t(
+                "{m} demo merchants, {r} demo riders and their sample parcels, payouts and cash are filling every page so you can see how it all works. Anything named “Demo” is a sample.",
+                { m: demo.merchants, r: demo.riders },
+              )}
+            </p>
+            <p className="mt-1 text-ink-3">
+              {t(
+                "To see the merchant or rider panel: open Merchants or Riders, press “Reset password” on a Demo account, then sign in on the main website with its phone number.",
+              )}
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setConfirm(true)}>
+            {t("Clear demo data")}
+          </Button>
+        </div>
+      </div>
+      <Modal
+        open={confirm}
+        onClose={() => setConfirm(false)}
+        title={t("Clear demo data")}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirm(false)}>{t("Back")}</Button>
+            <Button variant="danger" loading={busy} onClick={() => run(() => remove({ token }), t("Demo data cleared."))}>
+              {t("Clear demo data")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-2">
+          {t("This deletes every demo merchant, demo rider and all their sample parcels, payouts and cash records. Your real data is not touched.")}
+        </p>
+      </Modal>
+    </>
+  );
+}
+
 /* -------------------------------------------------------------- merchants */
 
 export function Merchants() {
@@ -146,7 +228,10 @@ export function Merchants() {
                   {(m.businessName ?? m.name).slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-48 flex-1">
-                  <p className="font-bold">{m.businessName}</p>
+                  <p className="flex items-center gap-2 font-bold">
+                    {m.businessName}
+                    {m.demo && <Badge tone="brand">{t("Demo")}</Badge>}
+                  </p>
                   <p className="text-sm text-ink-2">
                     {m.name} · {m.phone}
                     {m.email && ` · ${m.email}`}
@@ -298,7 +383,10 @@ export function Riders() {
                   <Bike className="size-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold">{r.name}</p>
+                  <p className="flex items-center gap-2 truncate font-bold">
+                    {r.name}
+                    {r.demo && <Badge tone="brand">{t("Demo")}</Badge>}
+                  </p>
                   <p className="text-sm text-ink-2">{r.phone}{r.riderArea && ` · ${r.riderArea}`}</p>
                 </div>
                 {r.status !== "active" && <Badge tone="red">{t("Suspended")}</Badge>}
