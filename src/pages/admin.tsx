@@ -46,7 +46,7 @@ import { AddRiderModal, RiderProfileModal } from "./riderProfile";
 import { LoginDetailsModal, SetPasswordModal, type GivenLogin, type Person } from "../components/PasswordTools";
 import { generatePassword } from "../lib/password";
 import { MerchantProfileModal } from "./merchantProfile";
-import { LiveBadge, LiveFeed, RidersOnRoad, Ticker } from "../components/Live";
+import { LiveBadge, LiveFeed, Ticker } from "../components/Live";
 import { RangePills, rangeLabel, useDateRange } from "../components/RangePicker";
 
 /* -------------------------------------------------------------- dashboard */
@@ -193,11 +193,6 @@ export function AdminDashboard() {
       </div>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <LiveFeed />
-        <RidersOnRoad dayStart={dayStart} />
-      </div>
-
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Card className="p-6">
           <h2 className="mb-4 font-bold">{range.days > 14 || range.preset === "custom" ? rangeLabel(range) : t("Last 14 days")}</h2>
           <TrendChart data={d.trend} />
@@ -218,7 +213,7 @@ export function AdminDashboard() {
               <button
                 key={s}
                 onClick={() => navigate(`/app/parcels?status=${s}`)}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-page"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-page cursor-pointer"
               >
                 <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${STATUS[s as keyof typeof STATUS].tone}`}>
                   <Icon className="size-4" />
@@ -239,6 +234,10 @@ export function AdminDashboard() {
             ))}
           </div>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <LiveFeed />
       </div>
     </>
   );
