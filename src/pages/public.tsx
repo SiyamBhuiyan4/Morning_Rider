@@ -3,12 +3,17 @@ import { useMutation, useQuery } from "convex/react";
 import {
   ArrowRight,
   Bike,
+  Calculator,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Circle,
   Clock,
+  Copy,
   Lock,
   MapPin,
+  Menu,
   MessageCircle,
   PackageCheck,
   PackageSearch,
@@ -20,6 +25,7 @@ import {
   ThumbsUp,
   Truck,
   Wallet,
+  X,
   Zap,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -28,7 +34,7 @@ import { useSession } from "../lib/session";
 import { errorText, useToast } from "../lib/toast";
 import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, dateTime, num, tk, type Category } from "../lib/format";
 import { CONTACT } from "../lib/contact";
-import { Button, Card, Field, Input, Logo, Select, StatusBadge, Textarea, Wordmark, cx } from "../components/ui";
+import { Button, Card, Field, Input, Logo, PasswordInput, Select, StatusBadge, Textarea, Wordmark, cx } from "../components/ui";
 import { IS_ADMIN_PORTAL } from "../lib/portal";
 import { Prefs } from "../components/Prefs";
 import { t, translateServer } from "../lib/prefs";
@@ -47,22 +53,23 @@ const withNext = (path: string) => {
 
 function PublicNav() {
   const { me } = useSession();
+  const [mobileOpen, setMobileOpen] = useState(false);
   return (
-    <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-5">
+    <header className="relative z-30 mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-5">
       <Link href="/" className="flex items-center gap-3">
-        <Logo size={46} className="ring-2 ring-white/25" />
+        <Logo size={46} className="ring-2 ring-white/25 shadow-lg" />
         <span className="hidden sm:block">
           <Wordmark dark />
         </span>
       </Link>
-      <nav className="flex items-center gap-1.5 sm:gap-2">
-        <a href="/#services" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-white/75 hover:text-white lg:block">
+      <nav className="hidden items-center gap-1.5 sm:gap-2 lg:flex">
+        <a href="/#services" className="rounded-xl px-3 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/10 hover:text-white">
           {t("Services")}
         </a>
-        <a href="/#pricing" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-white/75 hover:text-white lg:block">
+        <a href="/#pricing" className="rounded-xl px-3 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/10 hover:text-white">
           {t("Pricing")}
         </a>
-        <a href="/#join" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-white/75 hover:text-white lg:block">
+        <a href="/#join" className="rounded-xl px-3 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/10 hover:text-white">
           {t("Join as rider")}
         </a>
         <Prefs onDark />
@@ -72,6 +79,66 @@ function PublicNav() {
           <Button onClick={() => navigate("/login")}>{t("Merchant login")}</Button>
         )}
       </nav>
+
+      {/* Mobile controls */}
+      <div className="flex items-center gap-2 lg:hidden">
+        <Prefs onDark />
+        {me ? (
+          <Button size="sm" onClick={() => navigate("/app")}>{t("Dashboard")}</Button>
+        ) : (
+          <Button size="sm" onClick={() => navigate("/login")}>{t("Log in")}</Button>
+        )}
+        <button
+          type="button"
+          onClick={() => setMobileOpen((o) => !o)}
+          className="grid size-9 place-items-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
+          aria-label={t("Menu")}
+        >
+          {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+      </div>
+
+      {mobileOpen && (
+        <div className="animate-rise absolute inset-x-4 top-20 z-40 rounded-3xl border border-white/15 bg-navy-950/95 p-5 shadow-2xl backdrop-blur-xl lg:hidden">
+          <div className="flex flex-col gap-1.5">
+            <a
+              href="/#services"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white"
+            >
+              {t("Services")}
+            </a>
+            <a
+              href="/#pricing"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white"
+            >
+              {t("Pricing")}
+            </a>
+            <a
+              href="/#join"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white"
+            >
+              {t("Join as rider")}
+            </a>
+            <div className="my-2 border-t border-white/10" />
+            <a
+              href={`tel:${CONTACT.phone}`}
+              className="flex items-center gap-2.5 rounded-xl bg-brand/20 px-4 py-2.5 text-sm font-bold text-brand transition hover:bg-brand/30"
+            >
+              <Phone className="size-4" /> {t("Hotline")}: {CONTACT.phone}
+            </a>
+            <Link
+              href="/rider"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-white/65 transition hover:bg-white/10 hover:text-white"
+            >
+              {t("Rider login")} →
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -155,6 +222,259 @@ function SectionTitle({ kicker, title, text }: { kicker: string; title: string; 
   );
 }
 
+function RateCalculator({ rates }: { rates?: { uttara: number; dhakaCity: number; gazipurCity: number; narayanganjCity: number; extraPerKg: number; extraPerKgOutside: number; codPercent: number; codPercentOutside: number } | null }) {
+  const [zone, setZone] = useState<"uttara" | "dhaka_city" | "gazipur_city" | "narayanganj_city">("dhaka_city");
+  const [weight, setWeight] = useState(1);
+  const [cod, setCod] = useState(1000);
+
+  const baseRate = rates
+    ? zone === "uttara"
+      ? rates.uttara
+      : zone === "dhaka_city"
+        ? rates.dhakaCity
+        : zone === "gazipur_city"
+          ? rates.gazipurCity
+          : rates.narayanganjCity
+    : zone === "uttara"
+      ? 60
+      : zone === "dhaka_city"
+        ? 70
+        : 100;
+
+  const isOutside = zone === "gazipur_city" || zone === "narayanganj_city";
+  const extraKg = Math.max(0, Math.ceil(weight - 1));
+  const extraRate = rates ? (isOutside ? rates.extraPerKgOutside : rates.extraPerKg) : (isOutside ? 25 : 20);
+  const weightCharge = extraKg * extraRate;
+
+  const codPct = rates ? (isOutside ? rates.codPercentOutside : rates.codPercent) : (isOutside ? 1 : 0);
+  const codCharge = Math.round((cod * codPct) / 100);
+  const totalCost = baseRate + weightCharge + codCharge;
+  const merchantReceives = Math.max(0, cod - totalCost);
+
+  return (
+    <Card className="mx-auto mt-12 max-w-4xl overflow-hidden border-brand/20 shadow-xl">
+      <div className="sunrise flex items-center justify-between px-6 py-4 text-white">
+        <div className="flex items-center gap-2.5">
+          <Calculator className="size-5 text-sun" />
+          <h3 className="font-extrabold tracking-tight sm:text-lg">{t("Instant Delivery Rate Calculator")}</h3>
+        </div>
+        <span className="hidden rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-sun sm:block">
+          {t("Real-time rates")}
+        </span>
+      </div>
+      <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.15fr_1fr]">
+        <div className="space-y-5">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-ink-3">
+              {t("Delivery Area / Zone")}
+            </label>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {[
+                { id: "uttara" as const, name: "Uttara", time: t("Within 3 hours") },
+                { id: "dhaka_city" as const, name: "Dhaka City", time: t("Same day") },
+                { id: "gazipur_city" as const, name: "Gazipur City", time: t("Same day") },
+                { id: "narayanganj_city" as const, name: "Narayanganj", time: t("Same day") },
+              ].map((z) => (
+                <button
+                  key={z.id}
+                  type="button"
+                  onClick={() => setZone(z.id)}
+                  className={cx(
+                    "flex flex-col items-start rounded-xl p-3 text-left transition-all duration-150",
+                    zone === z.id
+                      ? "border-2 border-brand bg-brand-50/70 text-ink shadow-sm"
+                      : "border border-line bg-surface text-ink-2 hover:border-navy-100 hover:bg-page",
+                  )}
+                >
+                  <span className="text-sm font-bold text-ink">{z.name}</span>
+                  <span className="text-[11px] text-ink-3">{z.time}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-ink-3">
+                {t("Parcel Weight (kg)")}
+              </label>
+              <span className="text-xs font-bold text-brand">{weight} {t("kg")}</span>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              {[1, 2, 3, 5].map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setWeight(w)}
+                  className={cx(
+                    "flex-1 rounded-xl py-2 text-xs font-bold transition",
+                    weight === w ? "bg-navy-900 text-white shadow-sm" : "border border-line bg-surface text-ink-2 hover:bg-page",
+                  )}
+                >
+                  {w} {t("kg")}
+                </button>
+              ))}
+              <div className="w-24">
+                <Input
+                  type="number"
+                  min={0.5}
+                  max={50}
+                  step={0.5}
+                  value={weight}
+                  onChange={(e) => setWeight(Math.max(0.5, Number(e.target.value) || 1))}
+                  className="h-9 px-2 text-center text-xs font-bold"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-ink-3">
+                {t("Cash on Delivery (COD) Amount")}
+              </label>
+              <span className="text-xs font-bold text-brand">{tk(cod)}</span>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              {[0, 500, 1500, 3000].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCod(c)}
+                  className={cx(
+                    "flex-1 rounded-xl py-2 text-xs font-bold transition",
+                    cod === c ? "bg-navy-900 text-white shadow-sm" : "border border-line bg-surface text-ink-2 hover:bg-page",
+                  )}
+                >
+                  {tk(c)}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2">
+              <Input
+                type="number"
+                min={0}
+                step={50}
+                value={cod || ""}
+                onChange={(e) => setCod(Math.max(0, Number(e.target.value) || 0))}
+                placeholder={t("Custom COD amount (৳)")}
+                className="h-10 text-sm font-semibold"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Calculation Summary Card */}
+        <div className="flex flex-col justify-between rounded-2xl border border-line bg-page/70 p-5">
+          <div>
+            <p className="text-xs font-bold tracking-wider uppercase text-ink-3">{t("Cost Breakdown")}</p>
+            <div className="mt-4 space-y-2.5 text-sm">
+              <div className="flex justify-between text-ink-2">
+                <span>{t("Base delivery charge")} (1 kg)</span>
+                <span className="font-semibold text-ink">{tk(baseRate)}</span>
+              </div>
+              <div className="flex justify-between text-ink-2">
+                <span>{t("Extra weight charge")} ({extraKg} kg)</span>
+                <span className="font-semibold text-ink">{extraKg > 0 ? `+ ${tk(weightCharge)}` : "—"}</span>
+              </div>
+              <div className="flex justify-between text-ink-2">
+                <span>{t("COD fee")} ({codPct}%)</span>
+                <span className="font-semibold text-ink">{codCharge > 0 ? `+ ${tk(codCharge)}` : t("Free")}</span>
+              </div>
+              <div className="border-t border-line pt-2.5">
+                <div className="flex justify-between font-bold text-ink">
+                  <span>{t("Total delivery charge")}</span>
+                  <span className="text-base font-extrabold text-brand">{tk(totalCost)}</span>
+                </div>
+              </div>
+            </div>
+
+            {cod > 0 && (
+              <div className="mt-5 rounded-xl bg-emerald-50 p-4 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                <p className="text-xs font-bold tracking-wider uppercase text-emerald-700 dark:text-emerald-400">{t("Merchant will receive")}</p>
+                <p className="mt-1 text-2xl font-black">{tk(merchantReceives)}</p>
+                <p className="mt-0.5 text-xs opacity-80">{t("Paid to your bKash, Nagad or Bank")}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <Button size="lg" className="w-full" onClick={() => navigate("/register")}>
+              {t("Start shipping now")} <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function FaqSection() {
+  const [open, setOpen] = useState<number | null>(0);
+  const faqs = [
+    {
+      q: t("How fast does Morning Rider deliver?"),
+      a: t("Within Uttara, we deliver in just 3 hours when booked between 6 AM and 12 noon. Across all major areas of Dhaka City, Gazipur, and Narayanganj City, we provide reliable same-day delivery 7 days a week."),
+    },
+    {
+      q: t("When and how do merchants receive COD payouts?"),
+      a: t("Collected cash is settled directly to your bKash, Nagad, Rocket or Bank account. You receive itemized payment statements with downloadable and printable invoices."),
+    },
+    {
+      q: t("Can I send frozen meat, fish, cakes or perishable food?"),
+      a: t("Yes! Morning Rider offers specialized cold-chain delivery within 6 hours across Dhaka and Gazipur. We keep frozen items and delicate bakery products safe, flat, and at the right temperature."),
+    },
+    {
+      q: t("Is there any upfront fee or registration charge?"),
+      a: t("No. Merchant registration is 100% free with no hidden charges. You only pay standard delivery charges when you ship parcels."),
+    },
+    {
+      q: t("What happens if a customer refuses or returns a parcel?"),
+      a: t("If a delivery cannot be completed, our rider contacts you first. For returned parcels, only a fair return charge applies (usually 50% of the delivery charge) with 0% COD fee."),
+    },
+    {
+      q: t("How do I book parcels?"),
+      a: t("You can create parcels one-by-one in your merchant panel, upload up to 200 parcels in bulk via Excel/CSV, or simply message our office directly on WhatsApp!"),
+    },
+  ];
+
+  return (
+    <section className="border-t border-line bg-surface py-20">
+      <div className="mx-auto max-w-4xl px-5">
+        <SectionTitle
+          kicker={t("Got questions?")}
+          title={t("Frequently Asked Questions")}
+          text={t("Everything you need to know about shipping with Morning Rider.")}
+        />
+        <div className="mt-10 space-y-3">
+          {faqs.map((f, i) => (
+            <div
+              key={f.q}
+              className="overflow-hidden rounded-2xl border border-line bg-page/50 transition-colors duration-150 hover:border-brand/30"
+            >
+              <button
+                type="button"
+                onClick={() => setOpen(open === i ? null : i)}
+                className="flex w-full items-center justify-between gap-4 p-5 text-left font-bold text-ink"
+              >
+                <span className="text-base sm:text-lg">{f.q}</span>
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface text-ink-3">
+                  {open === i ? <ChevronUp className="size-4 text-brand" /> : <ChevronDown className="size-4" />}
+                </span>
+              </button>
+              {open === i && (
+                <div className="px-5 pb-5 text-sm leading-relaxed text-ink-2">
+                  <p className="border-t border-line/60 pt-3">{f.a}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function Home() {
   const rates = useQuery(api.settings.publicRates);
 
@@ -201,8 +521,8 @@ export function Home() {
             { icon: Zap, title: t("3-hour delivery"), text: t("Inside Uttara") },
             { icon: MapPin, title: t("3 cities"), text: t("Dhaka • Gazipur • Narayanganj") },
           ].map((f) => (
-            <div key={f.title} className="flex items-center gap-3 rounded-2xl bg-white/[0.07] p-4 ring-1 ring-white/10 backdrop-blur">
-              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-white">
+            <div key={f.title} className="glass flex items-center gap-3 rounded-2xl p-4 transition-all duration-200 hover:bg-white/[0.1]">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-white shadow-sm shadow-brand/30">
                 <f.icon className="size-5" />
               </div>
               <div className="min-w-0">
@@ -262,8 +582,8 @@ export function Home() {
         />
         <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {SERVICES.map((c) => (
-            <Card key={c} className="group p-5 text-center transition hover:-translate-y-0.5 hover:ring-2 hover:ring-brand/40">
-              <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-50 text-3xl transition group-hover:scale-110">
+            <Card key={c} className="group cursor-pointer p-5 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md hover:ring-2 hover:ring-brand/40">
+              <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-50 text-3xl transition-transform duration-200 group-hover:scale-110">
                 {CATEGORY[c].emoji}
               </div>
               <p className="mt-3 text-sm font-bold leading-snug">{CATEGORY[c].label}</p>
@@ -314,9 +634,9 @@ export function Home() {
             { zone: "gazipur_city" as const, value: rates?.gazipurCity, time: t("Same day") },
             { zone: "narayanganj_city" as const, value: rates?.narayanganjCity, time: t("Same day"), isNew: true },
           ].map((r) => (
-            <Card key={r.zone} className={cx("relative p-6 text-center", r.hot && "ring-2 ring-brand")}>
+            <Card key={r.zone} className={cx("relative p-6 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md", r.hot && "ring-2 ring-brand")}>
               {r.hot && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[11px] font-bold text-white">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[11px] font-bold text-white shadow-sm shadow-brand/30">
                   {t("Fastest")}
                 </span>
               )}
@@ -358,6 +678,9 @@ export function Home() {
             ))}
           </div>
         )}
+        <div className="mx-auto mt-10 max-w-4xl">
+          <RateCalculator rates={rates} />
+        </div>
       </section>
 
       {/* ---------------- how it works + coverage */}
@@ -449,6 +772,9 @@ export function Home() {
         </div>
       </section>
 
+      {/* ---------------- faq */}
+      <FaqSection />
+
       {/* ---------------- contact */}
       <section className="mx-auto max-w-6xl px-5 pb-20">
         <Card className="grid gap-6 p-8 md:grid-cols-[1.2fr_1fr] md:items-center">
@@ -480,9 +806,9 @@ export function Home() {
             <Wordmark />
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
-            <Link href="/login" className="hover:text-brand">{t("Merchant login")}</Link>
-            <Link href="/rider" className="hover:text-brand">{t("Rider login")}</Link>
-            <Link href="/join" className="hover:text-brand">{t("Join as rider")}</Link>
+            <Link href="/login" className="transition hover:text-brand">{t("Merchant login")}</Link>
+            <Link href="/rider" className="transition hover:text-brand">{t("Rider login")}</Link>
+            <Link href="/join" className="transition hover:text-brand">{t("Join as rider")}</Link>
             <span>
               {t("Hotline")}: {CONTACT.phone}, {CONTACT.phone2}
             </span>
@@ -594,9 +920,8 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
         )}
         <Field label={door === "admin" ? t("Admin passcode") : t("Password")}>
           {(id) => (
-            <Input
+            <PasswordInput
               id={id}
-              type="password"
               inputMode={door === "admin" ? "numeric" : undefined}
               autoComplete="current-password"
               autoFocus={door === "admin"}
@@ -853,10 +1178,10 @@ export function Register() {
           {(id) => <Input id={id} value={f.payoutAccount} onChange={set("payoutAccount")} required maxLength={100} />}
         </Field>
         <Field label={t("Password")} hint={t("At least 8 characters, with a letter and a number.")}>
-          {(id) => <Input id={id} type="password" autoComplete="new-password" value={f.password} onChange={set("password")} required minLength={8} />}
+          {(id) => <PasswordInput id={id} autoComplete="new-password" value={f.password} onChange={set("password")} required minLength={8} />}
         </Field>
         <Field label={t("Confirm password")} hint={mismatch ? <span className="text-red-600">{t("Passwords do not match.")}</span> : undefined}>
-          {(id) => <Input id={id} type="password" autoComplete="new-password" value={f.confirm} onChange={set("confirm")} required />}
+          {(id) => <PasswordInput id={id} autoComplete="new-password" value={f.confirm} onChange={set("confirm")} required />}
         </Field>
         {error && (
           <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700 sm:col-span-2">
@@ -983,6 +1308,7 @@ const JOURNEY = ["pending", "picked_up", "at_hub", "out_for_delivery", "delivere
 export function Track({ code }: { code?: string }) {
   const { token, me } = useSession();
   const result = useQuery(api.track.byCode, code && token ? { token, code } : "skip");
+  const [copied, setCopied] = useState(false);
 
   // Tracking needs an account: send signed-out visitors to log in, then back here.
   useEffect(() => {
@@ -1004,7 +1330,23 @@ export function Track({ code }: { code?: string }) {
         </div>
       </section>
       <div className="mx-auto -mt-8 max-w-2xl px-5 pb-16">
-        {!code || !me ? null : result === undefined ? (
+        {!code ? null : !me ? (
+          <Card className="animate-rise p-8 text-center">
+            <PackageSearch className="mx-auto size-12 text-brand" />
+            <h2 className="mt-4 text-xl font-bold">{t("Sign in to track your parcel")}</h2>
+            <p className="mt-2 text-sm text-ink-2">
+              {t("For privacy and security, parcel tracking is available after logging into your merchant or rider account.")}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button size="lg" onClick={() => navigate(`/login?next=${encodeURIComponent(`/track/${code}`)}`)}>
+                {t("Merchant login")}
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => navigate(`/rider?next=${encodeURIComponent(`/track/${code}`)}`)}>
+                {t("Rider login")}
+              </Button>
+            </div>
+          </Card>
+        ) : result === undefined ? (
           <Card className="p-10 text-center text-ink-3">{t("Looking up {code}…", { code })}</Card>
         ) : !parcel ? (
           <Card className="p-10 text-center">
@@ -1017,7 +1359,22 @@ export function Track({ code }: { code?: string }) {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-6">
               <div>
                 <p className="text-xs font-semibold tracking-wider text-ink-3">{t("TRACKING ID")}</p>
-                <p className="mt-1 font-mono text-xl font-bold">{parcel.trackingCode}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="font-mono text-xl font-bold">{parcel.trackingCode}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(parcel.trackingCode);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 shadow-xs transition hover:bg-page hover:text-ink active:scale-95"
+                    title={t("Copy ID")}
+                  >
+                    {copied ? <CheckCircle2 className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                    <span>{copied ? t("Copied!") : t("Copy ID")}</span>
+                  </button>
+                </div>
               </div>
               <StatusBadge status={parcel.status} className="px-3.5 py-1.5 text-sm" />
             </div>

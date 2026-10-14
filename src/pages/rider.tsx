@@ -44,13 +44,13 @@ export function RiderTasks() {
             key={x.key}
             onClick={() => setTab(x.key)}
             className={cx(
-              "flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl py-2 text-[13px] leading-tight font-bold whitespace-nowrap transition sm:flex-row sm:gap-2 sm:text-sm",
-              tab === x.key ? "bg-navy-900 text-white" : "text-ink-2 hover:bg-page",
+              "flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl py-2.5 text-[13px] font-bold leading-tight whitespace-nowrap transition-all duration-150 sm:flex-row sm:gap-2 sm:text-sm",
+              tab === x.key ? "bg-navy-900 text-white shadow-sm" : "text-ink-2 hover:bg-page hover:text-ink",
             )}
           >
             <x.icon className="size-4" />
             {x.label}
-            <span className={cx("rounded-full px-1.5 text-xs", tab === x.key ? "bg-brand" : "bg-page")}>{num(x.count)}</span>
+            <span className={cx("rounded-full px-1.5 py-0.5 text-[11px] font-bold", tab === x.key ? "bg-brand text-white" : "bg-page text-ink-3")}>{num(x.count)}</span>
           </button>
         ))}
       </div>
@@ -69,7 +69,7 @@ export function RiderTasks() {
                       <MapPin className="mt-0.5 size-4 shrink-0 text-brand" /> {s.pickupAddress}
                     </p>
                   </div>
-                  <a href={`tel:${s.merchantPhone}`} className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-white" aria-label={t("Call merchant")}>
+                  <a href={`tel:${s.merchantPhone}`} className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 transition hover:bg-emerald-600 hover:scale-105" aria-label={t("Call merchant")}>
                     <Phone className="size-5" />
                   </a>
                 </div>
@@ -137,7 +137,7 @@ export function RiderTasks() {
                     )}
                     {p.note && <p className="mt-1 rounded-lg bg-sun-100 px-2 py-1 text-xs font-medium text-amber-900">{t("Note")}: {p.note}</p>}
                   </div>
-                  <a href={`tel:${p.recipientPhone}`} className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-white" aria-label={t("Call customer")}>
+                  <a href={`tel:${p.recipientPhone}`} className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 transition hover:bg-emerald-600 hover:scale-105" aria-label={t("Call customer")}>
                     <Phone className="size-5" />
                   </a>
                 </div>

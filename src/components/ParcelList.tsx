@@ -165,7 +165,7 @@ export function ParcelList() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line bg-page/60 text-left text-xs font-bold tracking-wide text-ink-3 uppercase">
+                <tr className="border-b border-line bg-page text-left text-[11px] font-bold uppercase tracking-widest text-ink-3">
                   <th className="w-10 px-4 py-3">
                     <input
                       type="checkbox"
@@ -188,7 +188,10 @@ export function ParcelList() {
                   <tr
                     key={p._id}
                     onClick={() => setOpen(p._id)}
-                    className={cx("cursor-pointer border-b border-line/70 transition last:border-0 hover:bg-brand-50/40", selected.has(p._id) && "bg-brand-50/60")}
+                    className={cx(
+                      "cursor-pointer border-b border-line/70 transition-colors duration-100 last:border-0 hover:bg-brand-50/50",
+                      selected.has(p._id) && "bg-brand-50/70",
+                    )}
                   >
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" className="size-4 accent-[var(--color-brand)]" checked={selected.has(p._id)} onChange={() => toggle(p._id)} aria-label={t("Select {code}", { code: p.trackingCode })} />

@@ -89,11 +89,11 @@ export function Messages({ role }: { role: "merchant" | "rider" }) {
                   type="button"
                   onClick={() => setCurrent(th.userId)}
                   className={cx(
-                    "flex w-full items-start gap-3 border-b border-line px-4 py-3 text-left transition hover:bg-page",
-                    current === th.userId && "bg-brand/8",
+                    "flex w-full items-start gap-3 border-b border-line px-4 py-3.5 text-left transition-colors duration-100 hover:bg-page",
+                    current === th.userId && "border-l-2 border-l-brand bg-brand-50/60 pl-[14px]",
                   )}
                 >
-                  <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-brand-50 font-bold text-brand">
+                  <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 font-bold text-brand">
                     {th.name.slice(0, 1).toUpperCase()}
                     {th.unread > 0 && <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-red-500 ring-2 ring-surface" />}
                   </span>

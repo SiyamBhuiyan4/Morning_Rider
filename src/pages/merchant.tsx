@@ -39,7 +39,7 @@ export function MerchantDashboard() {
         }
       />
       <VerificationBanner />
-      <Card className="sunrise mb-6 overflow-hidden border-0 p-6 text-white">
+      <Card className="sunrise mb-6 overflow-hidden border-0 p-6 text-white shadow-lg">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <p className="text-sm font-semibold text-white/70">{t("Current balance")}</p>
@@ -78,10 +78,10 @@ export function MerchantDashboard() {
           <h2 className="mb-4 font-bold">{t("By status")}</h2>
           <div className="space-y-1">
             {(Object.keys(STATUS) as (keyof typeof STATUS)[]).filter((s) => (d.counts[s] ?? 0) > 0).map((s) => (
-              <button key={s} onClick={() => navigate(`/app/parcels?status=${s}`)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-page">
-                <span className={`size-2.5 rounded-full ${STATUS[s].dot}`} />
+              <button key={s} onClick={() => navigate(`/app/parcels?status=${s}`)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors duration-100 hover:bg-page">
+                <span className={`size-2.5 shrink-0 rounded-full ${STATUS[s].dot}`} />
                 <span className="flex-1 font-semibold">{STATUS[s].label}</span>
-                <span className="font-bold">{num(d.counts[s] ?? 0)}</span>
+                <span className="font-bold tabular-nums">{num(d.counts[s] ?? 0)}</span>
               </button>
             ))}
             {total === 0 && <p className="py-6 text-center text-sm text-ink-3">{t("No parcels yet — create your first one!")}</p>}
@@ -363,7 +363,7 @@ export function BulkUpload() {
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              if (file.size > 1_000_000) return toast.error("File is too large (max 1 MB).");
+              if (file.size > 1_000_000) return toast.error(t("File is too large (max 1 MB)."));
               load(await file.text());
               e.target.value = "";
             }}

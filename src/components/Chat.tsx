@@ -190,7 +190,7 @@ export function OfficeChatButton({ className }: { className?: string }) {
       </button>
 
       {open && (
-        <div className="animate-rise fixed inset-x-3 top-16 z-50 flex h-[min(34rem,calc(100dvh-5rem))] flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-pop)] lg:absolute lg:inset-x-auto lg:top-14 lg:right-0 lg:w-[23rem]">
+        <div className="animate-rise fixed inset-x-3 bottom-20 z-50 flex h-[min(34rem,calc(100dvh-6rem))] flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-pop)] lg:absolute lg:inset-x-auto lg:bottom-16 lg:right-0 lg:w-[24rem]">
           <div className="sunrise flex items-center gap-3 px-4 py-3.5 text-white">
             <Logo size={36} className="ring-2 ring-white/20" />
             <div className="min-w-0 flex-1">

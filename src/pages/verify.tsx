@@ -113,8 +113,8 @@ function VerifyForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!nidOk) return toast.error("NID number must be 10, 13 or 17 digits.");
-    if (!nidFront || !nidBack) return toast.error("Please upload both sides of your NID.");
+    if (!nidOk) return toast.error(t("NID number must be 10, 13 or 17 digits."));
+    if (!nidFront || !nidBack) return toast.error(t("Please upload both sides of your NID."));
     setBusy(true);
     try {
       await submit({
@@ -231,8 +231,8 @@ function Picker({ onUploaded, compact }: { onUploaded: (f: Uploaded) => void; co
   const [busy, setBusy] = useState(false);
 
   async function upload(file: File) {
-    if (!TYPES.includes(file.type)) return toast.error("Only JPG, PNG, WebP or PDF files are allowed.");
-    if (file.size > MAX_BYTES) return toast.error("File is too large (max 5 MB).");
+    if (!TYPES.includes(file.type)) return toast.error(t("Only JPG, PNG, WebP or PDF files are allowed."));
+    if (file.size > MAX_BYTES) return toast.error(t("File is too large (max 5 MB)."));
     setBusy(true);
     try {
       const url = await generateUploadUrl({ token });

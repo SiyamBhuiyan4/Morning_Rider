@@ -154,16 +154,16 @@ export function AdminDashboard() {
               <button
                 key={s}
                 onClick={() => navigate(`/app/parcels?status=${s}`)}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-page"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-page"
               >
-                <span className={`grid size-8 place-items-center rounded-lg ${STATUS[s as keyof typeof STATUS].tone}`}>
+                <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${STATUS[s as keyof typeof STATUS].tone}`}>
                   <Icon className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold">{STATUS[s as keyof typeof STATUS].label}</span>
-                  <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-page">
+                  <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-page">
                     <span
-                      className={`block h-full rounded-full transition-[width] duration-1000 ease-out ${STATUS[s as keyof typeof STATUS].dot}`}
+                      className={`block h-full rounded-full transition-[width] duration-700 ease-out ${STATUS[s as keyof typeof STATUS].dot}`}
                       style={{ width: `${(c(s as keyof typeof STATUS) / pipelineMax) * 100}%` }}
                     />
                   </span>
@@ -196,7 +196,7 @@ function AlertChip({
     <button
       onClick={onClick}
       className={cx(
-        "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ring-1 transition hover:-translate-y-0.5",
+        "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ring-1 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0",
         tone === "brand" ? "bg-brand-50 text-brand-700 ring-brand/40 hover:bg-brand-100" : "bg-sun-100 text-amber-900 ring-sun/50 hover:bg-sun/30",
       )}
     >
@@ -617,7 +617,14 @@ function CreateUserModal({ role, open, onClose }: { role: "merchant" | "rider"; 
           <Field label={t("Working area (optional)")}>{(id) => <Input id={id} value={f.riderArea} onChange={set("riderArea")} placeholder={t("e.g. Mirpur, Uttara")} />}</Field>
         )}
         <Field label={t("Password")} hint={t("At least 8 characters with a letter and a number. Share it privately.")}>
-          {(id) => <Input id={id} type="text" autoComplete="off" value={f.password} onChange={set("password")} required minLength={8} />}
+          {(id) => (
+            <div className="flex gap-2">
+              <Input id={id} type="text" autoComplete="off" value={f.password} onChange={set("password")} className="font-mono" required minLength={8} />
+              <Button type="button" variant="outline" className="shrink-0 whitespace-nowrap" onClick={() => setF((s) => ({ ...s, password: generatePassword() }))}>
+                {t("Generate")}
+              </Button>
+            </div>
+          )}
         </Field>
         <Button type="submit" loading={busy} className="w-full">
           {t("Create account")}
@@ -657,11 +664,11 @@ export function Riders() {
         <Spinner />
       ) : rows.length === 0 ? (
         <Card>
-          q ? (
+          {q ? (
             <Empty icon={Bike} title={t("No rider matches “{q}”", { q: search.trim() })} />
           ) : (
             <Empty icon={Bike} title={t("No riders yet")} text={t("Add your first rider so you can assign pickups and deliveries.")} />
-          )
+          )}
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

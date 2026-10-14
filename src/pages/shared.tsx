@@ -7,7 +7,7 @@ import { useAuthed, useSession } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
 import { PAYOUT_METHOD } from "../lib/format";
-import { Button, Card, Empty, Field, Input, Modal, PageHeader, Select, Spinner } from "../components/ui";
+import { Button, Card, Empty, Field, Input, Modal, PageHeader, PasswordInput, Select, Spinner } from "../components/ui";
 import { MerchantPicker, ParcelForm, type ParcelFields } from "../components/ParcelForm";
 import { ParcelList } from "../components/ParcelList";
 import { FraudSummary } from "../components/FraudSummary";
@@ -261,7 +261,7 @@ export function Account() {
                 {payoutChanged && (
                   <Field label={t("Current password")} hint={t("Needed to change your payment details or email.")}>
                     {(id) => (
-                      <Input id={id} type="password" autoComplete="current-password" value={p.currentPassword} onChange={set("currentPassword")} required />
+                      <PasswordInput id={id} autoComplete="current-password" value={p.currentPassword} onChange={set("currentPassword")} required />
                     )}
                   </Field>
                 )}
@@ -276,11 +276,11 @@ export function Account() {
           <Card className="h-fit p-6">
             <h2 className="mb-4 font-bold">{t("Change password")}</h2>
             <form onSubmit={savePassword} className="space-y-4">
-              <Field label={t("Current password")}>{(id) => <Input id={id} type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required />}</Field>
+              <Field label={t("Current password")}>{(id) => <PasswordInput id={id} autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required />}</Field>
               <Field label={t("New password")} hint={t("At least 8 characters with a letter and a number.")}>
-                {(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required minLength={8} />}
+                {(id) => <PasswordInput id={id} autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required minLength={8} />}
               </Field>
-              <Field label={t("Confirm new password")}>{(id) => <Input id={id} type="password" autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required />}</Field>
+              <Field label={t("Confirm new password")}>{(id) => <PasswordInput id={id} autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} required />}</Field>
               <Button type="submit" variant="dark" loading={busy === "pw"}>{t("Change password")}</Button>
             </form>
           </Card>

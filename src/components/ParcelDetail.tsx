@@ -95,7 +95,7 @@ export function StatusActions({
 
   if (waiting) {
     return (
-      <p className="flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">
+      <p className="flex items-center gap-2 rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm font-semibold text-brand-700">
         <Loader2 className="size-4 animate-spin" /> {t("Saving in a few seconds… press Undo below to cancel.")}
       </p>
     );
@@ -116,7 +116,7 @@ export function StatusActions({
         ))}
       </div>
       {move && (
-        <div className="animate-rise mt-3 space-y-3 rounded-2xl border border-line bg-page p-4">
+        <div className="animate-rise mt-3 space-y-3 rounded-2xl border border-line bg-page p-4 shadow-sm">
           {move === "out_for_delivery" && me.role === "admin" && (
             <Field label={t("Delivery rider")}>{() => <RiderSelect value={rider} onChange={setRider} />}</Field>
           )}
@@ -126,7 +126,7 @@ export function StatusActions({
             </Field>
           )}
           {move === "delivered" && codAmount > 0 && (
-            <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700">
+            <p className="rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm font-semibold text-brand-700">
               {t("Collect {amount} from the customer.", { amount: tk(codAmount) })}
             </p>
           )}
@@ -301,8 +301,8 @@ export function ParcelDetail({ id, onClose }: { id: Id<"parcels"> | null; onClos
 
 function InfoBlock({ icon: Icon, title, children }: { icon: typeof User; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line p-4 text-sm">
-      <p className="mb-2 flex items-center gap-1.5 text-xs font-bold tracking-wider text-ink-3 uppercase">
+    <div className="rounded-2xl border border-line p-4 text-sm transition-colors duration-150 hover:border-navy-100 hover:bg-page/50">
+      <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-3">
         <Icon className="size-3.5" /> {title}
       </p>
       <div className="space-y-0.5">{children}</div>
@@ -312,9 +312,9 @@ function InfoBlock({ icon: Icon, title, children }: { icon: typeof User; title: 
 
 function Money({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-page p-3">
-      <p className="text-xs font-medium text-ink-3">{label}</p>
-      <p className="mt-0.5 font-bold">{value}</p>
+    <div className="rounded-2xl bg-page p-3.5 ring-1 ring-line/60">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{label}</p>
+      <p className="mt-1 font-bold tabular-nums">{value}</p>
     </div>
   );
 }

@@ -1,13 +1,14 @@
 import {
   useEffect,
   useId,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
-import { Loader2, X, type LucideIcon } from "lucide-react";
+import { Eye, EyeOff, Loader2, X, type LucideIcon } from "lucide-react";
 import { STATUS, type Status } from "../lib/format";
 import { t } from "../lib/prefs";
 
@@ -35,15 +36,15 @@ export function Button({
     <button
       disabled={disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-xl text-center leading-tight font-semibold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center gap-2 rounded-xl text-center leading-tight font-semibold transition-all duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50",
         size === "sm" && "min-h-8 px-3 py-1 text-[13px]",
         size === "md" && "min-h-10 px-4 py-1.5 text-sm",
         size === "lg" && "min-h-12 px-6 py-2 text-[15px]",
-        variant === "primary" && "bg-brand text-white shadow-sm shadow-brand/30 hover:bg-brand-600",
+        variant === "primary" && "bg-brand text-white shadow-sm shadow-brand/30 hover:bg-brand-600 hover:shadow-md hover:shadow-brand/25",
         variant === "dark" && "bg-navy-900 text-white hover:bg-navy-800 dark:bg-navy-600 dark:hover:bg-navy-800",
-        variant === "outline" && "border border-line bg-surface text-ink hover:border-navy-100 hover:bg-navy-50",
+        variant === "outline" && "border border-line bg-surface text-ink hover:border-navy-100 hover:bg-navy-50 hover:shadow-sm",
         variant === "ghost" && "text-ink-2 hover:bg-navy-50 hover:text-ink",
-        variant === "danger" && "bg-red-600 text-white hover:bg-red-700",
+        variant === "danger" && "bg-red-600 text-white shadow-sm shadow-red-600/20 hover:bg-red-700 hover:shadow-md hover:shadow-red-600/25",
         className,
       )}
       {...rest}
@@ -84,6 +85,28 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
   return <input className={cx(control, "h-11", className)} {...rest} />;
 }
 
+export function PasswordInput({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        className={cx(control, "h-11 pr-10", className)}
+        {...rest}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((s) => !s)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-ink-3 transition hover:text-ink focus:outline-none"
+        aria-label={show ? t("Hide password") : t("Show password")}
+      >
+        {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
+    </div>
+  );
+}
+
 export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={cx(control, "min-h-20 py-2.5", className)} {...rest} />;
 }
@@ -98,7 +121,7 @@ export function Select({ className, children, ...rest }: SelectHTMLAttributes<HT
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cx("rounded-2xl border border-line bg-surface shadow-[var(--shadow-card)]", className)}>
+    <div className={cx("rounded-2xl border border-line bg-surface shadow-[var(--shadow-card)] transition-shadow duration-200", className)}>
       {children}
     </div>
   );
@@ -171,10 +194,10 @@ export function StatCard({
   hint?: ReactNode;
 }) {
   return (
-    <Card className="animate-rise p-5">
+    <Card className="animate-rise p-5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-default">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-ink-3">{label}</p>
+          <p className="text-[13px] font-semibold text-ink-3 uppercase tracking-wide">{label}</p>
           <p className="mt-2 truncate text-2xl font-extrabold tracking-tight text-ink">{value}</p>
           {hint && <p className="mt-1 text-xs text-ink-3">{hint}</p>}
         </div>
@@ -218,7 +241,7 @@ export function Modal({
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/50 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-950/60 backdrop-blur-[3px] sm:items-center sm:p-4" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-modal="true"
@@ -230,7 +253,7 @@ export function Modal({
       >
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 className="text-lg font-bold tracking-tight">{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-3 hover:bg-navy-50 hover:text-ink" aria-label={t("Close")}>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-ink-3 transition hover:bg-navy-50 hover:text-ink" aria-label={t("Close")}>
             <X className="size-5" />
           </button>
         </div>
@@ -243,12 +266,12 @@ export function Modal({
 
 export function Empty({ icon: Icon, title, text, action }: { icon: LucideIcon; title: string; text?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center px-6 py-14 text-center">
-      <div className="grid size-14 place-items-center rounded-2xl bg-brand-50 text-brand">
+    <div className="flex flex-col items-center px-6 py-16 text-center">
+      <div className="grid size-16 place-items-center rounded-2xl bg-brand-50 text-brand ring-1 ring-brand/15">
         <Icon className="size-7" />
       </div>
       <p className="mt-4 font-bold text-ink">{title}</p>
-      {text && <p className="mt-1 max-w-sm text-sm text-ink-2">{text}</p>}
+      {text && <p className="mt-1.5 max-w-sm text-sm text-ink-2 leading-relaxed">{text}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );

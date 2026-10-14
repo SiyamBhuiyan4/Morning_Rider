@@ -23,9 +23,9 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { OfficeChatButton } from "./Chat";
-import { Link, useLocation } from "../lib/router";
+import { Link, navigate, useLocation } from "../lib/router";
 import { useAuthed, useSession } from "../lib/session";
-import { Logo, Wordmark, cx } from "./ui";
+import { Button, Logo, Wordmark, cx } from "./ui";
 import { Prefs } from "./Prefs";
 import { getLang, t } from "../lib/prefs";
 
@@ -82,7 +82,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const items = [...NAV[me.role], { href: "/app/account", label: "Account", icon: UserCircle }];
 
   const nav = (
-    <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3">
+    <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3">
       {items.map((it) => {
         const active = path === it.href;
         return (
@@ -91,11 +91,18 @@ export function Shell({ children }: { children: ReactNode }) {
             href={it.href}
             onClick={() => setOpen(false)}
             className={cx(
-              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition",
-              active ? "bg-brand text-white shadow-lg shadow-brand/25" : "text-white/70 hover:bg-white/8 hover:text-white",
+              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition-all duration-150",
+              active
+                ? "bg-brand text-white shadow-lg shadow-brand/30"
+                : "text-white/65 hover:bg-white/10 hover:text-white",
             )}
           >
-            <it.icon className={cx("size-[18px]", active ? "text-white" : "text-white/50 group-hover:text-sun")} />
+            <it.icon
+              className={cx(
+                "size-[18px] transition-colors duration-150",
+                active ? "text-white" : "text-white/45 group-hover:text-sun",
+              )}
+            />
             {t(it.label)}
             {it.href === "/app/messages" && <UnreadDot role="merchant" />}
             {it.href === "/app/rider-messages" && <UnreadDot role="rider" />}
@@ -109,18 +116,18 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const sidebar = (
     <div className="sunrise flex h-full flex-col">
-      <div className="flex items-center gap-3 px-5 pb-6 pt-6">
-        <Logo size={44} className="ring-2 ring-white/20" />
+      <div className="flex items-center gap-3 px-5 pb-5 pt-6">
+        <Logo size={44} className="ring-2 ring-white/20 shadow-lg" />
         <Wordmark dark />
       </div>
       {me.role === "admin" && (
-        <p className={cx("-mt-3 mb-4 px-5 text-[11px] font-bold text-sun", getLang() !== "bn" && "tracking-[0.2em]")}>{t("ADMIN PANEL")}</p>
+        <p className={cx("-mt-2 mb-4 px-5 text-[11px] font-bold text-sun/80", getLang() !== "bn" && "tracking-[0.2em]")}>{t("ADMIN PANEL")}</p>
       )}
       {nav}
       <Prefs onDark className="mx-5 mt-4" />
-      <div className="m-3 rounded-2xl bg-white/6 p-3">
+      <div className="m-3 rounded-2xl border border-white/10 bg-white/[0.08] p-3">
         <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-full bg-sun font-bold text-navy-900">
+          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sun to-brand font-bold text-navy-900">
             {(me.businessName ?? me.name).slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
@@ -129,7 +136,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
           <button
             onClick={() => void signOut()}
-            className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
+            className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
             title={t("Sign out")}
             aria-label={t("Sign out")}
           >
@@ -143,6 +150,33 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-full lg:pl-64">
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">{sidebar}</aside>
+
+      {/* Desktop top bar */}
+      <header className="no-print sticky top-0 z-20 hidden items-center justify-between border-b border-line bg-surface/80 px-8 py-3.5 backdrop-blur-md lg:flex">
+        <div className="flex items-center gap-2.5 text-sm">
+          <span className="font-bold text-ink">Morning Rider</span>
+          <span className="text-ink-3">/</span>
+          <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700">
+            {roleLabel}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {me.role === "merchant" && (
+            <Button size="sm" icon={PackagePlus} onClick={() => navigate("/app/parcels/new")}>
+              {t("New parcel")}
+            </Button>
+          )}
+          <Prefs />
+          <div className="flex items-center gap-2.5 border-l border-line pl-3">
+            <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sun to-brand text-xs font-bold text-navy-900 shadow-sm">
+              {(me.businessName ?? me.name).slice(0, 1).toUpperCase()}
+            </div>
+            <span className="max-w-40 truncate text-xs font-semibold text-ink">
+              {me.businessName ?? me.name}
+            </span>
+          </div>
+        </div>
+      </header>
 
       {/* Mobile top bar */}
       <header className="no-print sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
@@ -170,8 +204,8 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      {me.role !== "admin" && <OfficeChatButton className="fixed top-5 right-6 z-40 hidden lg:block" />}
-      <main className={cx("mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8", me.role !== "admin" && "lg:pt-20")}>{children}</main>
+      {me.role !== "admin" && <OfficeChatButton className="fixed bottom-6 right-6 z-40 hidden lg:block" />}
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>
   );
 }
