@@ -52,7 +52,7 @@ import { RangePills, rangeLabel, useDateRange } from "../components/RangePicker"
 /* -------------------------------------------------------------- dashboard */
 
 export function AdminDashboard() {
-  const { token } = useAuthed();
+  const { token, me } = useAuthed();
   const dayStart = useMemo(startOfToday, []);
   const [range, setRange] = useDateRange("dashboard", "today");
   const live = useQuery(api.dashboard.admin, { token, dayStart, from: range.from, to: range.to });
@@ -67,16 +67,34 @@ export function AdminDashboard() {
 
   return (
     <>
-      <PageHeader
-        title={t(new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening")}
-        subtitle={t("Here's what's moving at Morning Rider today.")}
-        actions={
-          <div className="flex flex-wrap items-center gap-3">
-            <LiveBadge />
-            <Button icon={Plus} onClick={() => navigate("/app/parcels/new")}>{t("New parcel")}</Button>
+      {/* Executive Welcome Card */}
+      <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-r from-navy-950 via-navy-900 to-[#12284f] p-6 text-white shadow-xl sm:p-8">
+        <div className="pointer-events-none absolute -right-12 -top-12 size-56 rounded-full bg-brand/15 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-sun ring-1 ring-white/15">
+                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {t("Admin Console")}
+              </span>
+              <LiveBadge />
+            </div>
+            <h1 className="mt-3 text-2xl font-black italic tracking-tight sm:text-3xl">
+              {t(new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening")},{" "}
+              <span className="text-sun">{me.name.split(" ")[0]}</span>
+            </h1>
+            <p className="mt-1 text-sm text-white/70">
+              {t("Here's what's moving at Morning Rider today.")}
+            </p>
           </div>
-        }
-      />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button size="lg" icon={Plus} onClick={() => navigate("/app/parcels/new")} className="shadow-lg shadow-brand/30">
+              {t("New parcel")}
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <DemoCard />
 
       {/* Quick Actions Grid */}
@@ -93,7 +111,7 @@ export function AdminDashboard() {
             key={q.href}
             onClick={() => navigate(q.href)}
             className={cx(
-              "group flex flex-col items-center justify-center gap-2 rounded-2xl p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer border",
+              "group flex flex-col items-center justify-center gap-2.5 rounded-2xl p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer border",
               q.highlight
                 ? "bg-brand text-white border-brand shadow-sm shadow-brand/30 hover:bg-brand-600"
                 : "bg-surface text-ink border-line hover:border-brand/40",
@@ -117,32 +135,43 @@ export function AdminDashboard() {
         <span className="text-xs font-semibold text-ink-3">{t("Cash with riders and payable are always as of now.")}</span>
       </div>
       {(d.openPayoutRequests > 0 || d.pendingMerchants > 0 || d.pendingVerifications > 0 || d.lockedRiders > 0 || d.passwordRequests > 0) && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {d.openPayoutRequests > 0 && (
-            <AlertChip icon={HandCoins} tone="brand" onClick={() => navigate("/app/payouts")}>
-              {t("{n} merchant(s) asked to be paid →", { n: d.openPayoutRequests })}
-            </AlertChip>
-          )}
-          {d.pendingMerchants > 0 && (
-            <AlertChip icon={Store} tone="sun" onClick={() => navigate("/app/merchants")}>
-              {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
-            </AlertChip>
-          )}
-          {d.passwordRequests > 0 && (
-            <AlertChip icon={KeyRound} tone="brand" onClick={() => navigate("/app/merchants")}>
-              {t("{n} merchant(s) forgot their password →", { n: d.passwordRequests })}
-            </AlertChip>
-          )}
-          {d.lockedRiders > 0 && (
-            <AlertChip icon={Bike} tone="sun" onClick={() => navigate("/app/riders")}>
-              {t("{n} rider(s) locked out, activate from Riders →", { n: d.lockedRiders })}
-            </AlertChip>
-          )}
-          {d.pendingVerifications > 0 && (
-            <AlertChip icon={ShieldCheck} tone="sun" onClick={() => navigate("/app/merchants")}>
-              {t("{n} business(es) waiting for verification →", { n: d.pendingVerifications })}
-            </AlertChip>
-          )}
+        <div className="mb-6 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 dark:bg-amber-500/10 shadow-xs">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="relative flex size-2.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-500 opacity-75" />
+              <span className="relative inline-flex size-2.5 rounded-full bg-amber-500" />
+            </span>
+            <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+              {t("Action Required")}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {d.openPayoutRequests > 0 && (
+              <AlertChip icon={HandCoins} tone="brand" onClick={() => navigate("/app/payouts")}>
+                {t("{n} merchant(s) asked to be paid →", { n: d.openPayoutRequests })}
+              </AlertChip>
+            )}
+            {d.pendingMerchants > 0 && (
+              <AlertChip icon={Store} tone="sun" onClick={() => navigate("/app/merchants")}>
+                {t("{n} merchant(s) waiting for approval →", { n: d.pendingMerchants })}
+              </AlertChip>
+            )}
+            {d.passwordRequests > 0 && (
+              <AlertChip icon={KeyRound} tone="brand" onClick={() => navigate("/app/merchants")}>
+                {t("{n} merchant(s) forgot their password →", { n: d.passwordRequests })}
+              </AlertChip>
+            )}
+            {d.lockedRiders > 0 && (
+              <AlertChip icon={Bike} tone="sun" onClick={() => navigate("/app/riders")}>
+                {t("{n} rider(s) locked out, activate from Riders →", { n: d.lockedRiders })}
+              </AlertChip>
+            )}
+            {d.pendingVerifications > 0 && (
+              <AlertChip icon={ShieldCheck} tone="sun" onClick={() => navigate("/app/merchants")}>
+                {t("{n} business(es) waiting for verification →", { n: d.pendingVerifications })}
+              </AlertChip>
+            )}
+          </div>
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -727,7 +756,7 @@ export function Riders() {
                 className="h-full cursor-pointer rounded-2xl p-5 outline-none focus-visible:ring-4 focus-visible:ring-brand/30"
               >
               <div className="flex items-center gap-3">
-                <div className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand">
+                <div className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand shadow-xs dark:bg-brand-500/15">
                   <Bike className="size-6" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -742,13 +771,13 @@ export function Riders() {
                 )}
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-page p-3">
-                  <p className="text-xs text-ink-3">{t("Active tasks")}</p>
-                  <p className="font-bold">{num(r.activeTasks)}</p>
+                <div className="rounded-xl bg-page p-3 border border-line">
+                  <p className="text-xs font-semibold text-ink-3">{t("Active tasks")}</p>
+                  <p className="font-bold text-ink">{num(r.activeTasks)}</p>
                 </div>
-                <div className="rounded-xl bg-sun-100/70 p-3">
-                  <p className="text-xs text-amber-800">{t("Cash in hand")}</p>
-                  <p className="font-bold text-amber-900">{tk(r.cashInHand)}</p>
+                <div className="rounded-xl bg-amber-500/10 p-3 border border-amber-500/20">
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">{t("Cash in hand")}</p>
+                  <p className="font-bold text-amber-900 dark:text-amber-200">{tk(r.cashInHand)}</p>
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -1108,7 +1137,12 @@ export function Payouts() {
                     {b.payoutMethod && ` · ${PAYOUT_METHOD[b.payoutMethod]} ${b.payoutAccount ?? ""}`}
                   </p>
                 </div>
-                <p className={`text-lg font-extrabold ${b.net < 0 ? "text-red-600" : "text-ink"}`}>{tk(b.net)}</p>
+                <div className="text-right">
+                  <p className="text-[11px] font-semibold text-ink-3 uppercase">{t("Net payable")}</p>
+                  <p className={cx("text-xl font-black tracking-tight", b.net < 0 ? "text-red-600" : "text-emerald-600 dark:text-emerald-400")}>
+                    {tk(b.net)}
+                  </p>
+                </div>
                 <Button size="sm" onClick={() => setPaying(b.merchantId)}>
                   {t("Review & pay")}
                 </Button>
@@ -1518,7 +1552,7 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
   return (
     <>
       <PageHeader title={t("Delivery rates")} subtitle={t("New parcels are charged with these rates. Existing parcels keep the charge they were booked with.")} />
-      <Card className="max-w-2xl p-6">
+      <Card className="max-w-3xl p-6 sm:p-8">
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -1532,16 +1566,37 @@ function RateForm({ initial }: { initial: typeof api.settings.rates._returnType 
               setBusy(false);
             }
           }}
-          className="grid gap-4 sm:grid-cols-2"
+          className="space-y-6"
         >
-          {fields.map(([k, label, unit]) => (
-            <Field key={k} label={`${t(label)} (${unit})`}>
-              {(id) => <Input id={id} type="number" min={0} step="any" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} required />}
-            </Field>
-          ))}
-          <Button type="submit" loading={busy} className="sm:col-span-2">
-            {t("Save rates")}
-          </Button>
+          <div>
+            <h3 className="text-sm font-bold tracking-wider text-ink uppercase">{t("Base delivery charges by zone")}</h3>
+            <p className="mt-1 text-xs text-ink-3">{t("Standard base rate for parcels up to 1 kg.")}</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {fields.slice(0, 4).map(([k, label, unit]) => (
+                <Field key={k} label={`${t(label)} (${unit})`}>
+                  {(id) => <Input id={id} type="number" min={0} step="any" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} required />}
+                </Field>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-line pt-6">
+            <h3 className="text-sm font-bold tracking-wider text-ink uppercase">{t("Extra weight, COD & return policy")}</h3>
+            <p className="mt-1 text-xs text-ink-3">{t("Additional charges applied based on weight and collection.")}</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {fields.slice(4).map(([k, label, unit]) => (
+                <Field key={k} label={`${t(label)} (${unit})`}>
+                  {(id) => <Input id={id} type="number" min={0} step="any" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} required />}
+                </Field>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Button type="submit" size="lg" loading={busy} className="w-full sm:w-auto">
+              {t("Save rates")}
+            </Button>
+          </div>
         </form>
       </Card>
     </>

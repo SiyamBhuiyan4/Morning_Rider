@@ -81,7 +81,76 @@ export function Shell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const items = [...NAV[me.role], { href: "/app/account", label: "Account", icon: UserCircle }];
 
-  const nav = (
+  const adminSections = [
+    {
+      title: t("Overview"),
+      items: [
+        { href: "/app", label: "Dashboard", icon: LayoutDashboard },
+        { href: "/app/parcels", label: "Parcels", icon: Package },
+        { href: "/app/parcels/new", label: "New parcel", icon: PackagePlus },
+      ],
+    },
+    {
+      title: t("Operations & People"),
+      items: [
+        { href: "/app/merchants", label: "Merchants", icon: Store },
+        { href: "/app/riders", label: "Riders", icon: Bike },
+        { href: "/app/messages", label: "Merchant messages", icon: MessageCircle },
+        { href: "/app/rider-messages", label: "Rider messages", icon: MessagesSquare },
+      ],
+    },
+    {
+      title: t("Finance & Rates"),
+      items: [
+        { href: "/app/payouts", label: "Merchant payouts", icon: Wallet },
+        { href: "/app/cash", label: "Rider cash", icon: Banknote },
+        { href: "/app/fraud", label: "Fraud check", icon: ShieldCheck },
+        { href: "/app/settings", label: "Delivery rates", icon: Settings },
+      ],
+    },
+    {
+      title: t("Account"),
+      items: [{ href: "/app/account", label: "Account", icon: UserCircle }],
+    },
+  ];
+
+  const nav = me.role === "admin" ? (
+    <nav className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-3">
+      {adminSections.map((sec) => (
+        <div key={sec.title} className="space-y-0.5">
+          <p className="px-3 pb-1 text-[10px] font-bold tracking-wider text-white/40 uppercase">
+            {sec.title}
+          </p>
+          {sec.items.map((it) => {
+            const active = path === it.href;
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                onClick={() => setOpen(false)}
+                className={cx(
+                  "group flex items-center gap-3 rounded-xl px-3 py-2 text-[13.5px] font-semibold transition-all duration-150",
+                  active
+                    ? "bg-brand text-white shadow-md shadow-brand/30"
+                    : "text-white/70 hover:bg-white/10 hover:text-white",
+                )}
+              >
+                <it.icon
+                  className={cx(
+                    "size-[17px] transition-colors duration-150",
+                    active ? "text-white" : "text-white/50 group-hover:text-sun",
+                  )}
+                />
+                <span className="flex-1">{t(it.label)}</span>
+                {it.href === "/app/messages" && <UnreadDot role="merchant" />}
+                {it.href === "/app/rider-messages" && <UnreadDot role="rider" />}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  ) : (
     <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3">
       {items.map((it) => {
         const active = path === it.href;
@@ -125,18 +194,21 @@ export function Shell({ children }: { children: ReactNode }) {
       )}
       {nav}
       <Prefs onDark className="mx-5 mt-4" />
-      <div className="m-3 rounded-2xl border border-white/10 bg-white/[0.08] p-3">
+      <div className="m-3 rounded-2xl border border-white/10 bg-white/[0.08] p-3 backdrop-blur-xs">
         <div className="flex items-center gap-3">
-          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sun to-brand font-bold text-navy-900">
-            {(me.businessName ?? me.name).slice(0, 1).toUpperCase()}
+          <div className="relative">
+            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sun to-brand font-bold text-navy-900 shadow-sm">
+              {(me.businessName ?? me.name).slice(0, 1).toUpperCase()}
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-navy-900 bg-emerald-400" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-white">{me.businessName ?? me.name}</p>
-            <p className="text-xs text-white/50">{roleLabel}</p>
+            <p className="text-xs text-sun/80 font-medium">{roleLabel}</p>
           </div>
           <button
             onClick={() => void signOut()}
-            className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+            className="rounded-lg p-2 text-white/50 transition hover:bg-white/15 hover:text-white cursor-pointer"
             title={t("Sign out")}
             aria-label={t("Sign out")}
           >
