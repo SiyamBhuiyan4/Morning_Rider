@@ -28,6 +28,7 @@ import {
   FileSearch,
   Trash2,
   Search,
+  Settings,
   X,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -77,6 +78,40 @@ export function AdminDashboard() {
         }
       />
       <DemoCard />
+
+      {/* Quick Actions Grid */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {[
+          { label: t("New parcel"), href: "/app/parcels/new", icon: Plus, highlight: true },
+          { label: t("Merchants"), href: "/app/merchants", icon: Store },
+          { label: t("Riders"), href: "/app/riders", icon: Bike },
+          { label: t("Merchant payouts"), href: "/app/payouts", icon: Wallet },
+          { label: t("Rider cash"), href: "/app/cash", icon: Banknote },
+          { label: t("Delivery rates"), href: "/app/settings", icon: Settings },
+        ].map((q) => (
+          <button
+            key={q.href}
+            onClick={() => navigate(q.href)}
+            className={cx(
+              "group flex flex-col items-center justify-center gap-2 rounded-2xl p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer border",
+              q.highlight
+                ? "bg-brand text-white border-brand shadow-sm shadow-brand/30 hover:bg-brand-600"
+                : "bg-surface text-ink border-line hover:border-brand/40",
+            )}
+          >
+            <div
+              className={cx(
+                "grid size-10 place-items-center rounded-xl transition-transform duration-200 group-hover:scale-110",
+                q.highlight ? "bg-white/20 text-white" : "bg-page text-ink-2 group-hover:text-brand",
+              )}
+            >
+              <q.icon className="size-5" />
+            </div>
+            <span className="text-xs font-bold leading-tight">{q.label}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <RangePills value={range} onChange={setRange} />
         <span className="text-xs font-semibold text-ink-3">{t("Cash with riders and payable are always as of now.")}</span>
@@ -459,7 +494,7 @@ export function Merchants() {
                 }}
                 className="flex cursor-pointer flex-wrap items-center gap-4 p-4 outline-none transition hover:bg-page focus-visible:bg-page"
               >
-                <div className="grid size-11 place-items-center rounded-xl bg-navy-50 font-bold text-navy-700">
+                <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-navy-100 to-navy-50 font-bold text-navy-900 shadow-xs dark:from-navy-900 dark:to-navy-800 dark:text-white">
                   {(m.businessName ?? m.name).slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-48 flex-1">

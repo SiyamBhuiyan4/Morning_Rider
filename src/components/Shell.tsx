@@ -147,6 +147,9 @@ export function Shell({ children }: { children: ReactNode }) {
     </div>
   );
 
+  const currentNav = items.find((it) => it.href === path) ?? items.find((it) => path.startsWith(it.href) && it.href !== "/app");
+  const currentPage = currentNav ? t(currentNav.label) : undefined;
+
   return (
     <div className="min-h-full lg:pl-64">
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">{sidebar}</aside>
@@ -159,8 +162,25 @@ export function Shell({ children }: { children: ReactNode }) {
           <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700">
             {roleLabel}
           </span>
+          {currentPage && (
+            <>
+              <span className="text-ink-3">/</span>
+              <span className="font-semibold text-ink-2">{currentPage}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3">
+          {me.role === "admin" && (
+            <div className="flex items-center gap-2.5">
+              <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400 xl:inline-flex">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {t("System Live")}
+              </span>
+              <Button size="sm" icon={PackagePlus} onClick={() => navigate("/app/parcels/new")}>
+                {t("New parcel")}
+              </Button>
+            </div>
+          )}
           {me.role === "merchant" && (
             <Button size="sm" icon={PackagePlus} onClick={() => navigate("/app/parcels/new")}>
               {t("New parcel")}

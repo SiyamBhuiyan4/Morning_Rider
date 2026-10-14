@@ -8,6 +8,8 @@ export const BN: Record<string, string> = {
   Dashboard: "ড্যাশবোর্ড",
   Parcels: "পার্সেল",
   "New parcel": "নতুন পার্সেল",
+  "Quick actions": "কুইক অ্যাকশন",
+  "System Live": "সিস্টেম লাইভ",
   Merchants: "মার্চেন্ট",
   Riders: "রাইডার",
   "Merchant payouts": "মার্চেন্ট পেমেন্ট",

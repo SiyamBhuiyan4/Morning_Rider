@@ -194,21 +194,30 @@ export function StatCard({
   hint?: ReactNode;
 }) {
   return (
-    <Card className="animate-rise p-5 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-default">
+    <Card
+      className={cx(
+        "animate-rise relative overflow-hidden p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-default border-t-2",
+        accent === "navy" && "border-t-navy-600/70",
+        accent === "brand" && "border-t-brand",
+        accent === "sun" && "border-t-amber-500",
+        accent === "green" && "border-t-emerald-500",
+        accent === "red" && "border-t-red-500",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-ink-3 uppercase tracking-wide">{label}</p>
-          <p className="mt-2 truncate text-2xl font-extrabold tracking-tight text-ink">{value}</p>
-          {hint && <p className="mt-1 text-xs text-ink-3">{hint}</p>}
+          <p className="text-[12px] font-bold text-ink-3 uppercase tracking-wider">{label}</p>
+          <p className="mt-2.5 truncate text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">{value}</p>
+          {hint && <p className="mt-1.5 text-xs font-medium text-ink-3">{hint}</p>}
         </div>
         <div
           className={cx(
-            "grid size-11 shrink-0 place-items-center rounded-xl",
-            accent === "navy" && "bg-navy-50 text-navy-700",
-            accent === "brand" && "bg-brand-50 text-brand",
-            accent === "sun" && "bg-sun-100 text-amber-600",
-            accent === "green" && "bg-emerald-50 text-emerald-600",
-            accent === "red" && "bg-red-50 text-red-600",
+            "grid size-12 shrink-0 place-items-center rounded-2xl shadow-xs transition-transform duration-200",
+            accent === "navy" && "bg-navy-50 text-navy-700 dark:bg-navy-900/60 dark:text-sky-300",
+            accent === "brand" && "bg-brand-50 text-brand dark:bg-brand-500/15 dark:text-brand",
+            accent === "sun" && "bg-sun-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
+            accent === "green" && "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
+            accent === "red" && "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400",
           )}
         >
           <Icon className="size-5" />
