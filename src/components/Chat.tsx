@@ -70,8 +70,8 @@ export function ChatMessages({
                 <span className="rounded-full bg-page px-3 py-1 shadow-xs ring-1 ring-line/50">{day}</span>
               </p>
             )}
-            <div className={cx("flex items-center gap-1.5", mine ? "justify-end flex-row-reverse" : "justify-start flex-row")}>
-              {onDelete && confirmDeleteId !== m._id && (
+            <div className={cx("flex items-center gap-1.5", mine ? "justify-end" : "justify-start")}>
+              {mine && onDelete && confirmDeleteId !== m._id && (
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteId(m._id)}
@@ -94,6 +94,18 @@ export function ChatMessages({
                 <p className="break-words whitespace-pre-wrap">{m.body}</p>
                 <p className={cx("mt-0.5 text-right text-[10px]", mine ? "text-white/80" : "text-ink-3")}>{time(m.createdAt)}</p>
               </div>
+              {!mine && onDelete && confirmDeleteId !== m._id && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteId(m._id)}
+                  disabled={deletingId === m._id}
+                  title={t("Unsend message")}
+                  aria-label={t("Unsend message")}
+                  className="rounded-lg p-1 text-ink-3 opacity-70 transition-opacity hover:bg-page hover:text-red-500 focus:opacity-100 cursor-pointer sm:opacity-0 sm:group-hover/bubble:opacity-100"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              )}
             </div>
             {confirmDeleteId === m._id && (
               <div className={cx("mt-1.5 flex items-center gap-2 text-xs", mine ? "justify-end" : "justify-start")}>
