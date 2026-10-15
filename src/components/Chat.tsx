@@ -10,6 +10,7 @@ import {
   Search,
   Send,
   Store,
+  Trash2,
   X,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -33,12 +34,17 @@ export function ChatMessages({
   me,
   seenAt,
   empty,
+  onDelete,
 }: {
   messages: Msg[];
   me: "admin" | "user";
   seenAt: number | null;
   empty: string;
+  onDelete?: (messageId: string) => Promise<unknown> | void;
 }) {
+  const toast = useToast();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
@@ -58,13 +64,25 @@ export function ChatMessages({
         const mine = m.from === me;
         const seen = mine && m._id === lastMine?._id && seenAt !== null && seenAt >= m.createdAt;
         return (
-          <div key={m._id} className="animate-bubble-rise">
+          <div key={m._id} className="group/bubble animate-bubble-rise">
             {showDay && (
               <p className="my-3 text-center text-[11px] font-semibold text-ink-3">
                 <span className="rounded-full bg-page px-3 py-1 shadow-xs ring-1 ring-line/50">{day}</span>
               </p>
             )}
-            <div className={cx("flex", mine ? "justify-end" : "justify-start")}>
+            <div className={cx("flex items-center gap-1.5", mine ? "justify-end flex-row-reverse" : "justify-start flex-row")}>
+              {onDelete && confirmDeleteId !== m._id && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteId(m._id)}
+                  disabled={deletingId === m._id}
+                  title={t("Unsend message")}
+                  aria-label={t("Unsend message")}
+                  className="rounded-lg p-1 text-ink-3 opacity-70 transition-opacity hover:bg-page hover:text-red-500 focus:opacity-100 cursor-pointer sm:opacity-0 sm:group-hover/bubble:opacity-100"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              )}
               <div
                 className={cx(
                   "max-w-[84%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm transition-all",
@@ -77,6 +95,46 @@ export function ChatMessages({
                 <p className={cx("mt-0.5 text-right text-[10px]", mine ? "text-white/80" : "text-ink-3")}>{time(m.createdAt)}</p>
               </div>
             </div>
+            {confirmDeleteId === m._id && (
+              <div className={cx("mt-1.5 flex items-center gap-2 text-xs", mine ? "justify-end" : "justify-start")}>
+                <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-surface px-2.5 py-1.5 shadow-sm text-ink dark:border-red-900/40">
+                  <span className="text-[11px] font-medium text-red-600 dark:text-red-400">
+                    {t("Delete for everyone?")}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={deletingId === m._id}
+                    onClick={async () => {
+                      try {
+                        setDeletingId(m._id);
+                        await onDelete?.(m._id);
+                        setConfirmDeleteId(null);
+                      } catch (e) {
+                        toast.error(e);
+                      } finally {
+                        setDeletingId(null);
+                      }
+                    }}
+                    className="rounded-lg bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-red-700 active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingId === m._id ? (
+                      <span className="inline-block size-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      t("Yes, delete")
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="rounded-lg p-0.5 text-ink-3 hover:bg-page hover:text-ink transition cursor-pointer"
+                    aria-label={t("Cancel")}
+                    title={t("Cancel")}
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
             {seen && (
               <p className="mt-0.5 flex items-center justify-end gap-1 text-[10px] font-semibold text-emerald-500">
                 <CheckCheck className="size-3" /> {t("Seen")}
@@ -328,9 +386,11 @@ function AdminChatThreadView({
   onBack: () => void;
   onClose: () => void;
 }) {
+  const toast = useToast();
   const data = useQuery(api.chat.conversation, { token, userId });
   const adminSend = useMutation(api.chat.adminSend);
   const adminMarkSeen = useMutation(api.chat.adminMarkSeen);
+  const deleteMsg = useMutation(api.chat.deleteMessage);
 
   useEffect(() => {
     if (data && data.unread > 0) {
@@ -381,6 +441,10 @@ function AdminChatThreadView({
             me="admin"
             seenAt={data.userSeenAt}
             empty={t("No messages yet. Say hello to {name}.", { name: data.user.name })}
+            onDelete={async (id) => {
+              await deleteMsg({ token, messageId: id as Id<"chatMessages"> });
+              toast.ok(t("Message deleted for everyone"));
+            }}
           />
         ) : (
           <div className="m-auto size-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />

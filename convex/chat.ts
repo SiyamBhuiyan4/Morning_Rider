@@ -256,6 +256,57 @@ export const resetLimit = mutation({
   },
 });
 
+/**
+ * Admin unsend / delete a message for everyone.
+ * Completely removes the message from chatMessages, and syncs chatThreads preview.
+ */
+export const deleteMessage = mutation({
+  args: { token: v.string(), messageId: v.id("chatMessages") },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const msg = await ctx.db.get("chatMessages", args.messageId);
+    if (!msg) return null;
+
+    const userId = msg.userId;
+    await ctx.db.delete("chatMessages", msg._id);
+
+    const thread = await threadOf(ctx, userId);
+    if (thread) {
+      const remaining = await ctx.db
+        .query("chatMessages")
+        .withIndex("by_userId_and_createdAt", (q) => q.eq("userId", userId))
+        .order("desc")
+        .first();
+
+      if (remaining) {
+        const userSent =
+          msg.from === "user" && thread.userSent > 0 ? Math.max(0, thread.userSent - 1) : thread.userSent;
+        const adminUnread =
+          msg.from === "user" && thread.adminUnread > 0 ? Math.max(0, thread.adminUnread - 1) : thread.adminUnread;
+        const userUnread =
+          msg.from === "admin" && thread.userUnread > 0 ? Math.max(0, thread.userUnread - 1) : thread.userUnread;
+
+        await ctx.db.patch("chatThreads", thread._id, {
+          lastMessageAt: remaining.createdAt,
+          lastBody: preview(remaining.body),
+          lastFrom: remaining.from,
+          userSent,
+          adminUnread,
+          userUnread,
+        });
+      } else {
+        await ctx.db.patch("chatThreads", thread._id, {
+          lastBody: "",
+          adminUnread: 0,
+          userUnread: 0,
+          userSent: 0,
+        });
+      }
+    }
+    return { success: true };
+  },
+});
+
 /** Removes someone's whole conversation (demo clean-up, deleting a rider). */
 export async function removeChat(ctx: MutationCtx, userId: Id<"users">) {
   const thread = await threadOf(ctx, userId);

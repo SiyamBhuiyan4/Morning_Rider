@@ -144,6 +144,7 @@ function Conversation({ userId, onBack }: { userId: Id<"users">; onBack: () => v
   const send = useMutation(api.chat.adminSend);
   const markSeen = useMutation(api.chat.adminMarkSeen);
   const reset = useMutation(api.chat.resetLimit);
+  const deleteMsg = useMutation(api.chat.deleteMessage);
 
   // Opening the conversation marks the merchant's messages as seen (red dot goes away).
   useEffect(() => {
@@ -197,6 +198,10 @@ function Conversation({ userId, onBack }: { userId: Id<"users">; onBack: () => v
           me="admin"
           seenAt={data.userSeenAt}
           empty={t("No messages yet. Say hello to {name}.", { name: who.name })}
+          onDelete={async (id) => {
+            await deleteMsg({ token, messageId: id as Id<"chatMessages"> });
+            toast.ok(t("Message deleted for everyone"));
+          }}
         />
       </div>
       <ChatComposer
