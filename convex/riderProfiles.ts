@@ -10,7 +10,12 @@ import { education, maritalStatus, religion } from "./schema";
   and family phone numbers, so it is never sent to riders or merchants.
 */
 export const get = query({
-  args: { token: v.string(), riderId: v.id("users") },
+  args: {
+    token: v.string(),
+    riderId: v.id("users"),
+    from: v.optional(v.number()),
+    to: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     await requireUser(ctx, args.token, ["admin"]);
     const rider = await ctx.db.get("users", args.riderId);
@@ -33,10 +38,73 @@ export const get = query({
       .query("parcels")
       .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", rider._id).eq("status", "returned"))
       .take(5000);
+    const returning = await ctx.db
+      .query("parcels")
+      .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", rider._id).eq("status", "returning"))
+      .take(5000);
+    const hold = await ctx.db
+      .query("parcels")
+      .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", rider._id).eq("status", "hold"))
+      .take(5000);
     const deposits = await ctx.db
       .query("cashDeposits")
       .withIndex("by_riderId_and_createdAt", (q) => q.eq("riderId", rider._id))
       .take(5000);
+
+    const cashWithRiderRows = await ctx.db
+      .query("parcels")
+      .withIndex("by_deliveryRiderId_and_cashState", (q) =>
+        q.eq("deliveryRiderId", rider._id).eq("cashState", "with_rider"),
+      )
+      .take(1000);
+    const cashInHand = cashWithRiderRows.reduce((s, p) => s + p.collectedAmount, 0);
+
+    const hasRange = args.from !== undefined && args.to !== undefined && args.from > 0;
+    const from = args.from ?? 0;
+    const to = args.to ?? Number.MAX_SAFE_INTEGER;
+
+    const inRange = (ts: number | undefined) => {
+      if (!hasRange) return true;
+      if (!ts) return false;
+      return ts >= from && ts < to;
+    };
+
+    const deliveredInRange = [...delivered, ...partial].filter((p) => inRange(p.finalAt ?? p.updatedAt));
+    const returnedInRange = returned.filter((p) => inRange(p.finalAt ?? p.updatedAt));
+    const returningInRange = returning.filter((p) => inRange(p.updatedAt));
+    const holdInRange = hold.filter((p) => inRange(p.updatedAt));
+    const depositsInRange = deposits.filter((d) => inRange(d.createdAt));
+
+    const deliveredCount = deliveredInRange.length;
+    const deliveredAmount = deliveredInRange.reduce((s, p) => s + p.collectedAmount, 0);
+    const codTotal = deliveredInRange.reduce((s, p) => s + p.codAmount, 0);
+
+    const unsuccessfulCount = returnedInRange.length + returningInRange.length;
+    const totalHandled = deliveredCount + unsuccessfulCount;
+    const successRate = totalHandled > 0 ? Math.round((deliveredCount / totalHandled) * 100) : (deliveredCount > 0 ? 100 : 0);
+    const returnRate = totalHandled > 0 ? Math.round((unsuccessfulCount / totalHandled) * 100) : 0;
+    const cashDeposited = depositsInRange.reduce((s, d) => s + d.amount, 0);
+
+    const allParcelsInRange = [
+      ...deliveredInRange.map((p) => ({ ...p, sortAt: p.finalAt ?? p.updatedAt })),
+      ...returnedInRange.map((p) => ({ ...p, sortAt: p.finalAt ?? p.updatedAt })),
+      ...returningInRange.map((p) => ({ ...p, sortAt: p.updatedAt })),
+      ...holdInRange.map((p) => ({ ...p, sortAt: p.updatedAt })),
+    ].sort((a, b) => (b.sortAt ?? 0) - (a.sortAt ?? 0));
+
+    const parcelList = allParcelsInRange.slice(0, 30).map((p) => ({
+      _id: p._id,
+      trackingCode: p.trackingCode,
+      recipientName: p.recipientName,
+      recipientPhone: p.recipientPhone,
+      recipientAddress: p.recipientAddress,
+      district: p.district,
+      status: p.status,
+      codAmount: p.codAmount,
+      collectedAmount: p.collectedAmount,
+      at: p.sortAt ?? p.updatedAt,
+    }));
+
     return {
       rider: {
         _id: rider._id,
@@ -50,10 +118,23 @@ export const get = query({
       },
       profile,
       stats: {
-        delivered: delivered.length + partial.length,
-        returned: returned.length,
-        cashDeposited: deposits.reduce((s, d) => s + d.amount, 0),
+        delivered: deliveredCount,
+        returned: returnedInRange.length,
+        cashDeposited,
+        deliveredAmount,
+        codTotal,
+        unsuccessful: unsuccessfulCount,
+        returning: returningInRange.length,
+        hold: holdInRange.length,
+        totalHandled,
+        successRate,
+        returnRate,
+        cashInHand,
+        allTimeDelivered: delivered.length + partial.length,
+        allTimeReturned: returned.length,
+        allTimeCashDeposited: deposits.reduce((s, d) => s + d.amount, 0),
       },
+      parcels: parcelList,
     };
   },
 });

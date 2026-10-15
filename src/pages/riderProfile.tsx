@@ -1,6 +1,17 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Bike, ExternalLink, MessageCircle, Pencil, Phone } from "lucide-react";
+import {
+  Banknote,
+  Bike,
+  CalendarRange,
+  CheckCircle2,
+  ExternalLink,
+  MessageCircle,
+  Pencil,
+  Phone,
+  RotateCcw,
+  Wallet,
+} from "lucide-react";
 import { navigate } from "../lib/router";
 import { generatePassword } from "../lib/password";
 import { api } from "../../convex/_generated/api";
@@ -8,7 +19,9 @@ import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
 import { useToast } from "../lib/toast";
 import { date, num, tk } from "../lib/format";
-import { Badge, Button, Field, Input, Modal, Select, Spinner, Textarea } from "../components/ui";
+import { Badge, Button, Field, Input, Modal, Select, Spinner, Textarea, cx } from "../components/ui";
+import { RangePills, rangeLabel, useDateRange, type DateRange } from "../components/RangePicker";
+import { ParcelDetail } from "../components/ParcelDetail";
 import { t } from "../lib/prefs";
 
 type Profile = Doc<"riderProfiles">;
@@ -62,38 +75,66 @@ function facebookUrl(v: string) {
  */
 export function RiderProfileModal({ riderId, onClose }: { riderId: Id<"users"> | null; onClose: () => void }) {
   const { token } = useAuthed();
-  const data = useQuery(api.riderProfiles.get, riderId ? { token, riderId } : "skip");
+  const [range, setRange] = useDateRange("rider-profile", "30d");
+  const data = useQuery(
+    api.riderProfiles.get,
+    riderId ? { token, riderId, from: range.from, to: range.to } : "skip",
+  );
   const [editing, setEditing] = useState(false);
+  const [viewingParcelId, setViewingParcelId] = useState<Id<"parcels"> | null>(null);
   const close = () => {
     setEditing(false);
+    setViewingParcelId(null);
     onClose();
   };
 
   return (
-    <Modal open={riderId !== null} onClose={close} title={editing ? t("Edit rider profile") : t("Rider profile")} wide>
-      {data === undefined ? (
-        <Spinner />
-      ) : data === null ? (
-        <p className="text-sm text-ink-2">{t("Rider not found.")}</p>
-      ) : editing ? (
-        <ProfileForm data={data} onDone={() => setEditing(false)} />
-      ) : (
-        <ProfileView
-          data={data}
-          onEdit={() => setEditing(true)}
-          onMessage={() => {
-            close();
-            navigate(`/app/rider-messages?rider=${data.rider._id}`);
-          }}
-        />
+    <>
+      <Modal open={riderId !== null} onClose={close} title={editing ? t("Edit rider profile") : t("Rider profile")} wide>
+        {data === undefined ? (
+          <Spinner />
+        ) : data === null ? (
+          <p className="text-sm text-ink-2">{t("Rider not found.")}</p>
+        ) : editing ? (
+          <ProfileForm data={data} onDone={() => setEditing(false)} />
+        ) : (
+          <ProfileView
+            data={data}
+            range={range}
+            setRange={setRange}
+            onViewParcel={(id) => setViewingParcelId(id)}
+            onEdit={() => setEditing(true)}
+            onMessage={() => {
+              close();
+              navigate(`/app/rider-messages?rider=${data.rider._id}`);
+            }}
+          />
+        )}
+      </Modal>
+      {viewingParcelId && (
+        <ParcelDetail id={viewingParcelId} onClose={() => setViewingParcelId(null)} />
       )}
-    </Modal>
+    </>
   );
 }
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.riderProfiles.get>>>;
 
-function ProfileView({ data, onEdit, onMessage }: { data: Data; onEdit: () => void; onMessage: () => void }) {
+function ProfileView({
+  data,
+  range,
+  setRange,
+  onViewParcel,
+  onEdit,
+  onMessage,
+}: {
+  data: Data;
+  range: DateRange;
+  setRange: (r: DateRange) => void;
+  onViewParcel: (id: Id<"parcels">) => void;
+  onEdit: () => void;
+  onMessage: () => void;
+}) {
   const { rider, profile: p, stats } = data;
   const empty = <span className="text-ink-3">—</span>;
   const tel = (v?: string) =>
@@ -137,10 +178,130 @@ function ProfileView({ data, onEdit, onMessage }: { data: Data; onEdit: () => vo
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <Stat label={t("Delivered")} value={num(stats.delivered)} />
-        <Stat label={t("Returned")} value={num(stats.returned)} />
-        <Stat label={t("Cash handed in")} value={tk(stats.cashDeposited)} />
+      {/* Date Range Performance Analytics Card */}
+      <div className="rounded-2xl border border-line bg-page/60 p-4 shadow-xs">
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+          <div className="flex items-center gap-2">
+            <span className="grid size-7 place-items-center rounded-lg bg-brand/10 text-brand">
+              <CalendarRange className="size-4" />
+            </span>
+            <div>
+              <h3 className="font-bold text-sm text-ink">{t("Delivery performance & stats")}</h3>
+              <p className="text-[11px] font-semibold text-brand">{rangeLabel(range)}</p>
+            </div>
+          </div>
+          <RangePills value={range} onChange={setRange} withAll />
+        </div>
+
+        {/* 4 Performance Metric Cards */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {/* 1. Delivered Value (কত টাকার ডেলিভারি করেছে) */}
+          <div className="rounded-xl border border-line bg-surface p-3.5 shadow-xs transition hover:border-brand/40">
+            <div className="flex items-center justify-between text-ink-3">
+              <span className="text-xs font-semibold">{t("Delivered Value")}</span>
+              <Banknote className="size-4 text-brand" />
+            </div>
+            <p className="mt-1.5 text-lg font-bold text-ink">
+              {tk(stats.deliveredAmount ?? 0)}
+            </p>
+            <p className="text-[11px] font-medium text-ink-3">
+              {t("COD collected in range")}
+            </p>
+          </div>
+
+          {/* 2. Successful Deliveries (কতটা সাকসেসফুলি করেছে) */}
+          <div className="rounded-xl border border-line bg-surface p-3.5 shadow-xs transition hover:border-emerald-500/40">
+            <div className="flex items-center justify-between text-ink-3">
+              <span className="text-xs font-semibold">{t("Delivered (Success)")}</span>
+              <CheckCircle2 className="size-4 text-emerald-500" />
+            </div>
+            <p className="mt-1.5 text-lg font-bold text-emerald-600 dark:text-emerald-400">
+              {num(stats.delivered)}
+            </p>
+            <p className="text-[11px] font-medium text-emerald-600/80 dark:text-emerald-400/80">
+              {t("{rate}% success rate", { rate: stats.successRate ?? 0 })}
+            </p>
+          </div>
+
+          {/* 3. Unsuccessful / Returned (কতটা সাকসেসফুলি করে নাই) */}
+          <div className="rounded-xl border border-line bg-surface p-3.5 shadow-xs transition hover:border-red-500/40">
+            <div className="flex items-center justify-between text-ink-3">
+              <span className="text-xs font-semibold">{t("Returned / Failed")}</span>
+              <RotateCcw className="size-4 text-red-500" />
+            </div>
+            <p className="mt-1.5 text-lg font-bold text-red-600 dark:text-red-400">
+              {num(stats.unsuccessful ?? stats.returned)}
+            </p>
+            <p className="text-[11px] font-medium text-red-600/80 dark:text-red-400/80">
+              {t("{rate}% return rate", { rate: stats.returnRate ?? 0 })}
+            </p>
+          </div>
+
+          {/* 4. Cash Handed In (ক্যাশ জমা) */}
+          <div className="rounded-xl border border-line bg-surface p-3.5 shadow-xs transition hover:border-amber-500/40">
+            <div className="flex items-center justify-between text-ink-3">
+              <span className="text-xs font-semibold">{t("Cash handed in")}</span>
+              <Wallet className="size-4 text-amber-500" />
+            </div>
+            <p className="mt-1.5 text-lg font-bold text-ink">
+              {tk(stats.cashDeposited)}
+            </p>
+            <p className="text-[11px] font-medium text-ink-3">
+              {(stats.cashInHand ?? 0) > 0 ? (
+                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                  {t("Cash with rider: {amount}", { amount: tk(stats.cashInHand ?? 0) })}
+                </span>
+              ) : (
+                t("Deposited in office")
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Deliveries list in range */}
+        {data.parcels && data.parcels.length > 0 && (
+          <div className="mt-3.5 border-t border-line/70 pt-3">
+            <div className="flex items-center justify-between text-xs font-semibold text-ink-2 mb-2">
+              <span>{t("Deliveries in this period ({n})", { n: data.parcels.length })}</span>
+              <span className="text-[11px] text-ink-3">{t("Click tracking code to view parcel")}</span>
+            </div>
+            <div className="max-h-40 overflow-y-auto rounded-xl border border-line bg-surface divide-y divide-line text-xs">
+              {data.parcels.map((item) => (
+                <div key={item._id} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-page transition">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => onViewParcel(item._id)}
+                      className="font-mono font-bold text-brand hover:underline cursor-pointer"
+                    >
+                      {item.trackingCode}
+                    </button>
+                    <span className="truncate text-ink-2">
+                      {item.recipientName} ({item.district})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={cx(
+                        "rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                        item.status === "delivered" || item.status === "partial_delivered"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "bg-red-500/10 text-red-600 dark:text-red-400",
+                      )}
+                    >
+                      {item.status === "delivered"
+                        ? t("Delivered")
+                        : item.status === "partial_delivered"
+                          ? t("Partial")
+                          : t("Returned")}
+                    </span>
+                    <span className="font-semibold text-ink">{tk(item.collectedAmount)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {!p && (
@@ -221,15 +382,6 @@ function ProfileView({ data, onEdit, onMessage }: { data: Data; onEdit: () => vo
           <p className="whitespace-pre-wrap text-sm text-ink">{p.notes}</p>
         </Section>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-page p-3">
-      <p className="text-xs text-ink-3">{label}</p>
-      <p className="font-bold">{value}</p>
     </div>
   );
 }
