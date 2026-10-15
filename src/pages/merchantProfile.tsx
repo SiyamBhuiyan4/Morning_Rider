@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import {
   Ban,
+  CalendarRange,
   CheckCircle2,
   Clock,
   HandCoins,
@@ -19,6 +20,7 @@ import { useAuthed } from "../lib/session";
 import { navigate } from "../lib/router";
 import { PAYOUT_METHOD, date, num, tk } from "../lib/format";
 import { Badge, Button, Modal, Spinner, StatusBadge, cx } from "../components/ui";
+import { RangePills, rangeLabel, useDateRange, type DateRange } from "../components/RangePicker";
 import { ParcelDetail } from "../components/ParcelDetail";
 import { t } from "../lib/prefs";
 import { VerificationBadge } from "./adminVerify";
@@ -26,7 +28,11 @@ import { VerificationBadge } from "./adminVerify";
 /** One merchant at a glance: contact, parcels, money. Opens from the Merchants list. */
 export function MerchantProfileModal({ merchantId, onClose }: { merchantId: Id<"users"> | null; onClose: () => void }) {
   const { token } = useAuthed();
-  const data = useQuery(api.merchantProfile.get, merchantId ? { token, merchantId } : "skip");
+  const [range, setRange] = useDateRange("merchant-profile", "30d");
+  const data = useQuery(
+    api.merchantProfile.get,
+    merchantId ? { token, merchantId, from: range.from, to: range.to } : "skip",
+  );
 
   return (
     <Modal open={merchantId !== null} onClose={onClose} title={t("Merchant details")} wide>
@@ -35,7 +41,7 @@ export function MerchantProfileModal({ merchantId, onClose }: { merchantId: Id<"
       ) : data === null ? (
         <p className="text-sm text-ink-2">{t("Merchant not found.")}</p>
       ) : (
-        <Details data={data} onClose={onClose} />
+        <Details data={data} range={range} setRange={setRange} onClose={onClose} />
       )}
     </Modal>
   );
@@ -43,7 +49,17 @@ export function MerchantProfileModal({ merchantId, onClose }: { merchantId: Id<"
 
 type Data = NonNullable<ReturnType<typeof useQuery<typeof api.merchantProfile.get>>>;
 
-function Details({ data, onClose }: { data: Data; onClose: () => void }) {
+function Details({
+  data,
+  range,
+  setRange,
+  onClose,
+}: {
+  data: Data;
+  range: DateRange;
+  setRange: (r: DateRange) => void;
+  onClose: () => void;
+}) {
   const { merchant: m, counts: c, money } = data;
   const owe = money.balance;
   const [parcel, setParcel] = useState<Id<"parcels"> | null>(null);
@@ -86,7 +102,7 @@ function Details({ data, onClose }: { data: Data; onClose: () => void }) {
         <button
           type="button"
           onClick={() => go(`/app/messages?merchant=${m._id}`)}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-sky-500 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-sky-600"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-sky-500 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-sky-600 cursor-pointer"
         >
           <MessageSquare className="size-4" /> {t("Message")}
         </button>
@@ -140,10 +156,26 @@ function Details({ data, onClose }: { data: Data; onClose: () => void }) {
         </div>
       </div>
 
+      {/* Date Range Performance & Activity Filter */}
+      <div className="rounded-2xl border border-line bg-page/60 p-4 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="grid size-7 place-items-center rounded-lg bg-brand/10 text-brand">
+              <CalendarRange className="size-4" />
+            </span>
+            <div>
+              <h3 className="font-bold text-sm text-ink">{t("Performance & orders in range")}</h3>
+              <p className="text-[11px] font-semibold text-brand">{rangeLabel(range)}</p>
+            </div>
+          </div>
+          <RangePills value={range} onChange={setRange} withAll />
+        </div>
+      </div>
+
       {/* money */}
-      <Section title={t("Money")}>
+      <Section title={`${t("Money")} · ${rangeLabel(range)}`}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Tile icon={HandCoins} tone="text-brand" label={t("We earned (total)")} value={tk(money.earned)} />
+          <Tile icon={HandCoins} tone="text-brand" label={t("We earned (range)")} value={tk(money.earned)} />
           <Tile icon={HandCoins} label={t("Earned this month")} value={tk(money.earnedThisMonth)} />
           <Tile icon={Truck} label={t("COD collected for them")} value={tk(money.codCollected)} />
           <Tile icon={Wallet} tone="text-emerald-600 dark:text-emerald-400" label={t("Paid to them")} value={tk(money.paidOut)} sub={t("{n} payouts", { n: money.payoutCount })} />
@@ -156,7 +188,7 @@ function Details({ data, onClose }: { data: Data; onClose: () => void }) {
       </Section>
 
       {/* parcels */}
-      <Section title={t("Parcels")}>
+      <Section title={`${t("Parcels")} · ${rangeLabel(range)}`}>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
           <Tile icon={Package} label={t("Total orders")} value={num(c.total)} />
           <Tile icon={CheckCircle2} tone="text-emerald-600 dark:text-emerald-400" label={t("Completed")} value={num(c.delivered)} />
@@ -200,16 +232,16 @@ function Details({ data, onClose }: { data: Data; onClose: () => void }) {
       </Section>
 
       {data.recentParcels.length > 0 && (
-        <Section title={t("Latest parcels")}>
+        <Section title={`${t("Parcels in this period")} (${num(data.recentParcels.length)})`}>
           <div className="divide-y divide-line rounded-xl border border-line">
             {data.recentParcels.map((p) => (
               <button
                 key={p._id}
                 type="button"
                 onClick={() => setParcel(p._id)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-page"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-page cursor-pointer"
               >
-                <span className="font-mono text-xs text-ink-2">{p.trackingCode}</span>
+                <span className="font-mono text-xs text-brand font-bold hover:underline">{p.trackingCode}</span>
                 <span className="min-w-0 flex-1 truncate">{p.recipientName}</span>
                 <span className="hidden text-xs text-ink-3 sm:inline">{date(p.createdAt)}</span>
                 <span className="font-semibold">{tk(p.codAmount)}</span>
@@ -217,11 +249,12 @@ function Details({ data, onClose }: { data: Data; onClose: () => void }) {
               </button>
             ))}
           </div>
-          <button type="button" onClick={() => go(`/app/parcels?merchant=${m._id}`)} className="mt-2 text-sm font-semibold text-brand hover:underline">
+          <button type="button" onClick={() => go(`/app/parcels?merchant=${m._id}`)} className="mt-2 text-sm font-semibold text-brand hover:underline cursor-pointer">
             {t("See all parcels")} →
           </button>
         </Section>
       )}
+
 
       {data.recentPayouts.length > 0 && (
         <Section title={t("Latest payouts")}>

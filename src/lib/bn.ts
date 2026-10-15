@@ -1103,6 +1103,10 @@ export const BN: Record<string, string> = {
   "Deliveries in this period ({n})": "এই সময়ের ডেলিভারি তালিকা ({n}টি)",
   "Click tracking code to view parcel": "পার্সেল দেখতে ট্র্যাকিং কোডে ক্লিক করুন",
   "Partial": "আংশিক",
+  "Performance & orders in range": "পারফরম্যান্স ও নির্দিষ্ট সময়ের অর্ডার",
+  "We earned (range)": "আমাদের আয় (এই সময়)",
+  "Parcels in this period": "এই সময়ের পার্সেলসমূহ",
+
 
 
   "Create rider": "রাইডার তৈরি করুন",
