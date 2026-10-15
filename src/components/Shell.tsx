@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { OfficeChatButton } from "./Chat";
+import { FloatingChatButton } from "./Chat";
 import { Link, navigate, useLocation } from "../lib/router";
 import { useAuthed, useSession } from "../lib/session";
 import { Button, Logo, Wordmark, cx } from "./ui";
@@ -278,7 +278,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <Logo size={32} />
         <Wordmark />
         <Prefs className="ml-auto" />
-        {me.role !== "admin" && <OfficeChatButton className="relative" />}
+        <FloatingChatButton className="relative" />
       </header>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -296,7 +296,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      {me.role !== "admin" && <OfficeChatButton className="fixed bottom-6 right-6 z-40 hidden lg:block" />}
+      <FloatingChatButton className="fixed bottom-6 right-6 z-40 hidden lg:block" />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>
   );

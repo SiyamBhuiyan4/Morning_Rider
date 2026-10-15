@@ -192,14 +192,30 @@ export function AdminDashboard() {
         <StatCard label={t("Payable to merchants")} value={<Ticker value={d.payableToMerchants} format={tk} />} icon={Wallet} accent="brand" hint={t("Unpaid balance")} />
       </div>
 
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      {/* Full-width Executive Analytics Trend Card */}
+      <Card className="mt-6 p-6">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-bold text-base text-ink">
+            {range.days > 14 || range.preset === "custom" ? rangeLabel(range) : t("Last 14 days")}
+          </h2>
+          <span className="text-xs font-semibold text-ink-3">
+            {t("Parcels trend & fulfillment")}
+          </span>
+        </div>
+        <TrendChart data={d.trend} />
+      </Card>
+
+      {/* Balanced 2-Column Grid: Live Activity (Left) & Parcel Pipeline (Right) */}
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
+        <LiveFeed />
         <Card className="p-6">
-          <h2 className="mb-4 font-bold">{range.days > 14 || range.preset === "custom" ? rangeLabel(range) : t("Last 14 days")}</h2>
-          <TrendChart data={d.trend} />
-        </Card>
-        <Card className="p-6">
-          <h2 className="mb-4 font-bold">{t("Parcel pipeline")}</h2>
-          <div className="space-y-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-bold text-base text-ink">{t("Parcel pipeline")}</h2>
+            <span className="text-xs font-semibold text-ink-3">
+              {t("{n} in pipeline", { n: pipelineMax })}
+            </span>
+          </div>
+          <div className="space-y-1.5">
             {[
               { s: "pending", icon: Clock },
               { s: "picked_up", icon: Package },
@@ -213,13 +229,18 @@ export function AdminDashboard() {
               <button
                 key={s}
                 onClick={() => navigate(`/app/parcels?status=${s}`)}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-page cursor-pointer"
+                className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-150 hover:bg-page cursor-pointer"
               >
-                <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${STATUS[s as keyof typeof STATUS].tone}`}>
+                <span className={`grid size-8 shrink-0 place-items-center rounded-lg transition-transform group-hover:scale-105 ${STATUS[s as keyof typeof STATUS].tone}`}>
                   <Icon className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">{STATUS[s as keyof typeof STATUS].label}</span>
+                  <span className="flex items-center justify-between">
+                    <span className="block text-sm font-semibold text-ink">{STATUS[s as keyof typeof STATUS].label}</span>
+                    <span className="text-xs font-semibold text-ink-3">
+                      {pipelineMax > 0 ? `${Math.round((c(s as keyof typeof STATUS) / pipelineMax) * 100)}%` : "0%"}
+                    </span>
+                  </span>
                   <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-page">
                     <span
                       className={`block h-full rounded-full transition-[width] duration-700 ease-out ${STATUS[s as keyof typeof STATUS].dot}`}
@@ -227,17 +248,13 @@ export function AdminDashboard() {
                     />
                   </span>
                 </span>
-                <span className="w-10 text-right font-bold">
+                <span className="w-10 text-right font-bold text-ink">
                   <Ticker value={c(s as keyof typeof STATUS)} />
                 </span>
               </button>
             ))}
           </div>
         </Card>
-      </div>
-
-      <div className="mt-6">
-        <LiveFeed />
       </div>
     </>
   );
