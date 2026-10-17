@@ -39,9 +39,14 @@ export default function App() {
   if (path === "/join") return <Join />;
   if (path === "/forgot" && !IS_ADMIN_PORTAL) return <ForgotPassword />;
   if (path === "/login" || path === "/register" || path === "/rider") {
+    // Sign-in pages always show the form. A stored session (possibly another
+    // person's, left on a shared browser) must not skip it: a fresh sign-in
+    // replaces the stored session in SignIn.
+    if (path === "/login") return <Login />;
+    if (path === "/rider") return <RiderLogin />;
     if (me === undefined) return <Spinner className="h-full items-center" />;
     if (me) return <Redirect to="/app" />;
-    return path === "/login" ? <Login /> : path === "/rider" ? <RiderLogin /> : <Register />;
+    return <Register />;
   }
 
   // Everything below needs a signed-in user
