@@ -52,7 +52,6 @@ const withNext = (path: string) => {
 /* ------------------------------------------------------------------ nav */
 
 function PublicNav() {
-  const { me } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <header className="relative z-30 mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-5">
@@ -73,21 +72,13 @@ function PublicNav() {
           {t("Join as rider")}
         </a>
         <Prefs onDark />
-        {me ? (
-          <Button onClick={() => navigate("/app")}>{t("Dashboard")}</Button>
-        ) : (
-          <Button onClick={() => navigate("/login")}>{t("Merchant login")}</Button>
-        )}
+        <Button onClick={() => navigate("/login")}>{t("Merchant login")}</Button>
       </nav>
 
       {/* Mobile controls */}
       <div className="flex items-center gap-2 lg:hidden">
         <Prefs onDark />
-        {me ? (
-          <Button size="sm" onClick={() => navigate("/app")}>{t("Dashboard")}</Button>
-        ) : (
-          <Button size="sm" onClick={() => navigate("/login")}>{t("Log in")}</Button>
-        )}
+        <Button size="sm" onClick={() => navigate("/login")}>{t("Merchant login")}</Button>
         <button
           type="button"
           onClick={() => setMobileOpen((o) => !o)}
@@ -129,13 +120,6 @@ function PublicNav() {
             >
               <Phone className="size-4" /> {t("Hotline")}: {CONTACT.phone}
             </a>
-            <Link
-              href="/rider"
-              onClick={() => setMobileOpen(false)}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-white/65 transition hover:bg-white/10 hover:text-white"
-            >
-              {t("Rider login")} →
-            </Link>
           </div>
         </div>
       )}
@@ -754,9 +738,6 @@ export function Home() {
               <Button size="lg" onClick={() => navigate("/join")}>
                 {t("Apply now")} <ArrowRight className="size-4" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate("/rider")}>
-                {t("Rider login")}
-              </Button>
             </div>
           </div>
         </div>
@@ -797,7 +778,6 @@ export function Home() {
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
             <Link href="/login" className="transition hover:text-brand">{t("Merchant login")}</Link>
-            <Link href="/rider" className="transition hover:text-brand">{t("Rider login")}</Link>
             <Link href="/join" className="transition hover:text-brand">{t("Join as rider")}</Link>
             <span>
               {t("Hotline")}: {CONTACT.phone}, {CONTACT.phone2}
