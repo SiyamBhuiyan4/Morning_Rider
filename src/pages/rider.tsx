@@ -26,7 +26,7 @@ export function RiderTasks() {
 
   return (
     <>
-      <PageHeader title={`${t("Hi, {name}", { name: me.name.split(" ")[0] })} 👋`} subtitle={t("Your tasks for today.")} />
+      <PageHeader title={`${t("Hi, {name}", { name: me.name.split(" ")[0] })} 👋`} subtitle={t("Your assigned deliveries and pickups.")} />
       <Card className="sunrise mb-5 flex items-center justify-between border-0 p-5 text-white">
         <div>
           <p className="text-sm text-white/70">{t("Cash in hand")}</p>
@@ -106,7 +106,7 @@ export function RiderTasks() {
       {tab !== "pickup" &&
         ((tab === "deliver" ? tasks.deliveries : tasks.onHold).length === 0 ? (
           <Card>
-            <Empty icon={PackageCheck} title={tab === "deliver" ? t("No deliveries right now") : t("Nothing on hold")} text={t("New parcels assigned to you will appear here.")} />
+            <Empty icon={PackageCheck} title={tab === "deliver" ? t("No deliveries right now") : t("Nothing on hold")} text={t("Parcels assigned to you will appear here.")} />
           </Card>
         ) : (
           <div className="space-y-4">

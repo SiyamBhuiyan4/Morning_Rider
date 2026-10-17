@@ -188,7 +188,7 @@ export function LiveFeed() {
       {!items ? (
         <div className="h-72 animate-pulse bg-page/50" />
       ) : items.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-ink-3">{t("Nothing has happened yet today.")}</p>
+        <p className="px-5 py-10 text-center text-sm text-ink-3">{t("No recent activity to show.")}</p>
       ) : (
         <ul className="max-h-[26rem] divide-y divide-line overflow-y-auto">
           {items.map((e) => {

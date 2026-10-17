@@ -267,7 +267,7 @@ export const create = mutation({
       .query("users")
       .withIndex("by_phone", (q) => q.eq("phone", phone))
       .unique();
-    if (clash) throw new ConvexError("An account with this phone number already exists.");
+    if (clash) throw new ConvexError("This phone number already has an account. Please log in.");
     const { name, email, riderArea, profile } = buildProfile(form);
     const riderId = await ctx.db.insert("users", {
       name,

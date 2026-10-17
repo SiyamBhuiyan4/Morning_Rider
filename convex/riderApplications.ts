@@ -102,7 +102,7 @@ export const hire = mutation({
       .query("users")
       .withIndex("by_phone", (q) => q.eq("phone", app.phone))
       .unique();
-    if (clash) throw new ConvexError("An account with this phone number already exists.");
+    if (clash) throw new ConvexError("This phone number already has an account. Please log in.");
     const password = args.password?.trim() ? args.password.trim() : temporaryPassword();
     const riderId = await ctx.db.insert("users", {
       name: app.name,

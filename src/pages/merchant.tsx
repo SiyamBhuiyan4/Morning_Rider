@@ -175,7 +175,7 @@ function PayoutRequestCard({ balance }: { balance: number | undefined }) {
           <div className="flex flex-wrap items-center gap-3">
             <Badge tone="amber">{t("Waiting")}</Badge>
             <p className="flex-1 text-sm text-ink-2">
-              {t("You asked for {amount} on {date}. Morning Rider will send it soon.", { amount: tk(open.amount), date: dateTime(open.createdAt) })}
+              {t("You requested {amount} on {date}. Morning Rider will send it once it is processed.", { amount: tk(open.amount), date: dateTime(open.createdAt) })}
             </p>
             <Button
               size="sm"

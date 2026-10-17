@@ -128,7 +128,7 @@ function VerifyForm() {
         tradeLicenseFile: tradeFile?.storageId,
         otherFiles: others.map((o) => o.storageId),
       });
-      toast.ok(t("Documents sent. We'll review them soon."));
+      toast.ok(t("Documents sent. They are now under review."));
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       toast.error(err);

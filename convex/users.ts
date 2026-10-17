@@ -142,7 +142,7 @@ export const create = mutation({
       .query("users")
       .withIndex("by_phone", (q) => q.eq("phone", phone))
       .unique();
-    if (clash) throw new ConvexError("An account with this phone number already exists.");
+    if (clash) throw new ConvexError("This phone number already has an account. Please log in.");
     const email = cleanEmail(args.email, args.role === "merchant");
     await assertEmailFree(ctx, email);
     await ctx.db.insert("users", {

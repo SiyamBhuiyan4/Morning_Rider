@@ -50,7 +50,7 @@ export function FraudSummary({ phone, compact }: { phone: string; compact?: bool
           <Icon className={cx("size-6 shrink-0", L.text)} />
           <div className="min-w-0 flex-1">
             <p className="flex items-center justify-between gap-2 font-bold">
-              <span className={L.text}>{r.isNew ? t("New customer — no history yet") : t(L.label)}</span>
+              <span className={L.text}>{r.isNew ? t("No delivery history for this number yet") : t(L.label)}</span>
               <span className={cx("text-lg font-extrabold", L.text)}>{t("{n}% risk", { n: r.riskScore })}</span>
             </p>
             <RiskBar score={r.riskScore} />
@@ -75,7 +75,7 @@ export function FraudSummary({ phone, compact }: { phone: string; compact?: bool
             <p className={cx("mt-1 flex items-center justify-center gap-2 text-2xl font-extrabold sm:justify-start", L.text)}>
               <Icon className="size-7" /> {t(L.label)}
             </p>
-            <p className="mt-1 text-sm font-medium text-ink">{r.isNew ? t("New customer — no history yet") : t(L.advice)}</p>
+            <p className="mt-1 text-sm font-medium text-ink">{r.isNew ? t("No delivery history for this number yet") : t(L.advice)}</p>
             <ul className="mt-3 space-y-1 text-sm text-ink-2">
               {r.reasons.map((x) => (
                 <li key={x.text} className="flex items-start gap-2">

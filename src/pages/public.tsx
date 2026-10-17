@@ -206,10 +206,6 @@ const COVERAGE = [
   "Motijheel",
   "Jatrabari",
   "Khilgaon",
-  "Tongi",
-  "Gazipur Sadar",
-  "Board Bazar",
-  "Narayanganj Sadar",
 ];
 
 function SectionTitle({ kicker, title, text }: { kicker: string; title: string; text?: string }) {
@@ -256,10 +252,10 @@ function RateCalculator({ rates }: { rates?: { uttara: number; dhakaCity: number
       <div className="sunrise flex items-center justify-between px-6 py-4 text-white">
         <div className="flex items-center gap-2.5">
           <Calculator className="size-5 text-sun" />
-          <h3 className="font-extrabold tracking-tight sm:text-lg">{t("Instant Delivery Rate Calculator")}</h3>
+          <h3 className="font-extrabold tracking-tight sm:text-lg">{t("Delivery Rate Calculator")}</h3>
         </div>
         <span className="hidden rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-sun sm:block">
-          {t("Real-time rates")}
+          {t("Current rates")}
         </span>
       </div>
       <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.15fr_1fr]">
@@ -400,7 +396,7 @@ function RateCalculator({ rates }: { rates?: { uttara: number; dhakaCity: number
 
           <div className="mt-6">
             <Button size="lg" className="w-full" onClick={() => navigate("/register")}>
-              {t("Start shipping now")} <ArrowRight className="size-4" />
+              {t("Start shipping")} <ArrowRight className="size-4" />
             </Button>
           </div>
         </div>
@@ -414,7 +410,7 @@ function FaqSection() {
   const faqs = [
     {
       q: t("How fast does Morning Rider deliver?"),
-      a: t("Within Uttara, we deliver in just 3 hours when booked between 6 AM and 12 noon. Across all major areas of Dhaka City, Gazipur, and Narayanganj City, we provide reliable same-day delivery 7 days a week."),
+      a: t("Within Uttara, we deliver within 3 hours for orders booked between 6 AM and 12 noon. Across Dhaka City, Gazipur City and Narayanganj City, same-day delivery is available 7 days a week, starting at 6 AM."),
     },
     {
       q: t("When and how do merchants receive COD payouts?"),
@@ -430,11 +426,11 @@ function FaqSection() {
     },
     {
       q: t("What happens if a customer refuses or returns a parcel?"),
-      a: t("If a delivery cannot be completed, our rider contacts you first. For returned parcels, only a fair return charge applies (usually 50% of the delivery charge) with 0% COD fee."),
+      a: t("If a delivery cannot be completed, our rider contacts you first. For returned parcels, only a fair return charge applies, as shown in the pricing section, with 0% COD fee."),
     },
     {
       q: t("How do I book parcels?"),
-      a: t("You can create parcels one-by-one in your merchant panel, upload up to 200 parcels in bulk via Excel/CSV, or simply message our office directly on WhatsApp!"),
+      a: t("You can create parcels one-by-one in your merchant panel, upload up to 200 parcels in bulk via Excel/CSV, or message our office on WhatsApp."),
     },
   ];
 
@@ -495,7 +491,7 @@ export function Home() {
             <p className="mt-3 text-2xl font-bold tracking-tight text-sun sm:text-3xl">{t("No more delivery worries!")}</p>
             <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-white/70">
               {t(
-                "Morning Rider delivers parcels, food, medicine, frozen items and more across Dhaka, Gazipur and Narayanganj — 7 days a week, starting at 6 AM.",
+                "Morning Rider delivers parcels, food, medicine, frozen items and more across Dhaka, Gazipur and Narayanganj — 7 days a week, 6 AM to 12 AM.",
               )}
             </p>
             <div className="mt-7 max-w-xl">
@@ -549,7 +545,7 @@ export function Home() {
             icon: Snowflake,
             badge: t("Cold chain"),
             title: t("Frozen items in 6 hours"),
-            text: t("Meat, fish, ice cream and ready food carried cold, across Dhaka and Gazipur city."),
+            text: t("Meat, fish, ice cream and ready food carried cold, across Dhaka, Gazipur and Narayanganj city corporations."),
             accent: "bg-sky-500 text-white",
           },
           {
@@ -632,17 +628,12 @@ export function Home() {
             { zone: "uttara" as const, value: rates?.uttara, time: t("Within 3 hours"), hot: true },
             { zone: "dhaka_city" as const, value: rates?.dhakaCity, time: t("Same day") },
             { zone: "gazipur_city" as const, value: rates?.gazipurCity, time: t("Same day") },
-            { zone: "narayanganj_city" as const, value: rates?.narayanganjCity, time: t("Same day"), isNew: true },
+            { zone: "narayanganj_city" as const, value: rates?.narayanganjCity, time: t("Same day") },
           ].map((r) => (
             <Card key={r.zone} className={cx("relative p-6 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md", r.hot && "ring-2 ring-brand")}>
               {r.hot && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[11px] font-bold text-white shadow-sm shadow-brand/30">
-                  {t("Fastest")}
-                </span>
-              )}
-              {r.isNew && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-sun px-3 py-1 text-[11px] font-bold text-[#0b1b38]">
-                  {t("New area")}
+                  {t("Express")}
                 </span>
               )}
               <p className="text-sm font-semibold text-ink-2">{ZONE[r.zone]}</p>
@@ -711,7 +702,6 @@ export function Home() {
                 <p className="text-xs font-bold tracking-[0.18em] text-brand uppercase">{t("Delivery areas")}</p>
                 <h3 className="mt-1 text-2xl font-extrabold tracking-tight">{t("Dhaka, Gazipur and Narayanganj city corporations")}</h3>
               </div>
-              <span className="rounded-full bg-sun-100 px-3.5 py-1.5 text-sm font-bold text-amber-800">{t("New: Narayanganj City")}</span>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               {COVERAGE.map((a) => (
@@ -729,9 +719,9 @@ export function Home() {
       <section id="join" className="mx-auto max-w-6xl scroll-mt-6 px-5 py-20">
         <div className="grid overflow-hidden rounded-3xl shadow-[var(--shadow-card)] lg:grid-cols-2">
           <div className="sunrise p-8 text-white sm:p-10">
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-sun ring-1 ring-white/15">{t("We're hiring")}</span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-sun ring-1 ring-white/15">{t("Join our team")}</span>
             <h3 className="mt-4 text-3xl font-extrabold italic tracking-tight">{t("Become a Morning Rider")}</h3>
-            <p className="mt-3 text-white/75">{t("Have your own motorcycle and a valid licence? Join our delivery team in Dhaka and Gazipur.")}</p>
+            <p className="mt-3 text-white/75">{t("Have your own motorcycle and a valid licence? Join our delivery team in Dhaka, Gazipur and Narayanganj.")}</p>
             <p className="mt-6 text-sm font-bold text-sun">{t("Benefits")}</p>
             <ul className="mt-2 space-y-2 text-sm">
               {[t("Attractive pay"), t("Fuel allowance (by condition)"), t("Daily earning opportunity"), t("On-time payment"), t("Incentives for good performance"), t("Long-term career")].map((x) => (
@@ -779,7 +769,7 @@ export function Home() {
       <section className="mx-auto max-w-6xl px-5 pb-20">
         <Card className="grid gap-6 p-8 md:grid-cols-[1.2fr_1fr] md:items-center">
           <div>
-            <h3 className="text-2xl font-extrabold tracking-tight">{t("Order today, relax!")}</h3>
+            <h3 className="text-2xl font-extrabold tracking-tight">{t("Ready to send your parcel?")}</h3>
             <p className="mt-2 text-ink-2">{t("Call or WhatsApp us — we'll pick up your product and deliver it safely.")}</p>
             <p className="mt-4 flex items-start gap-2 text-sm text-ink-2">
               <MapPin className="mt-0.5 size-4 shrink-0 text-brand" /> {t("Office")}: {t(CONTACT.address)}
@@ -836,7 +826,7 @@ function AuthLayout({ title, subtitle, children }: { title: string; subtitle: st
           <img src="/brand/logo.png" alt="" className="mx-auto w-80 rounded-full shadow-2xl ring-8 ring-white/10" />
         </div>
         <p className="text-lg font-semibold italic text-white/80">
-          Fast <span className="text-brand">•</span> Safe <span className="text-brand">•</span> On time
+          {t("Fast")} <span className="text-brand">•</span> {t("Safe")} <span className="text-brand">•</span> {t("On time")}
         </p>
       </div>
       <div className="relative flex items-center justify-center p-6">
@@ -900,7 +890,7 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
   const copy = {
     merchant: { title: t("Merchant login"), subtitle: t("Sign in to send and track your parcels.") },
     rider: { title: t("Rider login"), subtitle: t("For Morning Rider delivery staff only.") },
-    admin: { title: t("Admin panel"), subtitle: t("Restricted area. Authorised Morning Rider staff only.") },
+    admin: { title: t("Admin panel"), subtitle: t("Restricted area. Authorized Morning Rider staff only.") },
   }[door];
 
   return (
