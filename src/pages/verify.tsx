@@ -8,7 +8,7 @@ import { useToast } from "../lib/toast";
 import { navigate } from "../lib/router";
 import { dateTime, num } from "../lib/format";
 import { Button, Card, Field, Input, PageHeader, Spinner, cx } from "../components/ui";
-import { t } from "../lib/prefs";
+import { t, translateServer } from "../lib/prefs";
 
 /* Same limits the server checks; checking here too saves a wasted upload. */
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -235,15 +235,15 @@ function Picker({ onUploaded, compact }: { onUploaded: (f: Uploaded) => void; co
     if (file.size > MAX_BYTES) return toast.error(t("File is too large (max 5 MB)."));
     setBusy(true);
     try {
-      const { url } = await uploadToTelegramCdn(file);
+      const { fileId, url, storageId } = await uploadToTelegramCdn(file);
       onUploaded({
-        storageId: url,
+        storageId: storageId || (fileId ? `tg:${fileId}` : url),
         name: file.name,
         type: file.type,
         preview: file.type.startsWith("image/") ? url : undefined,
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed. Please try again.");
+      toast.error(e instanceof Error ? translateServer(e.message) : t("Upload failed. Please try again."));
     } finally {
       setBusy(false);
     }

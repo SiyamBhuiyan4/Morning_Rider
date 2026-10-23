@@ -185,10 +185,10 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const sidebar = (
     <div className="sunrise flex h-full flex-col">
-      <div className="flex items-center gap-3 px-5 pb-5 pt-6">
+      <Link href="/app" className="flex items-center gap-3 px-5 pb-5 pt-6 transition hover:opacity-90">
         <Logo size={44} className="ring-2 ring-white/20 shadow-lg" />
         <Wordmark dark />
-      </div>
+      </Link>
       {me.role === "admin" && (
         <p className={cx("-mt-2 mb-4 px-5 text-[11px] font-bold text-sun/80", getLang() !== "bn" && "tracking-[0.2em]")}>{t("ADMIN PANEL")}</p>
       )}
@@ -275,8 +275,10 @@ export function Shell({ children }: { children: ReactNode }) {
         <button onClick={() => setOpen(true)} className="rounded-lg p-1.5 hover:bg-navy-50" aria-label={t("Menu")}>
           <Menu className="size-6" />
         </button>
-        <Logo size={32} />
-        <Wordmark />
+        <Link href="/app" className="flex items-center gap-2 transition hover:opacity-90">
+          <Logo size={32} />
+          <Wordmark />
+        </Link>
         <Prefs className="ml-auto" />
         <FloatingChatButton className="relative" />
       </header>

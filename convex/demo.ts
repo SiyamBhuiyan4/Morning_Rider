@@ -241,27 +241,20 @@ function pathTo(status: Status): Status[] {
 }
 
 async function demoUsers(ctx: MutationCtx | Parameters<typeof requireUser>[0]) {
-  const out: Doc<"users">[] = [];
-  for (const role of ["merchant", "rider"] as const) {
-    for (const status of ["pending", "active", "suspended"] as const) {
-      const rows = await ctx.db
-        .query("users")
-        .withIndex("by_role_and_status", (q) => q.eq("role", role).eq("status", status))
-        .take(1000);
-      out.push(...rows.filter((u) => u.demo));
-    }
-  }
-  return out;
+  return await ctx.db
+    .query("users")
+    .withIndex("by_demo", (q) => q.eq("demo", true))
+    .take(200);
 }
 
-/** Sample documents for one merchant's business verification, already in storage. */
+/** Sample documents for one merchant's business verification, stored as static URLs or data URIs. */
 export const demoFiles = v.object({
   phone: v.string(),
-  nidFront: v.id("_storage"),
-  nidBack: v.id("_storage"),
-  tinFile: v.optional(v.id("_storage")),
-  tradeLicenseFile: v.optional(v.id("_storage")),
-  otherFiles: v.array(v.id("_storage")),
+  nidFront: v.union(v.id("_storage"), v.string()),
+  nidBack: v.union(v.id("_storage"), v.string()),
+  tinFile: v.optional(v.union(v.id("_storage"), v.string())),
+  tradeLicenseFile: v.optional(v.union(v.id("_storage"), v.string())),
+  otherFiles: v.array(v.union(v.id("_storage"), v.string())),
 });
 type DemoFiles = typeof demoFiles.type;
 
@@ -867,10 +860,9 @@ export const status = query({
 });
 
 /*
-  Loading runs as an action because the sample verification documents are
-  real files in storage, and only actions can create files. The action makes
-  the files, then one mutation writes everything else; if that fails the files
-  are deleted again.
+  Loading runs as an action to coordinate demo seed mutation. The sample
+  verification documents are generated as data URIs so seeding demo data does
+  NOT write or consume Convex storage quotas.
 */
 export const load = action({
   args: { token: v.string() },
@@ -893,31 +885,20 @@ type SeedResult = Awaited<ReturnType<typeof seed>>;
 
 async function loadWith(ctx: ActionCtx, token: string | undefined): Promise<SeedResult> {
   const files: DemoFiles[] = [];
-  const stored: Id<"_storage">[] = [];
-  const store = async (title: string, lines: string[]) => {
-    const id = await ctx.storage.store(samplePdf(title, lines));
-    stored.push(id);
-    return id;
-  };
-  try {
-    for (const [i, m] of MERCHANTS.entries()) {
-      if (!m.verification) continue;
-      const who = [`Name: ${m.name}`, `Business: ${m.businessName}`, `NID: ${1980000000000 + i * 7654321}`];
-      files.push({
-        phone: merchantPhone(i),
-        nidFront: await store("NID card - front (SAMPLE)", who),
-        nidBack: await store("NID card - back (SAMPLE)", [...who, "Address: Dhaka"]),
-        tinFile: i % 2 === 0 ? await store("TIN certificate (SAMPLE)", [`Taxpayer: ${m.name}`, `TIN: ${100000000000 + i * 1234567}`]) : undefined,
-        tradeLicenseFile:
-          i % 3 !== 2 ? await store("Trade licence (SAMPLE)", [`Business: ${m.businessName}`, m.pickupAddress, "Valid until June 2027"]) : undefined,
-        otherFiles: i === 0 ? [await store("Shop photo (SAMPLE)", [m.businessName, m.pickupAddress])] : [],
-      });
-    }
-    return await ctx.runMutation(internal.demo.seedInternal, { token, files });
-  } catch (e) {
-    for (const id of stored) await ctx.storage.delete(id);
-    throw e;
+  for (const [i, m] of MERCHANTS.entries()) {
+    if (!m.verification) continue;
+    const who = [`Name: ${m.name}`, `Business: ${m.businessName}`, `NID: ${1980000000000 + i * 7654321}`];
+    files.push({
+      phone: merchantPhone(i),
+      nidFront: samplePdf("NID card - front (SAMPLE)", who),
+      nidBack: samplePdf("NID card - back (SAMPLE)", [...who, "Address: Dhaka"]),
+      tinFile: i % 2 === 0 ? samplePdf("TIN certificate (SAMPLE)", [`Taxpayer: ${m.name}`, `TIN: ${100000000000 + i * 1234567}`]) : undefined,
+      tradeLicenseFile:
+        i % 3 !== 2 ? samplePdf("Trade licence (SAMPLE)", [`Business: ${m.businessName}`, m.pickupAddress, "Valid until June 2027"]) : undefined,
+      otherFiles: i === 0 ? [samplePdf("Shop photo (SAMPLE)", [m.businessName, m.pickupAddress])] : [],
+    });
   }
+  return await ctx.runMutation(internal.demo.seedInternal, { token, files });
 }
 
 export const canLoad = internalQuery({
@@ -967,7 +948,7 @@ function samplePdf(title: string, lines: string[]) {
   out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
   out += offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("");
   out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-  return new Blob([out], { type: "application/pdf" });
+  return `data:application/pdf;base64,${btoa(out)}`;
 }
 
 export const remove = mutation({
@@ -997,6 +978,12 @@ const MOVING: Status[] = ["pending", "picked_up", "at_hub", "out_for_delivery", 
 export const tick = internalMutation({
   args: {},
   handler: async (ctx) => {
+    const hasDemo = await ctx.db
+      .query("users")
+      .withIndex("by_demo", (q) => q.eq("demo", true))
+      .first();
+    if (!hasDemo) return null;
+
     const users = await demoUsers(ctx);
     if (users.length === 0) return null;
     const merchants = users.filter((u) => u.role === "merchant" && u.status === "active" && u.verification === "approved");

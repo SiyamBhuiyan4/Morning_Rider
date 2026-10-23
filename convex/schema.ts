@@ -115,7 +115,8 @@ export default defineSchema({
   })
     .index("by_phone", ["phone"])
     .index("by_email", ["email"])
-    .index("by_role_and_status", ["role", "status"]),
+    .index("by_role_and_status", ["role", "status"])
+    .index("by_demo", ["demo"]),
 
   sessions: defineTable({
     userId: v.id("users"),

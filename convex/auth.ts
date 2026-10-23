@@ -1,4 +1,5 @@
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
+import type { MutationCtx, DatabaseReader } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import {
   currentUser,
@@ -49,7 +50,7 @@ const DECOY_SALT = "6d6f726e696e67726964657264656379";
 
 type LoginResult =
   | { ok: true; token: string; expiresAt: number }
-  | { ok: false; error: string; wrongDoor?: "rider" | "merchant" };
+  | { ok: false; error: string; wrongDoor?: "rider" | "merchant"; needsSetup?: boolean };
 
 /*
   Two front doors. The main website signs in merchants and riders only; the
@@ -93,6 +94,21 @@ const ADMIN_LOCK_MS = 60 * 60 * 1000;
 export const adminLogin = mutation({
   args: { passcode: v.string() },
   handler: async (ctx, args): Promise<LoginResult> => {
+    const admin = await adminAccount(ctx);
+    if (!admin) {
+      return {
+        ok: false,
+        error: "The admin passcode has not been set up yet. Initial setup is required.",
+        needsSetup: true,
+      };
+    }
+    if (admin.status !== "active") {
+      return {
+        ok: false,
+        error: "The admin account is currently suspended or inactive.",
+      };
+    }
+
     const now = Date.now();
     const since = now - ADMIN_LOCK_MS;
     const recent = await ctx.db
@@ -102,8 +118,6 @@ export const adminLogin = mutation({
     if (recent.length >= ADMIN_MAX_FAILURES) {
       return { ok: false, error: "Too many wrong attempts. The admin panel is locked for 1 hour." };
     }
-    const admin = await adminAccount(ctx);
-    if (!admin) return { ok: false, error: "The admin passcode has not been set up yet." };
 
     const candidate = await derive(args.passcode.slice(0, 128), admin.passwordSalt, admin.passwordIterations);
     if (!timingSafeEqual(candidate, admin.passwordHash)) {
@@ -122,11 +136,16 @@ export const adminLogin = mutation({
   },
 });
 
-async function adminAccount(ctx: MutationCtx) {
-  return await ctx.db
+async function adminAccount(ctx: { db: DatabaseReader }) {
+  const byPhone = await ctx.db
     .query("users")
     .withIndex("by_phone", (q) => q.eq("phone", ADMIN_LOGIN_ID))
-    .unique();
+    .first();
+  if (byPhone) return byPhone;
+  return await ctx.db
+    .query("users")
+    .withIndex("by_role_and_status", (q) => q.eq("role", "admin"))
+    .first();
 }
 
 function checkAdminPasscode(passcode: string) {
@@ -143,6 +162,50 @@ async function hashAdminPasscode(passcode: string) {
     passwordHash: await derive(passcode, passwordSalt, PBKDF2_ITERATIONS),
   };
 }
+
+/**
+ * Public query checking whether an initial admin account must be set up.
+ * Returns true if no admin user exists in the users table.
+ */
+export const isInitialSetupNeeded = query({
+  args: {},
+  handler: async (ctx): Promise<boolean> => {
+    const admin = await adminAccount(ctx);
+    return !admin;
+  },
+});
+
+/**
+ * Initial setup mutation: creates the first admin account when none exists.
+ * Throws ConvexError("Admin already configured.") if an admin already exists.
+ * Returns a valid session token and expiration so the creator is logged in immediately.
+ */
+export const setupInitialAdmin = mutation({
+  args: { passcode: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await adminAccount(ctx);
+    if (existing) {
+      throw new ConvexError("Admin already configured.");
+    }
+    const fields = await hashAdminPasscode(args.passcode);
+    const userId = await ctx.db.insert("users", {
+      name: "Admin",
+      phone: ADMIN_LOGIN_ID,
+      role: "admin",
+      status: "active",
+      ...fields,
+      createdAt: Date.now(),
+    });
+    // Clear any previous lockout failures
+    const fails = await ctx.db
+      .query("loginFailures")
+      .withIndex("by_phone_and_at", (q) => q.eq("phone", ADMIN_LOGIN_ID))
+      .take(500);
+    for (const f of fails) await ctx.db.delete("loginFailures", f._id);
+
+    return await issueSession(ctx, userId, ADMIN_SESSION_TTL_MS);
+  },
+});
 
 async function attemptLogin(
   ctx: MutationCtx,

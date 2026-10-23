@@ -91,17 +91,19 @@ export const admin = query({
     const chartFrom = span > 92 ? from : to - Math.max(span, 14) * DAY;
     const recent = await ctx.db
       .query("parcels")
-      .withIndex("by_createdAt", (q) => q.gte("createdAt", Math.min(chartFrom, from)))
-      .take(20000);
+      .withIndex("by_createdAt", (q) =>
+        q.gte("createdAt", Math.min(chartFrom, from)).lt("createdAt", to)
+      )
+      .take(5000);
     const inRange = recent.filter((p) => p.createdAt >= from && p.createdAt < to);
     const withRiders = await ctx.db
       .query("parcels")
       .withIndex("by_cashState", (q) => q.eq("cashState", "with_rider"))
-      .take(8000);
+      .take(2000);
     const unpaid = await ctx.db
       .query("parcels")
       .withIndex("by_settlement", (q) => q.eq("settlement", "unpaid"))
-      .take(8000);
+      .take(2000);
     const pendingMerchants = await ctx.db
       .query("users")
       .withIndex("by_role_and_status", (q) => q.eq("role", "merchant").eq("status", "pending"))
@@ -110,7 +112,7 @@ export const admin = query({
     const closed = await ctx.db
       .query("parcels")
       .withIndex("by_finalAt", (q) => q.gte("finalAt", from).lt("finalAt", to))
-      .take(20000);
+      .take(5000);
     const revenue = closed.reduce((s, p) => s + (p.collectedAmount - merchantNet(p)), 0);
     const delivered = closed.filter((p) => p.status === "delivered" || p.status === "partial_delivered").length;
 

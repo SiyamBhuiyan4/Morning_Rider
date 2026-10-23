@@ -4,7 +4,7 @@ import { navigate, useLocation } from "./lib/router";
 import { useSession } from "./lib/session";
 import { Shell } from "./components/Shell";
 import { Spinner } from "./components/ui";
-import { Home, Join, Login, Register, RiderLogin, Track, ForgotPassword } from "./pages/public";
+import { Home, Join, Login, Register, RiderLogin, AdminLogin, Track, ForgotPassword } from "./pages/public";
 import { AdminDashboard, Merchants, Payouts, RateSettings, RiderCashAdmin, Riders } from "./pages/admin";
 import { Messages } from "./pages/messages";
 import { BulkUpload, MerchantDashboard, MerchantPayments } from "./pages/merchant";
@@ -31,6 +31,15 @@ export default function App() {
     return <Redirect to={me ? "/app" : "/login"} />;
   }
 
+  // Admin routes
+  if (path === "/admin") {
+    if (me && me.role === "admin") return <Redirect to="/app" />;
+    return <AdminLogin />;
+  }
+  if (path === "/admin/login") {
+    return <AdminLogin />;
+  }
+
   // Public pages
   if (path === "/") return <Home />;
   if (path === "/track" || path.startsWith("/track/")) {
@@ -49,7 +58,7 @@ export default function App() {
 
   // Everything below needs a signed-in user
   if (me === undefined) return <Spinner className="h-full items-center" />;
-  if (me === null) return <Redirect to="/login" />;
+  if (me === null) return <Redirect to={path.startsWith("/admin") ? "/admin" : "/login"} />;
 
   if (path === "/print/labels") {
     const ids = (new URLSearchParams(search).get("ids") ?? "").split(",").filter(Boolean) as Id<"parcels">[];
@@ -57,9 +66,9 @@ export default function App() {
   }
   if (path.startsWith("/print/payout/")) return <PrintPayout id={path.slice(14) as Id<"payouts">} />;
 
-  // Each website only serves its own roles; the server already enforces this
-  // at sign-in, so reaching here with the wrong role means a stale session.
-  if ((me.role === "admin") !== IS_ADMIN_PORTAL) return <WrongPortal />;
+  // Restrict access: only the dedicated admin portal rejects non-admins.
+  // The main unified portal allows admins, merchants, and riders to access their respective views.
+  if (IS_ADMIN_PORTAL && me.role !== "admin") return <WrongPortal />;
 
   return <Shell>{route(path, me.role)}</Shell>;
 }

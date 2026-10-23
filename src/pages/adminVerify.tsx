@@ -8,6 +8,7 @@ import { useToast } from "../lib/toast";
 import { dateTime, num } from "../lib/format";
 import { Badge, Button, Card, Field, Modal, Spinner, Textarea } from "../components/ui";
 import { t } from "../lib/prefs";
+import { resolveMediaUrl, useResolvedMediaUrl } from "../lib/telegramCdn";
 
 type VerificationStatus = "submitted" | "approved" | "rejected";
 
@@ -131,51 +132,9 @@ export function VerificationReviewModal({ merchantId, onClose }: { merchantId: I
           <div>
             <p className="mb-2 text-[13px] font-semibold text-ink-2">{t("Uploaded files ({n})", { n: d.files.length })}</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {d.files.map((f, i) => {
-                const label = t(f.label);
-                const isImage = !!f.contentType?.startsWith("image/");
-                if (!f.url) {
-                  return (
-                    <div key={i} className="rounded-2xl border border-dashed border-line p-4 text-sm text-ink-3">
-                      <p className="font-semibold text-ink-2">{label}</p>
-                      {t("File not found")}
-                    </div>
-                  );
-                }
-                return isImage ? (
-                  <a
-                    key={i}
-                    href={f.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group block overflow-hidden rounded-2xl border border-line bg-page hover:border-brand"
-                    title={t("Open full size")}
-                  >
-                    <img src={f.url} alt={label} loading="lazy" className="h-56 w-full object-contain sm:h-64" />
-                    <span className="flex items-center justify-between gap-2 border-t border-line bg-surface px-3 py-2 text-sm font-semibold">
-                      {label}
-                      <ExternalLink className="size-4 text-ink-3 group-hover:text-brand" />
-                    </span>
-                  </a>
-                ) : (
-                  <a
-                    key={i}
-                    href={f.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-2xl border border-line bg-page p-4 hover:border-brand"
-                  >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600">
-                      <FileText className="size-5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">{label}</span>
-                      <span className="block text-xs text-ink-3">{t("PDF — open in new tab")}</span>
-                    </span>
-                    <ExternalLink className="size-4 text-ink-3" />
-                  </a>
-                );
-              })}
+              {d.files.map((f, i) => (
+                <AdminFileCard key={i} file={f} label={t(f.label)} />
+              ))}
             </div>
           </div>
 
@@ -205,5 +164,114 @@ function Info({ label, value }: { label: string; value?: string }) {
       <p className="text-xs text-ink-3">{label}</p>
       <p className="break-all font-mono font-semibold">{value || <span className="font-sans text-ink-3">{t("Not given")}</span>}</p>
     </div>
+  );
+}
+
+function AdminFileCard({
+  file,
+  label,
+}: {
+  file: { label: string; url: string | null; contentType: string | null };
+  label: string;
+}) {
+  const { url: liveUrl, loading } = useResolvedMediaUrl(file.url);
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
+
+  if (!file.url) {
+    return (
+      <div className="rounded-2xl border border-dashed border-line p-4 text-sm text-ink-3">
+        <p className="font-semibold text-ink-2">{label}</p>
+        {t("File not found")}
+      </div>
+    );
+  }
+
+  if (loading && !liveUrl) {
+    return (
+      <div className="flex h-56 items-center justify-center rounded-2xl border border-line bg-page p-4">
+        <Spinner />
+      </div>
+    );
+  }
+
+  const targetUrl = currentUrl || liveUrl || file.url;
+  const isPdf =
+    file.contentType === "application/pdf" ||
+    targetUrl?.toLowerCase().includes(".pdf") ||
+    targetUrl?.startsWith("data:application/pdf");
+  const isImage = !isPdf;
+
+  const handleOpen = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (targetUrl?.startsWith("data:")) {
+      e.preventDefault();
+      try {
+        const parts = targetUrl.split(",");
+        const byteString = atob(parts[1]);
+        const mimeString = parts[0].split(":")[1].split(";")[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+      } catch {
+        window.open(targetUrl, "_blank");
+      }
+    }
+  };
+
+  const handleImageError = async () => {
+    if (file.url) {
+      try {
+        const fresh = await resolveMediaUrl(file.url);
+        if (fresh && fresh !== targetUrl) {
+          setCurrentUrl(fresh);
+        }
+      } catch (err) {
+        console.error("Failed to re-resolve media url on image error:", err);
+      }
+    }
+  };
+
+  return isImage ? (
+    <a
+      href={targetUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleOpen}
+      className="group block overflow-hidden rounded-2xl border border-line bg-page hover:border-brand"
+      title={t("Open full size")}
+    >
+      <img
+        src={targetUrl}
+        alt={label}
+        loading="lazy"
+        className="h-56 w-full object-contain sm:h-64"
+        onError={handleImageError}
+      />
+      <span className="flex items-center justify-between gap-2 border-t border-line bg-surface px-3 py-2 text-sm font-semibold">
+        {label}
+        <ExternalLink className="size-4 text-ink-3 group-hover:text-brand" />
+      </span>
+    </a>
+  ) : (
+    <a
+      href={targetUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleOpen}
+      className="flex items-center gap-3 rounded-2xl border border-line bg-page p-4 hover:border-brand"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600">
+        <FileText className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{label}</span>
+        <span className="block text-xs text-ink-3">{t("PDF — open in new tab")}</span>
+      </span>
+      <ExternalLink className="size-4 text-ink-3" />
+    </a>
   );
 }

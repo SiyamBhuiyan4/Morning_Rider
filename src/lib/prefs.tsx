@@ -97,6 +97,7 @@ const SERVER_PATTERNS: [RegExp, string][] = [
   [/^You can send (\d+) messages until Morning Rider replies\.$/, "You can send {1} messages until Morning Rider replies."],
   [/^A message can have at most (\d+) words\.$/, "A message can have at most {1} words."],
   [/^(.+): enter a valid Bangladeshi mobile number \(01XXXXXXXXX\)\.$/, "{1}: enter a valid Bangladeshi mobile number (01XXXXXXXXX)."],
+  [/^Telegram CDN upload failed: (.+)$/, "Telegram CDN upload failed: {1}"],
 ];
 
 export function translateServer(msg: string): string {

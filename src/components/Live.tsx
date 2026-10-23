@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import {
   Ban,
@@ -159,7 +159,8 @@ function sentence(e: FeedItem) {
 /** Everything happening to parcels, as it happens. New lines slide in at the top. */
 export function LiveFeed() {
   const { token } = useAuthed();
-  const items = useQuery(api.live.feed, { token });
+  const queryArgs = useMemo(() => ({ token }), [token]);
+  const items = useQuery(api.live.feed, queryArgs);
   const now = useNow(15_000);
   const seen = useRef<Set<string> | null>(null);
   const [open, setOpen] = useState<Id<"parcels"> | null>(null);
@@ -225,7 +226,8 @@ export function LiveFeed() {
 /** Riders out working, each riding along a little road. */
 export function RidersOnRoad({ dayStart }: { dayStart: number }) {
   const { token } = useAuthed();
-  const road = useQuery(api.live.road, { token, dayStart });
+  const queryArgs = useMemo(() => ({ token, dayStart }), [token, dayStart]);
+  const road = useQuery(api.live.road, queryArgs);
   const rows = road?.rows;
 
   return (

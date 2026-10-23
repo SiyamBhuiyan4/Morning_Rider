@@ -25,7 +25,14 @@ export const get = query({
       .query("parcels")
       .withIndex("by_merchantId_and_createdAt", (q) => q.eq("merchantId", m._id))
       .order("desc")
-      .take(5000);
+      .take(1000);
+
+    const unpaid = await ctx.db
+      .query("parcels")
+      .withIndex("by_merchantId_and_settlement", (q) => q.eq("merchantId", m._id).eq("settlement", "unpaid"))
+      .take(1000);
+    const balance = unpaid.reduce((s, p) => s + merchantNet(p), 0);
+    const unpaidCount = unpaid.length;
 
     const hasRange = args.from !== undefined && args.to !== undefined && args.from > 0;
     const from = args.from ?? 0;
@@ -48,8 +55,6 @@ export const get = query({
     let deliveryEarned = 0;
     let codEarned = 0;
     let returnEarned = 0;
-    let balance = 0;
-    let unpaidCount = 0;
 
     // Start of this month in Dhaka time (UTC+6, no daylight saving).
     const DHAKA = 6 * 3_600_000;
@@ -58,11 +63,6 @@ export const get = query({
     let earnedThisMonth = 0;
 
     for (const p of parcels) {
-      if (p.settlement === "unpaid") {
-        balance += merchantNet(p);
-        unpaidCount++;
-      }
-
       let pEarned = 0;
       if (p.status === "delivered" || p.status === "partial_delivered") {
         pEarned = p.deliveryCharge + p.codCharge;

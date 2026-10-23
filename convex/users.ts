@@ -60,29 +60,51 @@ export const list = query({
       return out.map((u) => ({ ...publicUser(u), cashInHand: 0, activeTasks: 0, canDelete: false }));
     }
 
+    // Batch query active parcels across riders in 3 indexed queries instead of 3 * N queries
+    const [allCash, allDelivering, allPickups] = await Promise.all([
+      ctx.db
+        .query("parcels")
+        .withIndex("by_cashState", (q) => q.eq("cashState", "with_rider"))
+        .take(2000),
+      ctx.db
+        .query("parcels")
+        .withIndex("by_status_and_createdAt", (q) => q.eq("status", "out_for_delivery"))
+        .take(2000),
+      ctx.db
+        .query("parcels")
+        .withIndex("by_status_and_createdAt", (q) => q.eq("status", "pending"))
+        .take(2000),
+    ]);
+
+    const cashByRider = new Map<string, number>();
+    for (const p of allCash) {
+      if (p.deliveryRiderId) {
+        cashByRider.set(p.deliveryRiderId, (cashByRider.get(p.deliveryRiderId) ?? 0) + p.collectedAmount);
+      }
+    }
+    const deliveringByRider = new Map<string, number>();
+    for (const p of allDelivering) {
+      if (p.deliveryRiderId) {
+        deliveringByRider.set(p.deliveryRiderId, (deliveringByRider.get(p.deliveryRiderId) ?? 0) + 1);
+      }
+    }
+    const pickupsByRider = new Map<string, number>();
+    for (const p of allPickups) {
+      if (p.pickupRiderId) {
+        pickupsByRider.set(p.pickupRiderId, (pickupsByRider.get(p.pickupRiderId) ?? 0) + 1);
+      }
+    }
+
     return await Promise.all(
       out.map(async (u) => {
-        const cash = await ctx.db
-          .query("parcels")
-          .withIndex("by_deliveryRiderId_and_cashState", (q) =>
-            q.eq("deliveryRiderId", u._id).eq("cashState", "with_rider"),
-          )
-          .take(1000);
-        const delivering = await ctx.db
-          .query("parcels")
-          .withIndex("by_deliveryRiderId_and_status", (q) =>
-            q.eq("deliveryRiderId", u._id).eq("status", "out_for_delivery"),
-          )
-          .take(500);
-        const pickups = await ctx.db
-          .query("parcels")
-          .withIndex("by_pickupRiderId_and_status", (q) => q.eq("pickupRiderId", u._id).eq("status", "pending"))
-          .take(500);
+        const cashInHand = cashByRider.get(u._id) ?? 0;
+        const activeTasks = (deliveringByRider.get(u._id) ?? 0) + (pickupsByRider.get(u._id) ?? 0);
+        const canDelete = activeTasks === 0 && cashInHand === 0 ? !(await riderHasHistory(ctx, u._id)) : false;
         return {
           ...publicUser(u),
-          cashInHand: cash.reduce((s, p) => s + p.collectedAmount, 0),
-          activeTasks: delivering.length + pickups.length,
-          canDelete: !(await riderHasHistory(ctx, u._id)),
+          cashInHand,
+          activeTasks,
+          canDelete,
         };
       }),
     );

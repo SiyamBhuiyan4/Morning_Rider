@@ -27,29 +27,29 @@ export const get = query({
     const delivered = await ctx.db
       .query("parcels")
       .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", rider._id).eq("status", "delivered"))
-      .take(5000);
+      .take(1000);
     const partial = await ctx.db
       .query("parcels")
       .withIndex("by_deliveryRiderId_and_status", (q) =>
         q.eq("deliveryRiderId", rider._id).eq("status", "partial_delivered"),
       )
-      .take(5000);
+      .take(1000);
     const returned = await ctx.db
       .query("parcels")
       .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", rider._id).eq("status", "returned"))
-      .take(5000);
+      .take(1000);
     const returning = await ctx.db
       .query("parcels")
       .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", rider._id).eq("status", "returning"))
-      .take(5000);
+      .take(1000);
     const hold = await ctx.db
       .query("parcels")
       .withIndex("by_deliveryRiderId_and_status", (q) => q.eq("deliveryRiderId", rider._id).eq("status", "hold"))
-      .take(5000);
+      .take(1000);
     const deposits = await ctx.db
       .query("cashDeposits")
       .withIndex("by_riderId_and_createdAt", (q) => q.eq("riderId", rider._id))
-      .take(5000);
+      .take(1000);
 
     const cashWithRiderRows = await ctx.db
       .query("parcels")

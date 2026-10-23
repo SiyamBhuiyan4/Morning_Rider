@@ -52,6 +52,21 @@ function filesOf(row: Doc<"merchantVerifications">) {
   return [...out, ...row.otherFiles];
 }
 
+function isExternalStorageId(id: string | Id<"_storage">): boolean {
+  if (typeof id !== "string") return false;
+  return (
+    id.startsWith("tg:") ||
+    id.startsWith("http://") ||
+    id.startsWith("https://") ||
+    id.startsWith("data:") ||
+    id.startsWith("BQAC") ||
+    id.startsWith("AgAC") ||
+    id.startsWith("BAAC") ||
+    id.includes("://") ||
+    id.includes(":")
+  );
+}
+
 /** Deletes a stored file and its claim. Safe if either is already gone. */
 async function deleteFile(ctx: MutationCtx, storageId: Id<"_storage"> | string) {
   const claims = await ctx.db
@@ -59,8 +74,13 @@ async function deleteFile(ctx: MutationCtx, storageId: Id<"_storage"> | string) 
     .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
     .take(10);
   for (const c of claims) await ctx.db.delete("verificationFiles", c._id);
-  if (typeof storageId === "string" && (storageId.startsWith("http") || storageId.startsWith("BQAC"))) return;
-  if (await ctx.db.system.get("_storage", storageId as Id<"_storage">)) await ctx.storage.delete(storageId as Id<"_storage">);
+  if (isExternalStorageId(storageId)) return;
+  try {
+    const meta = await ctx.db.system.get("_storage", storageId as Id<"_storage">);
+    if (meta) await ctx.storage.delete(storageId as Id<"_storage">);
+  } catch {
+    // Non-convex storage id format or already removed
+  }
 }
 
 /** Removes every verification row and file of a merchant (demo clear, support reset). */
@@ -127,8 +147,8 @@ export const submit = mutation({
     if (new Set(files).size !== files.length) throw new ConvexError("The same file was added twice.");
 
     for (const id of files) {
-      if (typeof id === "string" && (id.startsWith("http") || id.startsWith("BQAC"))) {
-        // External Telegram CDN file
+      if (isExternalStorageId(id)) {
+        // External Telegram CDN file or static data URI
       } else {
         const meta = await ctx.db.system.get("_storage", id as Id<"_storage">);
         if (!meta) throw new ConvexError("A file was not uploaded. Please add it again.");
@@ -245,13 +265,19 @@ export const details = query({
     for (const f of labelled) {
       let url: string | null = null;
       let contentType: string | null = null;
-      if (typeof f.id === "string" && (f.id.startsWith("http") || f.id.startsWith("https"))) {
+      if (isExternalStorageId(f.id)) {
         url = f.id;
-        contentType = f.id.toLowerCase().includes(".pdf") ? "application/pdf" : "image/jpeg";
+        const lower = f.id.toLowerCase();
+        contentType = lower.includes(".pdf") || lower.startsWith("data:application/pdf") ? "application/pdf" : "image/jpeg";
       } else {
-        const meta = await ctx.db.system.get("_storage", f.id as Id<"_storage">);
-        url = meta ? await ctx.storage.getUrl(f.id as Id<"_storage">) : null;
-        contentType = meta?.contentType ?? null;
+        try {
+          const meta = await ctx.db.system.get("_storage", f.id as Id<"_storage">);
+          url = meta ? await ctx.storage.getUrl(f.id as Id<"_storage">) : null;
+          contentType = meta?.contentType ?? null;
+        } catch {
+          url = f.id;
+          contentType = "image/jpeg";
+        }
       }
       files.push({
         label: f.label,

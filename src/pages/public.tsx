@@ -21,6 +21,7 @@ import {
   Search,
   ShieldCheck,
   Snowflake,
+  Store,
   Sunrise,
   ThumbsUp,
   Truck,
@@ -791,6 +792,7 @@ export function Home() {
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
             <Link href="/login" className="transition hover:text-brand">{t("Merchant login")}</Link>
             <Link href="/join" className="transition hover:text-brand">{t("Join as rider")}</Link>
+            <Link href="/admin" className="transition hover:text-brand">{t("Admin portal")}</Link>
             <span>
               {t("Hotline")}: {CONTACT.phone}, {CONTACT.phone2}
             </span>
@@ -846,12 +848,18 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
   const login = useMutation(api.auth.login);
   const riderLogin = useMutation(api.auth.riderLogin);
   const adminLogin = useMutation(api.auth.adminLogin);
+  const setupInitialAdmin = useMutation(api.auth.setupInitialAdmin);
+  const isSetupNeeded = useQuery(api.auth.isInitialSetupNeeded);
   const { signIn } = useSession();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [error, setError] = useState("");
   const [wrongDoor, setWrongDoor] = useState<"rider" | "merchant" | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const showSetup = door === "admin" && (isSetupNeeded === true || needsSetup);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -859,6 +867,23 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
     setError("");
     setWrongDoor(null);
     try {
+      if (showSetup) {
+        if (password.length < 6) {
+          setError(t("Passcode must be at least 6 characters."));
+          setBusy(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError(t("Passcodes do not match."));
+          setBusy(false);
+          return;
+        }
+        const r = await setupInitialAdmin({ passcode: password });
+        signIn(r.token, r.expiresAt);
+        navigate(safeNext(nextParam()), { replace: true });
+        return;
+      }
+
       const r =
         door === "admin"
           ? await adminLogin({ passcode: password })
@@ -870,6 +895,9 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
         navigate(safeNext(nextParam()), { replace: true });
       } else {
         setError(translateServer(r.error));
+        if ("needsSetup" in r && r.needsSetup) {
+          setNeedsSetup(true);
+        }
         if ("wrongDoor" in r && r.wrongDoor) setWrongDoor(r.wrongDoor);
       }
     } catch (err) {
@@ -882,16 +910,65 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
   const copy = {
     merchant: { title: t("Merchant login"), subtitle: t("Sign in to send and track your parcels.") },
     rider: { title: t("Rider login"), subtitle: t("For Morning Rider delivery staff only.") },
-    admin: { title: t("Admin panel"), subtitle: t("Restricted area. Authorized Morning Rider staff only.") },
+    admin: showSetup
+      ? { title: t("Initial Admin Setup"), subtitle: t("Set up your master admin passcode to initialize the panel.") }
+      : { title: t("Admin panel"), subtitle: t("Restricted area. Authorized Morning Rider staff only.") },
   }[door];
 
   return (
     <AuthLayout title={copy.title} subtitle={copy.subtitle}>
+      {/* Portal door switcher */}
+      <div className="-mt-2 mb-6 grid grid-cols-3 rounded-2xl bg-surface-2 p-1 text-xs sm:text-sm font-bold">
+        <button
+          type="button"
+          onClick={() => navigate(withNext("/login"))}
+          className={cx(
+            "flex items-center justify-center gap-1.5 rounded-xl py-2 transition cursor-pointer",
+            door === "merchant" ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+          )}
+        >
+          <Store className="size-4" /> <span>{t("Merchant")}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate(withNext("/rider"))}
+          className={cx(
+            "flex items-center justify-center gap-1.5 rounded-xl py-2 transition cursor-pointer",
+            door === "rider" ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+          )}
+        >
+          <Bike className="size-4" /> <span>{t("Rider")}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate(withNext("/admin"))}
+          className={cx(
+            "flex items-center justify-center gap-1.5 rounded-xl py-2 transition cursor-pointer",
+            door === "admin" ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+          )}
+        >
+          <ShieldCheck className="size-4" /> <span>{t("Admin")}</span>
+        </button>
+      </div>
+
       {door === "rider" && (
-        <div className="-mt-4 mb-6 flex items-center gap-3 rounded-2xl bg-brand-50 p-3.5 text-sm font-semibold text-brand-700">
+        <div className="-mt-2 mb-6 flex items-center gap-3 rounded-2xl bg-brand-50 p-3.5 text-sm font-semibold text-brand-700">
           <Bike className="size-5 shrink-0" /> {t("Riders get their account from the Morning Rider office.")}
         </div>
       )}
+
+      {showSetup && (
+        <div className="-mt-2 mb-6 flex items-start gap-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-sm text-amber-800 dark:text-amber-200">
+          <ShieldCheck className="size-5 shrink-0 text-amber-600 mt-0.5" />
+          <div>
+            <p className="font-bold">{t("Database initialization")}</p>
+            <p className="mt-0.5 text-xs opacity-90">
+              {t("No admin account was found in the database. Choose a secure master passcode (minimum 6 digits or characters) to set up your admin access.")}
+            </p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={submit} className="space-y-4">
         {door !== "admin" && (
           <Field label={t("Phone number")}>
@@ -900,19 +977,35 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
             )}
           </Field>
         )}
-        <Field label={door === "admin" ? t("Admin passcode") : t("Password")}>
+        <Field label={door === "admin" ? (showSetup ? t("Set Admin Passcode") : t("Admin passcode")) : t("Password")}>
           {(id) => (
             <PasswordInput
               id={id}
               inputMode={door === "admin" ? "numeric" : undefined}
-              autoComplete="current-password"
+              autoComplete={showSetup ? "new-password" : "current-password"}
               autoFocus={door === "admin"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder={showSetup ? t("Master passcode (min 6 characters)") : undefined}
               required
             />
           )}
         </Field>
+        {showSetup && (
+          <Field label={t("Confirm passcode")}>
+            {(id) => (
+              <PasswordInput
+                id={id}
+                inputMode="numeric"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder={t("Confirm master passcode")}
+                required
+              />
+            )}
+          </Field>
+        )}
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">{error}</p>}
         {wrongDoor && (
           <Link
@@ -922,10 +1015,17 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
             {wrongDoor === "rider" ? t("Go to Rider login →") : t("Go to Merchant login →")}
           </Link>
         )}
-        <Button type="submit" size="lg" loading={busy} variant={door === "rider" ? "dark" : "primary"} className="w-full">
-          {t("Sign in")}
+        <Button
+          type="submit"
+          size="lg"
+          loading={busy}
+          variant={door === "rider" ? "dark" : "primary"}
+          className="w-full"
+        >
+          {showSetup ? t("Set Admin Passcode & Sign In") : t("Sign in")}
         </Button>
       </form>
+
       {door === "merchant" && (
         <>
           <p className="mt-6 text-center text-sm text-ink-2">
@@ -938,6 +1038,12 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
             {t("Are you a rider?")}{" "}
             <Link href={withNext("/rider")} className="font-semibold text-brand hover:underline">
               {t("Rider login")}
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-sm text-ink-2">
+            {t("Staff or Admin?")}{" "}
+            <Link href={withNext("/admin")} className="font-semibold text-brand hover:underline">
+              {t("Admin portal")}
             </Link>
           </p>
           <p className="mt-2 text-center text-sm">
@@ -961,6 +1067,28 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
               {t("Merchant login")}
             </Link>
           </p>
+          <p className="mt-2 text-center text-sm text-ink-2">
+            {t("Staff or Admin?")}{" "}
+            <Link href={withNext("/admin")} className="font-semibold text-brand hover:underline">
+              {t("Admin portal")}
+            </Link>
+          </p>
+        </>
+      )}
+      {door === "admin" && (
+        <>
+          <p className="mt-6 text-center text-sm text-ink-2">
+            {t("Are you a merchant?")}{" "}
+            <Link href={withNext("/login")} className="font-semibold text-brand hover:underline">
+              {t("Merchant login")}
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-sm text-ink-2">
+            {t("Are you a rider?")}{" "}
+            <Link href={withNext("/rider")} className="font-semibold text-brand hover:underline">
+              {t("Rider login")}
+            </Link>
+          </p>
         </>
       )}
     </AuthLayout>
@@ -973,6 +1101,10 @@ export function Login() {
 
 export function RiderLogin() {
   return <SignIn door="rider" />;
+}
+
+export function AdminLogin() {
+  return <SignIn door="admin" />;
 }
 
 /**
