@@ -8,7 +8,10 @@ import { ToastProvider, errorText } from "./lib/toast";
 import "./index.css";
 import { t } from "./lib/prefs";
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl =
+  (import.meta.env.VITE_CONVEX_URL as string | undefined) ||
+  "https://tough-badger-435.convex.cloud";
+const convex = new ConvexReactClient(convexUrl);
 
 /** A failed query (e.g. a session revoked mid-page) shows a message instead of a blank screen. */
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: unknown }> {
