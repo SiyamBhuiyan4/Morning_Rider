@@ -181,8 +181,73 @@ export function usePending(key: string | undefined) {
   return key ? pending.has(key) : false;
 }
 
-export function errorText(e: unknown) {
-  if (typeof e === "string") return t(e);
-  if (e instanceof ConvexError) return translateServer(String(e.data));
+export function errorText(e: unknown): string {
+  if (!e) return t("Something went wrong. Please try again.");
+
+  if (typeof e === "string") {
+    const trimmed = e.trim();
+    if (!trimmed) return t("Something went wrong. Please try again.");
+    return translateServer(t(trimmed));
+  }
+
+  if (e instanceof ConvexError) {
+    if (typeof e.data === "string") {
+      return translateServer(e.data);
+    }
+    if (e.data && typeof e.data === "object") {
+      const dataObj = e.data as Record<string, unknown>;
+      if (typeof dataObj.message === "string" && dataObj.message.trim()) {
+        return translateServer(t(dataObj.message.trim()));
+      }
+      if (typeof dataObj.error === "string" && dataObj.error.trim()) {
+        return translateServer(t(dataObj.error.trim()));
+      }
+      try {
+        return JSON.stringify(e.data);
+      } catch {
+        // Fall through
+      }
+    }
+    return translateServer(String(e.data));
+  }
+
+  if (e instanceof Error || (typeof e === "object" && e !== null && "message" in e)) {
+    const raw = String((e as { message?: unknown }).message ?? "").trim();
+    if (raw) {
+      // Strip Convex function call wrappers like "[CONVEX Q(auth:me)] " or "[CONVEX M(...)] "
+      let clean = raw.replace(/^\[CONVEX\s+[^\]]+\]\s*/i, "");
+      // Strip common prefixes like "Server Error: " or "Uncaught Error: "
+      clean = clean.replace(/^(Uncaught\s+)?(Server\s+)?Error:\s*/i, "").trim();
+
+      if (/useAuthed\s+on\s+a\s+signed-out\s+page/i.test(clean) || /not\s+signed\s+in/i.test(clean)) {
+        return t("Your session has ended or is invalid. Please sign in again.");
+      }
+      if (/you\s+do\s+not\s+have\s+access/i.test(clean)) {
+        return translateServer("You do not have access to this.");
+      }
+      if (/failed\s+to\s+fetch|network\s?error|network request failed|load failed|could not reach/i.test(clean)) {
+        return t("Unable to connect to the server. Please check your internet connection.");
+      }
+      if (/schema\s+mismatch|deployment\s+mismatch|version\s+mismatch/i.test(clean)) {
+        return t("A system update occurred. Please refresh or reset your session.");
+      }
+
+      if (clean) {
+        return translateServer(t(clean));
+      }
+    }
+  }
+
+  if (typeof (e as any)?.toString === "function") {
+    try {
+      const str = String((e as any).toString()).trim();
+      if (str && str !== "[object Object]") {
+        return translateServer(t(str));
+      }
+    } catch {
+      // Fall through
+    }
+  }
+
   return t("Something went wrong. Please try again.");
 }

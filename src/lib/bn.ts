@@ -95,6 +95,11 @@ export const BN: Record<string, string> = {
   Collected: "আদায়",
   "Something went wrong": "কিছু একটা সমস্যা হয়েছে",
   "Something went wrong. Please try again.": "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+  "Your session has ended or is invalid. Please sign in again.": "আপনার সেশনের মেয়াদ শেষ হয়েছে বা ভুল হয়েছে। অনুগ্রহ করে আবার সাইন ইন করুন।",
+  "Unable to connect to the server. Please check your internet connection.": "সার্ভারে সংযোগ করা সম্ভব হচ্ছে না। অনুগ্রহ করে ইন্টারনেট সংযোগ পরীক্ষা করুন।",
+  "A system update occurred. Please refresh or reset your session.": "সিস্টেমে আপডেট হয়েছে। অনুগ্রহ করে রিফ্রেশ করুন বা সেশন রিসেট করুন।",
+  "Reset Session & Go to Login": "সেশন রিসেট করে লগইনে যান",
+  "Reset session & go to login": "সেশন রিসেট করে লগইনে যান",
 
   // ---- statuses & zones
   Pending: "পেন্ডিং",
