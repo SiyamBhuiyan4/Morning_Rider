@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { useMutation, useQueries, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
   ArrowRight,
   Bike,
@@ -468,11 +468,7 @@ const DEFAULT_PUBLIC_RATES = {
 };
 
 export function Home() {
-  const rateResults = useQueries({ rates: { query: api.settings.publicRates, args: {} } });
-  const rates =
-    rateResults.rates && !(rateResults.rates instanceof Error)
-      ? rateResults.rates
-      : DEFAULT_PUBLIC_RATES;
+  const rates = DEFAULT_PUBLIC_RATES;
 
   return (
     <div className="min-h-full bg-page">

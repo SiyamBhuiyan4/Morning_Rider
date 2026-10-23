@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { useMutation, useQueries } from "convex/react";
+import { Component, createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 const KEY = "mr.session";
@@ -27,20 +27,38 @@ function readStored(): string {
   }
 }
 
-export function SessionProvider({ children }: { children: ReactNode }) {
+class SessionErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    try {
+      localStorage.removeItem(KEY);
+    } catch {}
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Ctx.Provider value={{ token: "", me: null, signIn: () => {}, signOut: async () => {} }}>
+          {this.props.children}
+        </Ctx.Provider>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function InnerSessionProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(readStored);
-  const results = useQueries(token ? { me: { query: api.auth.me, args: { token } } } : {});
-  const meResult = token ? results.me : null;
-  const me = meResult instanceof Error ? null : meResult;
+  const me = useQuery(api.auth.me, token ? { token } : "skip");
   const logout = useMutation(api.auth.logout);
 
-  // The server says the session is gone (expired, revoked, suspended, or backend error) — drop it.
+  // The server says the session is gone (expired, revoked, suspended) — drop it.
   useEffect(() => {
-    if (token && (me === null || meResult instanceof Error)) {
+    if (token && me === null) {
       localStorage.removeItem(KEY);
       setToken("");
     }
-  }, [token, me, meResult]);
+  }, [token, me]);
 
   const signIn = useCallback((t: string, expiresAt: number) => {
     localStorage.setItem(KEY, JSON.stringify({ token: t, expiresAt }));
@@ -56,6 +74,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{ token, me: token ? me : null, signIn, signOut }}>{children}</Ctx.Provider>
+  );
+}
+
+export function SessionProvider({ children }: { children: ReactNode }) {
+  return (
+    <SessionErrorBoundary>
+      <InnerSessionProvider>{children}</InnerSessionProvider>
+    </SessionErrorBoundary>
   );
 }
 
