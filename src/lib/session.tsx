@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQueries } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 const KEY = "mr.session";
@@ -29,16 +29,18 @@ function readStored(): string {
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(readStored);
-  const me = useQuery(api.auth.me, token ? { token } : "skip");
+  const results = useQueries(token ? { me: { query: api.auth.me, args: { token } } } : {});
+  const meResult = token ? results.me : null;
+  const me = meResult instanceof Error ? null : meResult;
   const logout = useMutation(api.auth.logout);
 
-  // The server says the session is gone (expired, revoked, suspended) — drop it.
+  // The server says the session is gone (expired, revoked, suspended, or backend error) — drop it.
   useEffect(() => {
-    if (token && me === null) {
+    if (token && (me === null || meResult instanceof Error)) {
       localStorage.removeItem(KEY);
       setToken("");
     }
-  }, [token, me]);
+  }, [token, me, meResult]);
 
   const signIn = useCallback((t: string, expiresAt: number) => {
     localStorage.setItem(KEY, JSON.stringify({ token: t, expiresAt }));

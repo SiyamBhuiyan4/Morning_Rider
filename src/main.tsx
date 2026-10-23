@@ -25,7 +25,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: unknown 
           <p className="mt-2 text-sm text-ink-2">{errorText(this.state.error)}</p>
           <button
             className="mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white"
-            onClick={() => location.assign("/app")}
+            onClick={() => {
+              try {
+                localStorage.removeItem("mr.session");
+              } catch {}
+              location.assign("/");
+            }}
           >
             {t("Reload")}
           </button>
