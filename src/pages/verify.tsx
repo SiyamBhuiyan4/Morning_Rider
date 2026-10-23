@@ -12,11 +12,13 @@ import { t } from "../lib/prefs";
 
 /* Same limits the server checks; checking here too saves a wasted upload. */
 const MAX_BYTES = 5 * 1024 * 1024;
+import { uploadToTelegramCdn } from "../lib/telegramCdn";
+
 const TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const ACCEPT = TYPES.join(",");
 const MAX_OTHER = 5;
 
-type Uploaded = { storageId: Id<"_storage">; name: string; type: string; preview?: string };
+type Uploaded = { storageId: Id<"_storage"> | string; name: string; type: string; preview?: string };
 
 export function VerifyBusiness() {
   const { token } = useAuthed();
@@ -223,11 +225,9 @@ function FileSlot({ label, value, onChange }: { label: string; value: Uploaded |
   );
 }
 
-/** Checks the file, uploads it to Convex storage and hands back the storage id. */
+/** Checks the file, uploads it to Telegram CDN and hands back the storage id. */
 function Picker({ onUploaded, compact }: { onUploaded: (f: Uploaded) => void; compact?: boolean }) {
-  const { token } = useAuthed();
   const toast = useToast();
-  const generateUploadUrl = useMutation(api.verification.generateUploadUrl);
   const [busy, setBusy] = useState(false);
 
   async function upload(file: File) {
@@ -235,18 +235,15 @@ function Picker({ onUploaded, compact }: { onUploaded: (f: Uploaded) => void; co
     if (file.size > MAX_BYTES) return toast.error(t("File is too large (max 5 MB)."));
     setBusy(true);
     try {
-      const url = await generateUploadUrl({ token });
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
-      if (!res.ok) throw new Error("upload failed");
-      const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
+      const { url } = await uploadToTelegramCdn(file);
       onUploaded({
-        storageId,
+        storageId: url,
         name: file.name,
         type: file.type,
-        preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+        preview: file.type.startsWith("image/") ? url : undefined,
       });
     } catch (e) {
-      toast.error(e instanceof Error && e.message === "upload failed" ? "Upload failed. Please try again." : e);
+      toast.error(e instanceof Error ? e.message : "Upload failed. Please try again.");
     } finally {
       setBusy(false);
     }

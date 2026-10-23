@@ -287,13 +287,13 @@ export default defineSchema({
   merchantVerifications: defineTable({
     merchantId: v.id("users"),
     nidNumber: v.string(),
-    nidFront: v.id("_storage"),
-    nidBack: v.id("_storage"),
+    nidFront: v.union(v.id("_storage"), v.string()),
+    nidBack: v.union(v.id("_storage"), v.string()),
     tinNumber: v.optional(v.string()),
-    tinFile: v.optional(v.id("_storage")),
+    tinFile: v.optional(v.union(v.id("_storage"), v.string())),
     tradeLicenseNumber: v.optional(v.string()),
-    tradeLicenseFile: v.optional(v.id("_storage")),
-    otherFiles: v.array(v.id("_storage")), // max 5
+    tradeLicenseFile: v.optional(v.union(v.id("_storage"), v.string())),
+    otherFiles: v.array(v.union(v.id("_storage"), v.string())), // max 5
     status: verificationStatus,
     reason: v.optional(v.string()), // why it was rejected, shown to the merchant
     submittedAt: v.number(),
@@ -304,7 +304,7 @@ export default defineSchema({
 
   /* Every file ever put in a verification, so one upload can't be claimed twice. */
   verificationFiles: defineTable({
-    storageId: v.id("_storage"),
+    storageId: v.union(v.id("_storage"), v.string()),
     merchantId: v.id("users"),
   })
     .index("by_storageId", ["storageId"])

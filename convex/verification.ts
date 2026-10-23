@@ -46,20 +46,21 @@ async function latestRow(ctx: QueryCtx | MutationCtx, merchantId: Id<"users">) {
 }
 
 function filesOf(row: Doc<"merchantVerifications">) {
-  const out: Id<"_storage">[] = [row.nidFront, row.nidBack];
+  const out: (Id<"_storage"> | string)[] = [row.nidFront, row.nidBack];
   if (row.tinFile) out.push(row.tinFile);
   if (row.tradeLicenseFile) out.push(row.tradeLicenseFile);
   return [...out, ...row.otherFiles];
 }
 
 /** Deletes a stored file and its claim. Safe if either is already gone. */
-async function deleteFile(ctx: MutationCtx, storageId: Id<"_storage">) {
+async function deleteFile(ctx: MutationCtx, storageId: Id<"_storage"> | string) {
   const claims = await ctx.db
     .query("verificationFiles")
     .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
     .take(10);
   for (const c of claims) await ctx.db.delete("verificationFiles", c._id);
-  if (await ctx.db.system.get("_storage", storageId)) await ctx.storage.delete(storageId);
+  if (typeof storageId === "string" && (storageId.startsWith("http") || storageId.startsWith("BQAC"))) return;
+  if (await ctx.db.system.get("_storage", storageId as Id<"_storage">)) await ctx.storage.delete(storageId as Id<"_storage">);
 }
 
 /** Removes every verification row and file of a merchant (demo clear, support reset). */
@@ -99,13 +100,13 @@ export const submit = mutation({
   args: {
     token: v.string(),
     nidNumber: v.string(),
-    nidFront: v.id("_storage"),
-    nidBack: v.id("_storage"),
+    nidFront: v.union(v.id("_storage"), v.string()),
+    nidBack: v.union(v.id("_storage"), v.string()),
     tinNumber: v.optional(v.string()),
-    tinFile: v.optional(v.id("_storage")),
+    tinFile: v.optional(v.union(v.id("_storage"), v.string())),
     tradeLicenseNumber: v.optional(v.string()),
-    tradeLicenseFile: v.optional(v.id("_storage")),
-    otherFiles: v.optional(v.array(v.id("_storage"))),
+    tradeLicenseFile: v.optional(v.union(v.id("_storage"), v.string())),
+    otherFiles: v.optional(v.array(v.union(v.id("_storage"), v.string()))),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.token, ["merchant"]);
@@ -126,11 +127,15 @@ export const submit = mutation({
     if (new Set(files).size !== files.length) throw new ConvexError("The same file was added twice.");
 
     for (const id of files) {
-      const meta = await ctx.db.system.get("_storage", id);
-      if (!meta) throw new ConvexError("A file was not uploaded. Please add it again.");
-      if (meta.size > MAX_FILE_BYTES) throw new ConvexError("Each file must be 5 MB or smaller.");
-      if (!meta.contentType || !FILE_TYPES.includes(meta.contentType)) {
-        throw new ConvexError("Files must be JPG, PNG, WebP or PDF.");
+      if (typeof id === "string" && (id.startsWith("http") || id.startsWith("BQAC"))) {
+        // External Telegram CDN file
+      } else {
+        const meta = await ctx.db.system.get("_storage", id as Id<"_storage">);
+        if (!meta) throw new ConvexError("A file was not uploaded. Please add it again.");
+        if (meta.size > MAX_FILE_BYTES) throw new ConvexError("Each file must be 5 MB or smaller.");
+        if (!meta.contentType || !FILE_TYPES.includes(meta.contentType)) {
+          throw new ConvexError("Files must be JPG, PNG, WebP or PDF.");
+        }
       }
       // A file already in a verification may only be carried over from this
       // merchant's own rejected submission.
@@ -228,7 +233,7 @@ export const details = query({
     const row = await latestRow(ctx, m._id);
     if (!row) return null;
 
-    const labelled: { label: "NID front" | "NID back" | "TIN" | "Trade licence" | "Other document"; id: Id<"_storage"> }[] = [
+    const labelled: { label: "NID front" | "NID back" | "TIN" | "Trade licence" | "Other document"; id: Id<"_storage"> | string }[] = [
       { label: "NID front", id: row.nidFront },
       { label: "NID back", id: row.nidBack },
     ];
@@ -238,11 +243,20 @@ export const details = query({
 
     const files = [];
     for (const f of labelled) {
-      const meta = await ctx.db.system.get("_storage", f.id);
+      let url: string | null = null;
+      let contentType: string | null = null;
+      if (typeof f.id === "string" && (f.id.startsWith("http") || f.id.startsWith("https"))) {
+        url = f.id;
+        contentType = f.id.toLowerCase().includes(".pdf") ? "application/pdf" : "image/jpeg";
+      } else {
+        const meta = await ctx.db.system.get("_storage", f.id as Id<"_storage">);
+        url = meta ? await ctx.storage.getUrl(f.id as Id<"_storage">) : null;
+        contentType = meta?.contentType ?? null;
+      }
       files.push({
         label: f.label,
-        url: meta ? await ctx.storage.getUrl(f.id) : null,
-        contentType: meta?.contentType ?? null,
+        url,
+        contentType,
       });
     }
     return {
