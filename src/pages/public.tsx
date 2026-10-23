@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQueries, useQuery } from "convex/react";
 import {
   ArrowRight,
   Bike,
@@ -455,8 +455,24 @@ function FaqSection() {
   );
 }
 
+const DEFAULT_PUBLIC_RATES = {
+  uttara: 60,
+  dhakaCity: 70,
+  gazipurCity: 90,
+  narayanganjCity: 110,
+  extraPerKg: 15,
+  extraPerKgOutside: 20,
+  codPercent: 0,
+  codPercentOutside: 1,
+  returnPercent: 50,
+};
+
 export function Home() {
-  const rates = useQuery(api.settings.publicRates);
+  const rateResults = useQueries({ rates: { query: api.settings.publicRates, args: {} } });
+  const rates =
+    rateResults.rates && !(rateResults.rates instanceof Error)
+      ? rateResults.rates
+      : DEFAULT_PUBLIC_RATES;
 
   return (
     <div className="min-h-full bg-page">
