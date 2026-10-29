@@ -576,7 +576,7 @@ export function Home() {
             <span>{t("Live Delivery Flow")}</span>
           </div>
           <p className="text-xs text-white/50 hidden sm:block">
-            {t("Merchant pickup • Fast sorting hub • Express doorstep delivery")}
+            {t("Day & Night Non-Stop Express Dispatch • Dhaka, Gazipur & Narayanganj")}
           </p>
         </div>
         <RoadBandAnimation />
