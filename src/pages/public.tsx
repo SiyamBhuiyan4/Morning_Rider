@@ -1,44 +1,44 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import {
-  ArrowRight,
   Bike,
-  Calculator,
-  CalendarDays,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Circle,
-  Clock,
   Copy,
   Lock,
-  MapPin,
   Menu,
-  MessageCircle,
-  PackageCheck,
   PackageSearch,
   Phone,
   Search,
   ShieldCheck,
-  Snowflake,
   Store,
-  Sunrise,
-  ThumbsUp,
-  Truck,
-  Wallet,
   X,
-  Zap,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Link, navigate } from "../lib/router";
 import { useSession } from "../lib/session";
 import { errorText, useToast } from "../lib/toast";
-import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, dateTime, num, tk, type Category } from "../lib/format";
+import { CATEGORY, PAYOUT_METHOD, STATUS, ZONE, dateTime, num, tk } from "../lib/format";
 import { CONTACT } from "../lib/contact";
 import { Button, Card, Field, Input, Logo, PasswordInput, Select, StatusBadge, Textarea, Wordmark, cx } from "../components/ui";
 import { IS_ADMIN_PORTAL } from "../lib/portal";
 import { Prefs } from "../components/Prefs";
 import { t, translateServer } from "../lib/prefs";
+import { PublicNav as LandingNav } from "../components/landing/PublicNav";
+import { HeroSection } from "../components/landing/HeroSection";
+import { ThreeJobsSection } from "../components/landing/ThreeJobsSection";
+import { ParcelJourneySection } from "../components/landing/ParcelJourneySection";
+import { RateCalculatorSection } from "../components/landing/RateCalculatorSection";
+import { ServicesSection } from "../components/landing/ServicesSection";
+import { RiskCheckDemoSection } from "../components/landing/RiskCheckDemoSection";
+import { CoverageDirectorySection } from "../components/landing/CoverageDirectorySection";
+import { BookingShowcaseSection } from "../components/landing/BookingShowcaseSection";
+import { BusinessPerksSection } from "../components/landing/BusinessPerksSection";
+import { RiderRecruitmentSection } from "../components/landing/RiderRecruitmentSection";
+import { TestimonialsSection } from "../components/landing/TestimonialsSection";
+import { FaqSection as LandingFaqSection } from "../components/landing/FaqSection";
+import { CtaBanner } from "../components/landing/CtaBanner";
+import { PublicFooter } from "../components/landing/PublicFooter";
 
 /** Only same-site paths may be used as a post-login destination. */
 export function safeNext(raw: string | null) {
@@ -163,299 +163,6 @@ function TrackBox({ big }: { big?: boolean }) {
 
 /* ----------------------------------------------------------------- home */
 
-const SERVICES: Category[] = [
-  "parcel",
-  "document",
-  "food",
-  "medicine",
-  "shopping",
-  "electronics",
-  "cosmetics",
-  "gift",
-  "frozen",
-  "bakery",
-  "home",
-  "business",
-];
-
-const COVERAGE = [
-  "Uttara",
-  "Gulshan",
-  "Banani",
-  "Dhanmondi",
-  "Mirpur",
-  "Mohammadpur",
-  "Bashundhara",
-  "Badda",
-  "Tejgaon",
-  "Motijheel",
-  "Jatrabari",
-  "Khilgaon",
-];
-
-function SectionTitle({ kicker, title, text }: { kicker: string; title: string; text?: string }) {
-  return (
-    <div className="mx-auto max-w-2xl text-center">
-      <p className="text-xs font-bold tracking-[0.18em] text-brand uppercase">{kicker}</p>
-      <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">{title}</h2>
-      {text && <p className="mt-3 text-ink-2">{text}</p>}
-    </div>
-  );
-}
-
-function RateCalculator({ rates }: { rates?: { uttara: number; dhakaCity: number; gazipurCity: number; narayanganjCity: number; extraPerKg: number; extraPerKgOutside: number; codPercent: number; codPercentOutside: number } | null }) {
-  const [zone, setZone] = useState<"uttara" | "dhaka_city" | "gazipur_city" | "narayanganj_city">("dhaka_city");
-  const [weight, setWeight] = useState(1);
-  const [cod, setCod] = useState(1000);
-
-  const baseRate = rates
-    ? zone === "uttara"
-      ? rates.uttara
-      : zone === "dhaka_city"
-        ? rates.dhakaCity
-        : zone === "gazipur_city"
-          ? rates.gazipurCity
-          : rates.narayanganjCity
-    : zone === "uttara"
-      ? 60
-      : zone === "dhaka_city"
-        ? 70
-        : 100;
-
-  const isOutside = zone === "gazipur_city" || zone === "narayanganj_city";
-  const extraKg = Math.max(0, Math.ceil(weight - 1));
-  const extraRate = rates ? (isOutside ? rates.extraPerKgOutside : rates.extraPerKg) : (isOutside ? 25 : 20);
-  const weightCharge = extraKg * extraRate;
-
-  const codPct = rates ? (isOutside ? rates.codPercentOutside : rates.codPercent) : (isOutside ? 1 : 0);
-  const codCharge = Math.round((cod * codPct) / 100);
-  const totalCost = baseRate + weightCharge + codCharge;
-  const merchantReceives = Math.max(0, cod - totalCost);
-
-  return (
-    <Card className="mx-auto mt-12 max-w-4xl overflow-hidden border-brand/20 shadow-xl">
-      <div className="sunrise flex items-center justify-between px-6 py-4 text-white">
-        <div className="flex items-center gap-2.5">
-          <Calculator className="size-5 text-sun" />
-          <h3 className="font-extrabold tracking-tight sm:text-lg">{t("Delivery Rate Calculator")}</h3>
-        </div>
-        <span className="hidden rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-sun sm:block">
-          {t("Current rates")}
-        </span>
-      </div>
-      <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.15fr_1fr]">
-        <div className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink-3">
-              {t("Delivery Area / Zone")}
-            </label>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {[
-                { id: "uttara" as const, name: "Uttara", time: t("Within 3 hours") },
-                { id: "dhaka_city" as const, name: "Dhaka City", time: t("Same day") },
-                { id: "gazipur_city" as const, name: "Gazipur City", time: t("Same day") },
-                { id: "narayanganj_city" as const, name: "Narayanganj", time: t("Same day") },
-              ].map((z) => (
-                <button
-                  key={z.id}
-                  type="button"
-                  onClick={() => setZone(z.id)}
-                  className={cx(
-                    "flex flex-col items-start rounded-xl p-3 text-left transition-all duration-150",
-                    zone === z.id
-                      ? "border-2 border-brand bg-brand-50/70 text-ink shadow-sm"
-                      : "border border-line bg-surface text-ink-2 hover:border-navy-100 hover:bg-page",
-                  )}
-                >
-                  <span className="text-sm font-bold text-ink">{z.name}</span>
-                  <span className="text-[11px] text-ink-3">{z.time}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-3">
-                {t("Parcel Weight (kg)")}
-              </label>
-              <span className="text-xs font-bold text-brand">{weight} {t("kg")}</span>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              {[1, 2, 3, 5].map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => setWeight(w)}
-                  className={cx(
-                    "flex-1 rounded-xl py-2 text-xs font-bold transition",
-                    weight === w ? "bg-navy-900 text-white shadow-sm" : "border border-line bg-surface text-ink-2 hover:bg-page",
-                  )}
-                >
-                  {w} {t("kg")}
-                </button>
-              ))}
-              <div className="w-24">
-                <Input
-                  type="number"
-                  min={0.5}
-                  max={50}
-                  step={0.5}
-                  value={weight}
-                  onChange={(e) => setWeight(Math.max(0.5, Number(e.target.value) || 1))}
-                  className="h-9 px-2 text-center text-xs font-bold"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-3">
-                {t("Cash on Delivery (COD) Amount")}
-              </label>
-              <span className="text-xs font-bold text-brand">{tk(cod)}</span>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              {[0, 500, 1500, 3000].map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCod(c)}
-                  className={cx(
-                    "flex-1 rounded-xl py-2 text-xs font-bold transition",
-                    cod === c ? "bg-navy-900 text-white shadow-sm" : "border border-line bg-surface text-ink-2 hover:bg-page",
-                  )}
-                >
-                  {tk(c)}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2">
-              <Input
-                type="number"
-                min={0}
-                step={50}
-                value={cod || ""}
-                onChange={(e) => setCod(Math.max(0, Number(e.target.value) || 0))}
-                placeholder={t("Custom COD amount (৳)")}
-                className="h-10 text-sm font-semibold"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Calculation Summary Card */}
-        <div className="flex flex-col justify-between rounded-2xl border border-line bg-page/70 p-5">
-          <div>
-            <p className="text-xs font-bold tracking-wider uppercase text-ink-3">{t("Cost Breakdown")}</p>
-            <div className="mt-4 space-y-2.5 text-sm">
-              <div className="flex justify-between text-ink-2">
-                <span>{t("Base delivery charge")} (1 kg)</span>
-                <span className="font-semibold text-ink">{tk(baseRate)}</span>
-              </div>
-              <div className="flex justify-between text-ink-2">
-                <span>{t("Extra weight charge")} ({extraKg} kg)</span>
-                <span className="font-semibold text-ink">{extraKg > 0 ? `+ ${tk(weightCharge)}` : "—"}</span>
-              </div>
-              <div className="flex justify-between text-ink-2">
-                <span>{t("COD fee")} ({codPct}%)</span>
-                <span className="font-semibold text-ink">{codCharge > 0 ? `+ ${tk(codCharge)}` : t("Free")}</span>
-              </div>
-              <div className="border-t border-line pt-2.5">
-                <div className="flex justify-between font-bold text-ink">
-                  <span>{t("Total delivery charge")}</span>
-                  <span className="text-base font-extrabold text-brand">{tk(totalCost)}</span>
-                </div>
-              </div>
-            </div>
-
-            {cod > 0 && (
-              <div className="mt-5 rounded-xl bg-emerald-50 p-4 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-                <p className="text-xs font-bold tracking-wider uppercase text-emerald-700 dark:text-emerald-400">{t("Merchant will receive")}</p>
-                <p className="mt-1 text-2xl font-black">{tk(merchantReceives)}</p>
-                <p className="mt-0.5 text-xs opacity-80">{t("Paid to your bKash, Nagad or Bank")}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <Button size="lg" className="w-full" onClick={() => navigate("/register")}>
-              {t("Start shipping")} <ArrowRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function FaqSection() {
-  const [open, setOpen] = useState<number | null>(0);
-  const faqs = [
-    {
-      q: t("How fast does Morning Rider deliver?"),
-      a: t("Within Uttara, we deliver within 3 hours for orders booked between 6 AM and 12 noon. Across Dhaka City, Gazipur City and Narayanganj City, same-day delivery is available 7 days a week, starting at 6 AM."),
-    },
-    {
-      q: t("When and how do merchants receive COD payouts?"),
-      a: t("Collected cash is settled directly to your bKash, Nagad, Rocket or Bank account. You receive itemized payment statements with downloadable and printable invoices."),
-    },
-    {
-      q: t("Can I send frozen meat, fish, cakes or perishable food?"),
-      a: t("Yes! Morning Rider offers specialized cold-chain delivery within 6 hours across Dhaka and Gazipur. We keep frozen items and delicate bakery products safe, flat, and at the right temperature."),
-    },
-    {
-      q: t("Is there any upfront fee or registration charge?"),
-      a: t("No. Merchant registration is 100% free with no hidden charges. You only pay standard delivery charges when you ship parcels."),
-    },
-    {
-      q: t("What happens if a customer refuses or returns a parcel?"),
-      a: t("If a delivery cannot be completed, our rider contacts you first. For returned parcels, only a fair return charge applies, as shown in the pricing section, with 0% COD fee."),
-    },
-    {
-      q: t("How do I book parcels?"),
-      a: t("You can create parcels one-by-one in your merchant panel, upload up to 200 parcels in bulk via Excel/CSV, or message our office on WhatsApp."),
-    },
-  ];
-
-  return (
-    <section className="border-t border-line bg-surface py-20">
-      <div className="mx-auto max-w-4xl px-5">
-        <SectionTitle
-          kicker={t("Got questions?")}
-          title={t("Frequently Asked Questions")}
-          text={t("Everything you need to know about shipping with Morning Rider.")}
-        />
-        <div className="mt-10 space-y-3">
-          {faqs.map((f, i) => (
-            <div
-              key={f.q}
-              className="overflow-hidden rounded-2xl border border-line bg-page/50 transition-colors duration-150 hover:border-brand/30"
-            >
-              <button
-                type="button"
-                onClick={() => setOpen(open === i ? null : i)}
-                className="flex w-full items-center justify-between gap-4 p-5 text-left font-bold text-ink"
-              >
-                <span className="text-base sm:text-lg">{f.q}</span>
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface text-ink-3">
-                  {open === i ? <ChevronUp className="size-4 text-brand" /> : <ChevronDown className="size-4" />}
-                </span>
-              </button>
-              {open === i && (
-                <div className="px-5 pb-5 text-sm leading-relaxed text-ink-2">
-                  <p className="border-t border-line/60 pt-3">{f.a}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 const DEFAULT_PUBLIC_RATES = {
   uttara: 60,
   dhakaCity: 70,
@@ -472,336 +179,51 @@ export function Home() {
   const rates = DEFAULT_PUBLIC_RATES;
 
   return (
-    <div className="min-h-full bg-page">
-      {/* ---------------- hero */}
-      <section className="sunrise relative overflow-hidden pb-28">
-        <PublicNav />
-        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-5 pt-8 lg:grid-cols-[1.15fr_1fr] lg:pt-14">
-          <div className="animate-rise">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-sun ring-1 ring-white/15">
-              <Zap className="size-3.5" /> {t("FAST • SAFE • ON TIME")}
-            </span>
-            {/* The brand is the headline, the same in both languages. */}
-            <h1 className="keep-tracking mt-5 text-5xl font-extrabold italic leading-[1.02] tracking-tight text-white sm:text-7xl">
-              MORNING <span className="text-brand">RIDER</span>
-            </h1>
-            <p className="mt-3 text-2xl font-bold tracking-tight text-sun sm:text-3xl">{t("No more delivery worries!")}</p>
-            <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-white/70">
-              {t(
-                "Morning Rider delivers parcels, food, medicine, frozen items and more across Dhaka, Gazipur and Narayanganj — 7 days a week, 6 AM to 12 AM.",
-              )}
-            </p>
-            <div className="mt-7 max-w-xl">
-              <TrackBox big />
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => navigate("/register")}>
-                {t("Become a merchant")} <ArrowRight className="size-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="relative mx-auto hidden w-full max-w-md lg:block">
-            <div className="absolute -inset-10 rounded-full bg-sun/25 blur-3xl" />
-            <img src="/brand/logo.png" alt="" className="relative w-full rounded-full shadow-2xl ring-8 ring-white/10" />
-          </div>
-        </div>
+    <div className="min-h-full bg-page text-ink selection:bg-brand/20">
+      {/* Top Header & Hero */}
+      <div className="sunrise">
+        <LandingNav />
+        <HeroSection />
+      </div>
 
-        {/* quick facts */}
-        <div className="relative z-10 mx-auto mt-12 grid max-w-6xl grid-cols-2 gap-3 px-5 lg:grid-cols-4">
-          {[
-            { icon: CalendarDays, title: t("7 days a week"), text: t("Delivery every day") },
-            { icon: Sunrise, title: t("From 6 AM"), text: t("Morning delivery") },
-            { icon: Zap, title: t("3-hour delivery"), text: t("Inside Uttara") },
-            { icon: MapPin, title: t("3 cities"), text: t("Dhaka • Gazipur • Narayanganj") },
-          ].map((f) => (
-            <div key={f.title} className="glass flex items-center gap-3 rounded-2xl p-4 transition-all duration-200 hover:bg-white/[0.1]">
-              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-white shadow-sm shadow-brand/30">
-                <f.icon className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-bold text-white">{f.title}</p>
-                <p className="text-xs leading-snug text-white/60">{f.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="speed-lines absolute bottom-10 left-0 w-1/2 opacity-60" />
-      </section>
+      {/* Steadfast-Grade Three Jobs, One Network */}
+      <ThreeJobsSection />
 
-      {/* ---------------- delivery speeds */}
-      <section className="mx-auto -mt-14 grid max-w-6xl gap-4 px-5 md:grid-cols-3">
-        {[
-          {
-            icon: Zap,
-            badge: t("Express"),
-            title: t("3-hour delivery in Uttara"),
-            text: t("Order between 6 AM and 12 noon and it reaches anywhere in Uttara within 3 hours."),
-            accent: "bg-brand text-white",
-          },
-          {
-            icon: Snowflake,
-            badge: t("Cold chain"),
-            title: t("Frozen items in 6 hours"),
-            text: t("Meat, fish, ice cream and ready food carried cold, across Dhaka, Gazipur and Narayanganj city corporations."),
-            accent: "bg-sky-500 text-white",
-          },
-          {
-            icon: Truck,
-            badge: t("Same day"),
-            title: t("Dhaka, Gazipur & Narayanganj"),
-            text: t("Regular parcels delivered the same day inside the city corporations."),
-            accent: "bg-navy-900 text-white",
-          },
-        ].map((c) => (
-          <Card key={c.title} className="relative z-10 p-6">
-            <div className="flex items-center justify-between">
-              <div className={cx("grid size-12 place-items-center rounded-2xl", c.accent)}>
-                <c.icon className="size-6" />
-              </div>
-              <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">{c.badge}</span>
-            </div>
-            <p className="mt-5 text-lg font-extrabold tracking-tight">{c.title}</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{c.text}</p>
-          </Card>
-        ))}
-      </section>
+      {/* The Road a Parcel Actually Takes */}
+      <ParcelJourneySection />
 
-      {/* ---------------- services */}
-      <section id="services" className="mx-auto max-w-6xl scroll-mt-6 px-5 py-20">
-        <SectionTitle
-          kicker={t("Our services")}
-          title={t("We deliver all kinds of products")}
-          text={t("Your product, our responsibility — from a single document to your whole shop's orders.")}
-        />
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {SERVICES.map((c) => (
-            <Card key={c} className="group cursor-pointer p-5 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md hover:ring-2 hover:ring-brand/40">
-              <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-50 text-3xl transition-transform duration-200 group-hover:scale-110">
-                {CATEGORY[c].emoji}
-              </div>
-              <p className="mt-3 text-sm font-bold leading-snug">{CATEGORY[c].label}</p>
-            </Card>
-          ))}
-        </div>
-      </section>
+      {/* Interactive Delivery Rate & Payout Calculator */}
+      <RateCalculatorSection rates={rates} />
 
-      {/* ---------------- frozen spotlight */}
-      <section className="mx-auto max-w-6xl px-5">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-600 to-[#0b1b38] p-8 text-white sm:p-10">
-          <Snowflake className="absolute -right-6 -top-6 size-48 text-white/10" />
-          <div className="relative grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-center">
-            <div>
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-                <Snowflake className="size-3.5" /> {t("Frozen & bakery delivery")}
-              </span>
-              <h3 className="mt-4 text-3xl font-extrabold tracking-tight">{t("Fresh, safe and on time")}</h3>
-              <p className="mt-3 max-w-lg text-white/80">
-                {t(
-                  "Frozen meat, chicken, fish, prawns, vegetables, snacks, ice cream, ready food, cakes and bakery items — kept at the right temperature until they reach your door.",
-                )}
-              </p>
-            </div>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {[
-                t("Carried at the right temperature"),
-                t("Cold chain kept unbroken"),
-                t("On-time delivery"),
-                t("Clean, secure packaging"),
-              ].map((x) => (
-                <li key={x} className="flex items-center gap-2.5 rounded-2xl bg-white/10 p-3.5 text-sm font-semibold ring-1 ring-white/15">
-                  <CheckCircle2 className="size-5 shrink-0 text-sun" /> {x}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
+      {/* AI Delivery Risk & Customer Fraud Check */}
+      <RiskCheckDemoSection />
 
-      {/* ---------------- pricing */}
-      <section id="pricing" className="mx-auto max-w-6xl scroll-mt-6 px-5 py-20">
-        <SectionTitle kicker={t("Pricing")} title={t("Simple, honest pricing")} text={t("Up to 1 kg. No hidden charges.")} />
-        <div className="mx-auto mt-10 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { zone: "uttara" as const, value: rates?.uttara, time: t("Within 3 hours"), hot: true },
-            { zone: "dhaka_city" as const, value: rates?.dhakaCity, time: t("Same day") },
-            { zone: "gazipur_city" as const, value: rates?.gazipurCity, time: t("Same day") },
-            { zone: "narayanganj_city" as const, value: rates?.narayanganjCity, time: t("Same day") },
-          ].map((r) => (
-            <Card key={r.zone} className={cx("relative p-6 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md", r.hot && "ring-2 ring-brand")}>
-              {r.hot && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-[11px] font-bold text-white shadow-sm shadow-brand/30">
-                  {t("Express")}
-                </span>
-              )}
-              <p className="text-sm font-semibold text-ink-2">{ZONE[r.zone]}</p>
-              <p className="mt-3 text-4xl font-extrabold tracking-tight text-navy-900 dark:text-white">
-                {r.value === undefined ? "—" : tk(r.value)}
-              </p>
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
-                <Clock className="size-3.5" /> {r.time}
-              </p>
-            </Card>
-          ))}
-        </div>
-        {rates && (
-          <div className="mx-auto mt-8 grid max-w-3xl gap-3 text-sm sm:grid-cols-3">
-            {[
-              {
-                title: t("Each extra kg"),
-                text: t("{inside} in Dhaka · {outside} in Gazipur & Narayanganj", { inside: tk(rates.extraPerKg), outside: tk(rates.extraPerKgOutside) }),
-              },
-              {
-                title: t("COD charge"),
-                text:
-                  rates.codPercent === 0
-                    ? t("Free inside Dhaka · {pct}% in Gazipur & Narayanganj", { pct: rates.codPercentOutside })
-                    : t("{inside}% in Dhaka · {outside}% in Gazipur & Narayanganj", { inside: rates.codPercent, outside: rates.codPercentOutside }),
-              },
-              { title: t("Return"), text: t("{pct}% of the delivery charge", { pct: rates.returnPercent }) },
-            ].map((x) => (
-              <div key={x.title} className="rounded-2xl bg-surface p-4 text-center ring-1 ring-line">
-                <p className="font-bold">{x.title}</p>
-                <p className="mt-1 text-ink-3">{x.text}</p>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="mx-auto mt-10 max-w-4xl">
-          <RateCalculator rates={rates} />
-        </div>
-      </section>
+      {/* Comprehensive 12-Service Grid + Cold-Chain & Bakery Spotlight */}
+      <ServicesSection />
 
-      {/* ---------------- how it works + coverage */}
-      <section className="bg-surface py-20">
-        <div className="mx-auto max-w-6xl px-5">
-          <SectionTitle kicker={t("How it works")} title={t("From your shop to your customer")} />
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: PackageCheck, title: t("Book the parcel"), text: t("Create it in your merchant panel or send it on WhatsApp.") },
-              { icon: Bike, title: t("We pick it up"), text: t("Our rider collects it from your shop.") },
-              { icon: Truck, title: t("We deliver"), text: t("Fast, safe delivery with live status at every step.") },
-              { icon: Wallet, title: t("You get paid"), text: t("Collected cash is paid to your bKash, Nagad or bank.") },
-            ].map((s, i) => (
-              <div key={s.title} className="relative rounded-2xl border border-line p-6">
-                <span className="absolute right-5 top-5 text-4xl font-extrabold text-navy-50 dark:text-white/5">{num(i + 1)}</span>
-                <div className="grid size-11 place-items-center rounded-xl bg-[#0b1b38] text-sun">
-                  <s.icon className="size-5" />
-                </div>
-                <p className="mt-4 font-bold">{s.title}</p>
-                <p className="mt-1 text-sm leading-relaxed text-ink-2">{s.text}</p>
-              </div>
-            ))}
-          </div>
+      {/* Complete City Corporation Coverage Directory with Live Search */}
+      <CoverageDirectorySection />
 
-          <div className="mt-16 rounded-3xl bg-page p-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold tracking-[0.18em] text-brand uppercase">{t("Delivery areas")}</p>
-                <h3 className="mt-1 text-2xl font-extrabold tracking-tight">{t("Dhaka, Gazipur and Narayanganj city corporations")}</h3>
-              </div>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {COVERAGE.map((a) => (
-                <span key={a} className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-sm font-semibold ring-1 ring-line">
-                  <MapPin className="size-3.5 text-brand" /> {t(a)}
-                </span>
-              ))}
-              <span className="rounded-full px-3.5 py-2 text-sm font-semibold text-ink-3">{t("and many more areas")}</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Simple 3-Step Booking to Doorstep Showcase */}
+      <BookingShowcaseSection />
 
-      {/* ---------------- join as rider */}
-      <section id="join" className="mx-auto max-w-6xl scroll-mt-6 px-5 py-20">
-        <div className="grid overflow-hidden rounded-3xl shadow-[var(--shadow-card)] lg:grid-cols-2">
-          <div className="sunrise p-8 text-white sm:p-10">
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-sun ring-1 ring-white/15">{t("Join our team")}</span>
-            <h3 className="mt-4 text-3xl font-extrabold italic tracking-tight">{t("Become a Morning Rider")}</h3>
-            <p className="mt-3 text-white/75">{t("Have your own motorcycle and a valid licence? Join our delivery team in Dhaka, Gazipur and Narayanganj.")}</p>
-            <p className="mt-6 text-sm font-bold text-sun">{t("Benefits")}</p>
-            <ul className="mt-2 space-y-2 text-sm">
-              {[t("Attractive pay"), t("Fuel allowance (by condition)"), t("Daily earning opportunity"), t("On-time payment"), t("Incentives for good performance"), t("Long-term career")].map((x) => (
-                <li key={x} className="flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-sun" /> {x}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="bg-surface p-8 sm:p-10">
-            <p className="font-bold">{t("What you need")}</p>
-            <ul className="mt-3 space-y-2.5 text-sm text-ink-2">
-              {[
-                t("Your own motorcycle (in good condition)"),
-                t("Valid driving licence"),
-                t("National ID card (NID)"),
-                t("Smartphone with internet"),
-                t("Know the roads of Dhaka city"),
-                t("Honest, responsible and hard-working"),
-              ].map((x) => (
-                <li key={x} className="flex items-center gap-2.5">
-                  <ShieldCheck className="size-4 shrink-0 text-brand" /> {x}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-6 rounded-2xl bg-page p-3.5 text-xs leading-relaxed text-ink-2">
-              {t("Apply online — our team reviews every application and invites you for an interview. Your rider account is created after you are hired.")}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => navigate("/join")}>
-                {t("Apply now")} <ArrowRight className="size-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Merchant Business Perks & Bulk Excel Upload */}
+      <BusinessPerksSection />
 
-      {/* ---------------- faq */}
-      <FaqSection />
+      {/* Rider Career Recruitment */}
+      <RiderRecruitmentSection />
 
-      {/* ---------------- contact */}
-      <section className="mx-auto max-w-6xl px-5 pb-20">
-        <Card className="grid gap-6 p-8 md:grid-cols-[1.2fr_1fr] md:items-center">
-          <div>
-            <h3 className="text-2xl font-extrabold tracking-tight">{t("Ready to send your parcel?")}</h3>
-            <p className="mt-2 text-ink-2">{t("Call or WhatsApp us — we'll pick up your product and deliver it safely.")}</p>
-            <p className="mt-4 flex items-start gap-2 text-sm text-ink-2">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-brand" /> {t("Office")}: {t(CONTACT.address)}
-            </p>
-          </div>
-          <div className="grid gap-3">
-            <a href={`tel:${CONTACT.phone}`} className="flex items-center gap-3 rounded-2xl bg-brand p-4 font-bold text-white hover:bg-brand-600">
-              <Phone className="size-5" /> {t("Call")} {CONTACT.phone}
-            </a>
-            <a href={CONTACT.whatsapp} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-emerald-600 p-4 font-bold text-white hover:bg-emerald-700">
-              <MessageCircle className="size-5" /> WhatsApp {CONTACT.phone}
-            </a>
-            <a href={CONTACT.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-[#0b1b38] p-4 font-bold text-white ring-1 ring-white/10 hover:bg-[#12284f]">
-              <ThumbsUp className="size-5" /> {t("Facebook page")}
-            </a>
-          </div>
-        </Card>
-      </section>
+      {/* Trust Standards & Merchant Reviews */}
+      <TestimonialsSection />
 
-      <footer className="border-t border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8">
-          <div className="flex items-center gap-3">
-            <Logo size={36} />
-            <Wordmark />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
-            <Link href="/login" className="transition hover:text-brand">{t("Merchant login")}</Link>
-            <Link href="/join" className="transition hover:text-brand">{t("Join as rider")}</Link>
-            <Link href="/admin" className="transition hover:text-brand">{t("Admin portal")}</Link>
-            <span>
-              {t("Hotline")}: {CONTACT.phone}, {CONTACT.phone2}
-            </span>
-          </div>
-          <p className="w-full text-sm text-ink-3">
-            © {new Date().getFullYear()} Morning Rider Courier Service · {t("Your trust is our inspiration.")}
-          </p>
-        </div>
-      </footer>
+      {/* Comprehensive Frequently Asked Questions */}
+      <LandingFaqSection />
+
+      {/* High-Impact Pre-Footer Conversion Banner */}
+      <CtaBanner />
+
+      {/* Modern 5-Column Public Footer */}
+      <PublicFooter />
     </div>
   );
 }
