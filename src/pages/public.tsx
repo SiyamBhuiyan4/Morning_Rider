@@ -39,6 +39,8 @@ import { Button, Card, Field, Input, Logo, PasswordInput, Select, StatusBadge, T
 import { IS_ADMIN_PORTAL } from "../lib/portal";
 import { Prefs } from "../components/Prefs";
 import { t, translateServer } from "../lib/prefs";
+import { RoadBandAnimation } from "../components/RoadBandAnimation";
+import { NetworkMapAnimation } from "../components/NetworkMapAnimation";
 
 /** Only same-site paths may be used as a post-login destination. */
 export function safeNext(raw: string | null) {
@@ -566,6 +568,20 @@ export function Home() {
         ))}
       </section>
 
+      {/* ---------------- live delivery flow banner */}
+      <section className="relative w-full overflow-hidden bg-[#101824] pt-8 border-y border-white/10 shadow-2xl">
+        <div className="mx-auto max-w-6xl px-5 mb-3 flex items-center justify-between">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-sun ring-1 ring-white/15">
+            <span className="size-2 rounded-full bg-brand animate-ping" />
+            <span>{t("Live Delivery Flow")}</span>
+          </div>
+          <p className="text-xs text-white/50 hidden sm:block">
+            {t("Merchant pickup • Fast sorting hub • Express doorstep delivery")}
+          </p>
+        </div>
+        <RoadBandAnimation />
+      </section>
+
       {/* ---------------- services */}
       <section id="services" className="mx-auto max-w-6xl scroll-mt-6 px-5 py-20">
         <SectionTitle
@@ -700,6 +716,12 @@ export function Home() {
                 <h3 className="mt-1 text-2xl font-extrabold tracking-tight">{t("Dhaka, Gazipur and Narayanganj city corporations")}</h3>
               </div>
             </div>
+
+            {/* Nationwide fast live network map */}
+            <div className="mt-8">
+              <NetworkMapAnimation />
+            </div>
+
             <div className="mt-6 flex flex-wrap gap-2">
               {COVERAGE.map((a) => (
                 <span key={a} className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3.5 py-2 text-sm font-semibold ring-1 ring-line">
