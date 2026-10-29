@@ -407,160 +407,199 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
           </g>
 
           {/* =========================================================================
-              PANICKED COURIER RUNNER WITH PARCEL ON HEAD (RUNNING IN FEAR OF THE TRUCK!)
-              Position: x=580, y=175 (Sprinting between the Delivery Van and Motorcycle)
+              REALISTIC ATHLETIC COURIER RUNNER (DESPERATELY SPRINTING FROM THE TRUCK)
+              Position: x=580, y=168 (Between the Delivery Van and Motorcycle)
               ========================================================================= */}
-          <g className="runner-container">
-            {/* Ground Contact Shadow under Running Feet */}
-            <ellipse cx="2" cy="50" rx="20" ry="4.5" fill="#050a14" opacity="0.75" />
+          <g className="real-runner-group">
+            {/* Ground Contact Shadow (Bounces and stretches with stride) */}
+            <ellipse cx="6" cy="54" rx="24" ry="5" fill="#050a14" opacity="0.8" className="runner-ground-shadow" />
 
-            {/* Foot Dust Puffs Flying Backward */}
-            <g className="dust-cloud">
-              <circle cx="-22" cy="46" r="4.5" fill="#94a3b8" opacity="0.6" />
-              <circle cx="-30" cy="48" r="3" fill="#cbd5e1" opacity="0.4" />
+            {/* Foot Dust & Skid Marks Behind Back Foot */}
+            <g className="runner-skid-dust">
+              <ellipse cx="-26" cy="50" rx="6" ry="3.5" fill="#94a3b8" opacity="0.6" />
+              <ellipse cx="-38" cy="52" rx="4" ry="2.5" fill="#cbd5e1" opacity="0.4" />
             </g>
 
-            {/* ---------------- SPRINTING LEGS ---------------- */}
-            {/* Back Leg (Left) */}
-            <g className="runner-leg-back">
+            {/* ---------------- ARTICULATED BIOMECHANICAL LEGS ---------------- */}
+            {/* BACK (LEFT) LEG - Full Hip & Knee Joint Chain */}
+            <g className="runner-thigh-left">
+              {/* Left Thigh (Upper Leg Muscle) */}
               <path
-                d="M-2 12 L-18 26 L-26 44"
-                stroke="#0b1b38"
-                strokeWidth="6.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
+                d="M-2 10 C-6 18 -8 28 -4 34 C-1 36 6 34 5 28 C6 20 4 12 -2 10 Z"
+                fill="#0b1b38"
               />
-              {/* Sneaker Shoe */}
-              <path d="M-32 42 L-22 42 L-20 47 L-32 47 Z" fill="#ea580c" />
-              <rect x="-30" y="46" width="10" height="2" fill="#ffffff" />
+              {/* Reflective Athletic Piping on Thigh */}
+              <path d="M-5 16 C-7 24 -6 30 -3 34" stroke="#f1f5f9" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.8" />
+
+              {/* Left Shin & Foot (Articulates at Knee cx=-4, cy=34) */}
+              <g className="runner-shin-left">
+                {/* Calf & Shin Muscle */}
+                <path
+                  d="M-4 34 C-8 42 -7 50 -5 54 L-2 54 C1 50 1 42 -1 34 Z"
+                  fill="#0f172a"
+                />
+                {/* Left Athletic Running Sneaker */}
+                <g transform="translate(-4, 52)">
+                  {/* Thick White Cushioned Midsole */}
+                  <path d="M-10 6 L8 6 C9 4 8 2 6 2 L-8 2 Z" fill="#ffffff" />
+                  {/* Black Rubber Outsole Tread */}
+                  <rect x="-10" y="6" width="18" height="1.5" fill="#0f172a" />
+                  {/* Sneaker Upper (Morning Rider Brand Orange) */}
+                  <path d="M-8 2 L-2 -3 L6 1 L8 4 L-8 4 Z" fill="#f57a10" />
+                  {/* White Accent Stripe & Laces */}
+                  <line x1="-3" y1="-1" x2="3" y2="2" stroke="#ffffff" strokeWidth="1" />
+                </g>
+              </g>
             </g>
 
-            {/* Front Leg (Right) */}
-            <g className="runner-leg-front">
+            {/* FRONT (RIGHT) LEG - Full Hip & Knee Joint Chain */}
+            <g className="runner-thigh-right">
+              {/* Right Thigh (Upper Leg Muscle) */}
               <path
-                d="M4 12 L22 24 L16 46"
-                stroke="#0b1b38"
-                strokeWidth="6.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
+                d="M2 10 C6 18 12 28 8 34 C5 36 -1 34 0 28 C-1 20 0 12 2 10 Z"
+                fill="#0b1b38"
               />
-              {/* Sneaker Shoe */}
-              <path d="M12 44 L24 44 L26 49 L12 49 Z" fill="#ea580c" />
-              <rect x="14" y="48" width="10" height="2" fill="#ffffff" />
+              {/* Reflective Athletic Piping on Thigh */}
+              <path d="M4 16 C8 24 10 30 7 34" stroke="#f1f5f9" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.8" />
+
+              {/* Right Shin & Foot (Articulates at Knee cx=8, cy=34) */}
+              <g className="runner-shin-right">
+                {/* Calf & Shin Muscle */}
+                <path
+                  d="M8 34 C12 42 11 50 9 54 L6 54 C3 50 4 42 5 34 Z"
+                  fill="#0f172a"
+                />
+                {/* Right Athletic Running Sneaker */}
+                <g transform="translate(8, 52)">
+                  {/* Thick White Cushioned Midsole */}
+                  <path d="M-10 6 L8 6 C9 4 8 2 6 2 L-8 2 Z" fill="#ffffff" />
+                  {/* Black Rubber Outsole Tread */}
+                  <rect x="-10" y="6" width="18" height="1.5" fill="#0f172a" />
+                  {/* Sneaker Upper (Morning Rider Brand Orange) */}
+                  <path d="M-8 2 L-2 -3 L6 1 L8 4 L-8 4 Z" fill="#f57a10" />
+                  {/* White Accent Stripe & Laces */}
+                  <line x1="-3" y1="-1" x2="3" y2="2" stroke="#ffffff" strokeWidth="1" />
+                </g>
+              </g>
             </g>
 
-            {/* ---------------- TORSO & UNIFORM ---------------- */}
-            {/* Torso aggressively leaned forward in full sprint */}
+            {/* ---------------- ATHLETIC UPPER BODY & ARMS ---------------- */}
+            {/* Pelvis & Running Shorts */}
+            <path d="M-8 8 C-8 4 8 4 10 8 L6 16 H-6 Z" fill="#0b1b38" />
+
+            {/* Athletic Torso Leaned Forward 35° (High Performance Stride) */}
             <path
-              d="M-6 12 C-6 2 -2 -8 8 -12 L16 -8 C10 4 2 14 -6 12 Z"
+              d="M-6 8 C-7 0 -2 -12 10 -16 L18 -12 C13 4 5 14 -6 8 Z"
               fill="#f57a10"
-              stroke="#c2410c"
-              strokeWidth="2"
-            />
-            {/* T-shirt Collar & White Accent */}
-            <path d="M6 -12 L12 -8 L4 -6 Z" fill="#ffffff" />
-            {/* Morning Rider Kite Icon on Runner's Chest */}
-            <circle cx="8" cy="-2" r="2.5" fill="#f8b030" />
-
-            {/* Fluttering T-shirt Hem in the Wind */}
-            <path d="M-8 8 L-14 12 L-6 13 Z" fill="#ea580c" />
-
-            {/* ---------------- ARMS HOLDING PARCEL ON HEAD ---------------- */}
-            {/* Left Arm reaching up to balance box */}
-            <path
-              d="M-4 -8 L-15 -24 L-12 -38"
               stroke="#ea580c"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
+              strokeWidth="1.5"
             />
-            {/* Left Hand gripping left side of carton */}
-            <circle cx="-12" cy="-38" r="3.5" fill="#fed7aa" stroke="#c2410c" strokeWidth="1" />
+            {/* Dark Charcoal Side Breathable Mesh Panel */}
+            <path d="M-3 6 C-4 0 0 -8 8 -12 L6 -8 C1 0 -2 5 -3 6 Z" fill="#0f172a" opacity="0.75" />
+            {/* Athletic Crew Neck Collar (White) */}
+            <path d="M8 -16 L14 -12 L11 -10 Z" fill="#ffffff" />
+            {/* Official Morning Rider Kite Emblem on Chest */}
+            <g transform="translate(10, -6) scale(0.015) translate(-303, -831)">
+              <path d="M640.36,856.8v170.38c0,4.02-5.75,4.71-6.69.8-9.97-41.71-30.1-79.47-57.65-110.5-1.2-1.35-1.15-3.38.12-4.66l58.42-58.42c2.14-2.14,5.8-.62,5.8,2.4Z" fill="#ffffff" />
+              <path d="M617.45,837.29l-58.43,58.42c-1.27,1.27-3.31,1.32-4.66.12-31.03-27.55-68.79-47.69-110.5-57.65-3.91-.93-3.23-6.69.8-6.69h170.39c3.03,0,4.54,3.66,2.4,5.8Z" fill="#f8b030" />
+            </g>
 
-            {/* Right Arm reaching up to balance box */}
-            <path
-              d="M10 -6 L20 -22 L14 -38"
-              stroke="#ea580c"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            {/* Right Hand gripping right side of carton */}
-            <circle cx="14" cy="-38" r="3.5" fill="#fed7aa" stroke="#c2410c" strokeWidth="1" />
+            {/* Muscular Left Arm Gripping Carton Edge */}
+            <g>
+              {/* Shoulder Deltoid & Bicep */}
+              <path d="M-3 -10 C-8 -18 -16 -24 -14 -32" stroke="#ea580c" strokeWidth="5.5" strokeLinecap="round" fill="none" />
+              {/* Forearm & Wrist */}
+              <path d="M-14 -32 L-12 -44" stroke="#fed7aa" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+              {/* Defined Hand & Fingers Gripping Left Side of Box */}
+              <path d="M-14 -44 C-15 -48 -11 -49 -10 -46 L-10 -42 Z" fill="#fed7aa" stroke="#c2410c" strokeWidth="0.8" />
+            </g>
 
-            {/* ---------------- PARCEL CARTON BALANCED ON HEAD ---------------- */}
-            <g transform="translate(1, -50)">
-              {/* Corrugated Cardboard Delivery Carton */}
+            {/* Muscular Right Arm Gripping Carton Edge */}
+            <g>
+              {/* Shoulder Deltoid & Bicep */}
+              <path d="M12 -8 C18 -16 22 -24 18 -32" stroke="#ea580c" strokeWidth="5.5" strokeLinecap="round" fill="none" />
+              {/* Forearm & Wrist */}
+              <path d="M18 -32 L14 -44" stroke="#fed7aa" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+              {/* Defined Hand & Fingers Gripping Right Side of Box */}
+              <path d="M12 -44 C11 -48 15 -49 16 -46 L16 -42 Z" fill="#fed7aa" stroke="#c2410c" strokeWidth="0.8" />
+            </g>
+
+            {/* ---------------- REALISTIC COURIER CARDBOARD CARTON ON HEAD ---------------- */}
+            <g transform="translate(1, -56)">
+              {/* 3D Angled Cardboard Box */}
+              {/* Main Front Face */}
               <rect
-                x="-18"
-                y="-14"
-                width="36"
-                height="26"
-                rx="3"
+                x="-19"
+                y="-15"
+                width="38"
+                height="28"
+                rx="2.5"
                 fill="#d97706"
                 stroke="#92400e"
-                strokeWidth="2"
+                strokeWidth="1.8"
               />
-              {/* Box Top Flap Crease */}
-              <line x1="-18" y1="-7" x2="18" y2="-7" stroke="#b45309" strokeWidth="1.5" />
+              {/* Top Face Depth Perspective */}
+              <polygon points="-19,-15 -14,-20 29,-20 24,-15" fill="#f59e0b" stroke="#92400e" strokeWidth="1.2" />
+              {/* Right Side Depth Face */}
+              <polygon points="19,-15 24,-20 24,8 19,13" fill="#b45309" stroke="#92400e" strokeWidth="1.2" />
 
-              {/* Morning Rider Official Orange Packing Tape */}
-              <rect x="-18" y="-4" width="36" height="6" fill="#f57a10" />
-              <rect x="-3" y="-14" width="6" height="26" fill="#ea580c" />
+              {/* Heavy-Duty Morning Rider Branded Packing Tape */}
+              <rect x="-19" y="-3" width="38" height="6.5" fill="#f57a10" />
+              <rect x="-3" y="-15" width="6.5" height="28" fill="#ea580c" />
+              <polygon points="-3,-15 2,-20 8,-20 3,-15" fill="#f57a10" />
 
-              {/* White Barcode Shipping Label */}
-              <rect x="-14" y="3" width="14" height="7" rx="1" fill="#ffffff" />
-              <line x1="-12" y1="5" x2="-2" y2="5" stroke="#0f172a" strokeWidth="1" strokeDasharray="1.5 1" />
-              <line x1="-12" y1="8" x2="-4" y2="8" stroke="#0f172a" strokeWidth="0.8" />
-
-              {/* "FRAGILE / THIS SIDE UP" Arrows in Red */}
-              <path d="M10 4 L10 9 M8 6 L10 4 L12 6" stroke="#ef4444" strokeWidth="1.2" strokeLinecap="round" />
+              {/* Official Courier Barcode Shipping Label */}
+              <rect x="-15" y="4" width="16" height="8" rx="1" fill="#ffffff" />
+              <line x1="-13" y1="6" x2="-1" y2="6" stroke="#0f172a" strokeWidth="1.2" strokeDasharray="1.5 1" />
+              <line x1="-13" y1="9" x2="-3" y2="9" stroke="#0f172a" strokeWidth="0.8" />
+              {/* Red Fragile / Express Mark */}
+              <rect x="9" y="5" width="8" height="6" rx="1" fill="#ef4444" />
+              <text x="10" y="9.5" fontSize="4" fontWeight="900" fill="#ffffff" fontFamily="sans-serif">EXP</text>
             </g>
 
-            {/* ---------------- PANICKED FACE (LOOKING BACK AT TRUCK IN FEAR!) ---------------- */}
-            <g transform="translate(1, -22)">
-              {/* Head (tilted backward looking over left shoulder at oncoming truck) */}
-              <circle cx="0" cy="0" r="11" fill="#fed7aa" stroke="#ea580c" strokeWidth="1.5" />
+            {/* ---------------- REALISTIC HUMAN HEAD & FACIAL EXPRESSION ---------------- */}
+            {/* Focused, Strained, Looking Back in Urgency at Oncoming Truck */}
+            <g transform="translate(1, -26)">
+              {/* Neck with Muscular Tendon */}
+              <path d="M1 4 L4 12 L-4 12 L-2 4 Z" fill="#fbcfe8" />
+              <line x1="2" y1="6" x2="3" y2="12" stroke="#ea580c" strokeWidth="1" opacity="0.6" />
 
-              {/* Disheveled Black Hair blowing in the wind */}
-              <path d="M-8 -6 C-12 -12 4 -14 10 -8 C6 -4 -4 -4 -8 -6 Z" fill="#0f172a" />
-              <path d="M-10 -4 L-15 -7 L-9 -1 Z" fill="#0f172a" />
-
-              {/* Wide Terrified Cartoon Eyes (Looking back to the left at the truck!) */}
-              {/* Left Eye */}
-              <ellipse cx="-4" cy="-1" rx="4" ry="4.5" fill="#ffffff" stroke="#0f172a" strokeWidth="1" />
-              <circle cx="-6" cy="-1" r="1.8" fill="#0f172a" />
-              {/* Right Eye */}
-              <ellipse cx="4" cy="-1" rx="3.5" ry="4" fill="#ffffff" stroke="#0f172a" strokeWidth="1" />
-              <circle cx="2" cy="-1" r="1.6" fill="#0f172a" />
-
-              {/* Panicked Open Screaming / Gasping Mouth */}
-              <path d="M-5 5 Q-1 9 4 5 Q-1 4 -5 5 Z" fill="#ef4444" stroke="#0f172a" strokeWidth="1" />
-              <ellipse cx="-1" cy="6" rx="2.5" ry="1.5" fill="#ffffff" />
-
-              {/* Flying Panic Sweat Drops (Popping off and flying backward!) */}
+              {/* Head Silhouette (Anatomical Human Head Profile) */}
               <path
-                d="M-10 -8 C-14 -8 -16 -4 -12 -2 C-10 -4 -8 -8 -10 -8 Z"
-                fill="#38bdf8"
-                stroke="#0284c7"
-                strokeWidth="0.8"
-                className="sweat-burst-1"
-              />
-              <path
-                d="M-7 -12 C-10 -12 -12 -9 -9 -7 C-7 -9 -5 -12 -7 -12 Z"
-                fill="#38bdf8"
-                stroke="#0284c7"
-                strokeWidth="0.8"
-                className="sweat-burst-2"
+                d="M-6 4 C-10 2 -10 -8 -5 -12 C2 -15 8 -12 8 -4 C8 2 4 6 -2 6 Z"
+                fill="#fed7aa"
+                stroke="#ea580c"
+                strokeWidth="1.2"
               />
 
-              {/* Comical Panic Stress Lines Above Eyebrows */}
-              <line x1="-8" y1="-8" x2="-4" y2="-6" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
-              <line x1="2" y1="-7" x2="6" y2="-8" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+              {/* Realistic Short Hair with Wind-blown Strands */}
+              <path
+                d="M-7 -6 C-12 -12 0 -16 6 -11 C4 -8 -3 -7 -7 -6 Z"
+                fill="#0f172a"
+              />
+              <path d="M-8 -3 L-14 -7 L-8 -1 Z" fill="#0f172a" />
+              <path d="M-6 -8 L-13 -13 L-6 -6 Z" fill="#0f172a" />
+
+              {/* Realistic Human Eye Glancing Back at Truck */}
+              {/* Brow Line (Intense / Stressed Urgency) */}
+              <path d="M-7 -4 L-1 -2" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+              {/* Almond Eye White */}
+              <ellipse cx="-4" cy="-1.5" rx="3.5" ry="2.2" fill="#ffffff" stroke="#0f172a" strokeWidth="0.8" />
+              {/* Dark Iris / Pupil Looking Back Left at Truck */}
+              <circle cx="-5.5" cy="-1.5" r="1.5" fill="#0f172a" />
+
+              {/* Nose Bridge & Lip Profile */}
+              <path d="M-7 1 L-9 3 L-7 4" stroke="#ea580c" strokeWidth="1" strokeLinecap="round" fill="none" />
+              {/* Parted Mouth Exhaling Hard from Sprint */}
+              <path d="M-5 4 Q-3 7 -1 4 Z" fill="#881337" stroke="#0f172a" strokeWidth="0.8" />
+
+              {/* Subtle Aerodynamic Sweat Droplet Flying Backward */}
+              <path
+                d="M-9 -8 C-13 -8 -15 -5 -11 -3 C-9 -5 -7 -8 -9 -8 Z"
+                fill="#38bdf8"
+                opacity="0.9"
+                className="runner-sweat-stream"
+              />
             </g>
           </g>
 
@@ -1017,60 +1056,123 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
           100% { opacity: 0.55; }
         }
 
-        /* Panicked Courier Runner Sprint (Fleeing the oncoming truck in fear!) */
-        .runner-container {
-          animation: runnerSprintPanic 0.22s ease-in-out infinite;
+        /* =======================================================
+           REALISTIC HUMAN SPRINT BIOMECHANICS & KINEMATICS
+           ======================================================= */
+        /* Runner Center-of-Mass Double Vertical Bounce (Flight & Stance) */
+        .real-runner-group {
+          animation: realRunnerBounce 0.52s ease-in-out infinite;
         }
-        @keyframes runnerSprintPanic {
+        @keyframes realRunnerBounce {
           0%, 100% {
-            transform: translate(575px, 175px) rotate(8deg);
+            transform: translate(575px, 168px);
+          }
+          20% {
+            transform: translate(575px, 172px); /* Foot 1 strike stance dip */
+          }
+          45% {
+            transform: translate(575px, 163px); /* Flight phase 1 launch */
+          }
+          70% {
+            transform: translate(575px, 172px); /* Foot 2 strike stance dip */
+          }
+          95% {
+            transform: translate(575px, 163px); /* Flight phase 2 launch */
+          }
+        }
+
+        /* Ground Contact Shadow (Squashes on contact, shrinks in flight) */
+        .runner-ground-shadow {
+          animation: shadowPulse 0.52s ease-in-out infinite;
+        }
+        @keyframes shadowPulse {
+          0%, 50%, 100% { transform: scale(0.85); opacity: 0.55; }
+          20%, 70% { transform: scale(1.15); opacity: 0.85; }
+        }
+
+        /* ---------------- LEFT LEG KINEMATIC CHAIN ---------------- */
+        /* Left Hip Rotation (Thigh) */
+        .runner-thigh-left {
+          transform-box: fill-box;
+          transform-origin: 0px 10px;
+          animation: thighSprintCycle 0.52s linear infinite;
+        }
+        /* Left Knee Flexion (Shin & Foot) */
+        .runner-shin-left {
+          transform-box: fill-box;
+          transform-origin: -4px 34px;
+          animation: shinKneeCycle 0.52s linear infinite;
+        }
+
+        /* ---------------- RIGHT LEG KINEMATIC CHAIN (Delayed by 50%) ---------------- */
+        /* Right Hip Rotation (Thigh) */
+        .runner-thigh-right {
+          transform-box: fill-box;
+          transform-origin: 2px 10px;
+          animation: thighSprintCycle 0.52s linear infinite -0.26s;
+        }
+        /* Right Knee Flexion (Shin & Foot) */
+        .runner-shin-right {
+          transform-box: fill-box;
+          transform-origin: 8px 34px;
+          animation: shinKneeCycle 0.52s linear infinite -0.26s;
+        }
+
+        /* Thigh Hip Gait (Extension back to high-knee flexion forward) */
+        @keyframes thighSprintCycle {
+          0% {
+            transform: rotate(-28deg);
+          }
+          25% {
+            transform: rotate(18deg);
           }
           50% {
-            transform: translate(575px, 169px) rotate(4deg);
+            transform: rotate(45deg);
+          }
+          75% {
+            transform: rotate(6deg);
+          }
+          100% {
+            transform: rotate(-28deg);
           }
         }
 
-        /* Frantic Sprinting Legs */
-        .runner-leg-front {
-          transform-box: fill-box;
-          transform-origin: top center;
-          animation: sprintFrontLeg 0.22s ease-in-out infinite alternate;
-        }
-        @keyframes sprintFrontLeg {
-          0% { transform: rotate(-38deg); }
-          100% { transform: rotate(45deg); }
-        }
-
-        .runner-leg-back {
-          transform-box: fill-box;
-          transform-origin: top center;
-          animation: sprintBackLeg 0.22s ease-in-out infinite alternate;
-        }
-        @keyframes sprintBackLeg {
-          0% { transform: rotate(45deg); }
-          100% { transform: rotate(-38deg); }
+        /* Knee Joint Flexion (Heel kick-up on backswing, full extension on strike) */
+        @keyframes shinKneeCycle {
+          0% {
+            transform: rotate(10deg); /* Pushing off ground */
+          }
+          25% {
+            transform: rotate(92deg); /* Heel kick-up to glute on swing-through */
+          }
+          50% {
+            transform: rotate(50deg); /* High knee forward fold */
+          }
+          75% {
+            transform: rotate(5deg);  /* Straightened for foot plant */
+          }
+          100% {
+            transform: rotate(10deg);
+          }
         }
 
-        /* Flying Panic Sweat Drops */
-        .sweat-burst-1 {
-          animation: sweatFly 0.45s linear infinite;
+        /* High-Velocity Sweat Stream */
+        .runner-sweat-stream {
+          animation: sweatStream 0.45s linear infinite;
         }
-        .sweat-burst-2 {
-          animation: sweatFly 0.45s linear infinite 0.22s;
-        }
-        @keyframes sweatFly {
+        @keyframes sweatStream {
           0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
-          25% { opacity: 1; }
-          100% { transform: translate(-28px, -18px) scale(1.3); opacity: 0; }
+          25% { opacity: 0.9; }
+          100% { transform: translate(-26px, -14px) scale(1.2); opacity: 0; }
         }
 
-        /* Foot Dust Puffs */
-        .dust-cloud {
-          animation: dustPuffBlow 0.35s linear infinite;
+        /* Skid Dust Particles */
+        .runner-skid-dust {
+          animation: skidDustBlow 0.35s linear infinite;
         }
-        @keyframes dustPuffBlow {
-          0% { transform: translate(0, 0) scale(0.6); opacity: 0.8; }
-          100% { transform: translate(-25px, -6px) scale(1.8); opacity: 0; }
+        @keyframes skidDustBlow {
+          0% { transform: translate(0, 0) scale(0.6); opacity: 0.75; }
+          100% { transform: translate(-22px, -4px) scale(1.6); opacity: 0; }
         }
       `}</style>
     </div>
