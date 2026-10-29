@@ -374,7 +374,7 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
             />
             {/* Front Bumper with Fog Lamps */}
             <path d="M268 106 H292 V118 H268 Z" fill="#1e293b" />
-            <circle cx="282" cy="112" r="3" fill="#fef08a" />
+            <circle cx="282" cy="112" r="3" fill="#fef08a" className="headlight-bulb" />
 
             {/* Windshield & Side Window Glass */}
             <path
@@ -410,7 +410,7 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
             {/* Realistic Headlight Assembly */}
             <path d="M280 82 H290 V96 H280 Z" fill="#1e293b" rx="2" />
             {/* LED Projector Lens */}
-            <circle cx="285" cy="87" r="4" fill="#ffffff" stroke="#fef08a" strokeWidth="1.5" />
+            <circle cx="285" cy="87" r="4" fill="#ffffff" stroke="#fef08a" strokeWidth="1.5" className="headlight-bulb" />
             {/* Turn Signal Indicator */}
             <rect x="281" y="92" width="7" height="3" rx="1" fill="#f59e0b" />
 
@@ -681,227 +681,204 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
           </g>
 
           {/* =========================================================================
-              VEHICLE 2: REALISTIC MORNING RIDER SPORT MOTORCYCLE & RIDER
+              VEHICLE 2: MORNING RIDER OFFICIAL LOGO SCOOTER / BIKE RIDER
               Position: x=880, y=90
+              Replaces the previous generic motorbike with the iconic Morning Rider logo
+              scooter rider with branded parcel box, sleek curves, and day/night headlight!
               ========================================================================= */}
           <g transform="translate(880, 90)" className="bike-container">
             {/* Ground Contact Shadow */}
-            <ellipse cx="110" cy="136" rx="115" ry="6" fill="#050a14" opacity="0.85" />
+            <ellipse cx="115" cy="138" rx="120" ry="6" fill="#050a14" opacity="0.85" />
 
-            {/* Motorcycle Headlight Beam Piercing Forward */}
+            {/* Motorcycle / Scooter Headlight Beam Piercing Forward (Turns on at Night, off at Morning) */}
             <polygon
-              points="180,82 480,45 480,140 180,105"
+              points="182,72 480,35 480,135 182,94"
               fill="url(#headlightBeam)"
               className="headlight-beam"
             />
 
-            {/* Speed Wind Streaks Behind Rider */}
-            <g stroke="#f8b030" strokeWidth="2" strokeLinecap="round" opacity="0.8" className="rider-wind-trails">
-              <line x1="-35" y1="35" x2="-5" y2="35" />
-              <line x1="-55" y1="60" x2="-15" y2="60" />
-              <line x1="-40" y1="85" x2="-10" y2="85" />
+            {/* Speed Wind Streaks Behind Rider & Box */}
+            <g stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.75" className="rider-wind-trails">
+              <line x1="-35" y1="52" x2="-5" y2="52" />
+              <line x1="-50" y1="72" x2="-15" y2="72" />
+              <line x1="-38" y1="92" x2="-10" y2="92" />
             </g>
 
-            {/* ---------------- Heavy-Duty Oxford Thermal Delivery Box ---------------- */}
-            <g transform="translate(20, 42)">
-              {/* Outer Backpack / Cargo Box */}
+            {/* ---------------- 1. Morning Rider Official Delivery Cargo Box ---------------- */}
+            <g transform="translate(18, 44)">
+              {/* Outer Cargo Box (Matching Morning Rider Logo) */}
               <rect
                 x="0"
                 y="0"
-                width="56"
-                height="52"
-                rx="7"
-                fill="#f57a10"
-                stroke="#c2410c"
+                width="58"
+                height="54"
+                rx="6"
+                fill="#0d1b32"
+                stroke="#ffffff"
                 strokeWidth="2.5"
               />
-              {/* Heavy-duty Top Flap & Webbing */}
-              <rect x="0" y="0" width="56" height="12" rx="4" fill="#ea580c" />
-              <line x1="0" y1="12" x2="56" y2="12" stroke="#9a3412" strokeWidth="1.5" />
+              {/* Box Top Flap Line */}
+              <line x1="0" y1="12" x2="58" y2="12" stroke="#ffffff" strokeWidth="1.5" />
 
-              {/* High-Visibility 3M Reflective Safety Band */}
-              <rect x="4" y="24" width="48" height="6" rx="2" fill="#fef08a" />
-              <rect x="6" y="26" width="44" height="2" fill="#ffffff" />
+              {/* Official Morning Rider 3D Delivery Parcel Icon (From Brand Logo) */}
+              <g transform="translate(18, 16)">
+                {/* 3D Parcel Box Faces */}
+                <polygon points="12,14 26,14 26,27 12,27" fill="#ffffff" />
+                <polygon points="12,14 18,7 32,7 26,14" fill="#f1f5f9" />
+                <polygon points="26,14 32,7 32,20 26,27" fill="#cbd5e1" />
+                {/* Packaging Seam Lines */}
+                <line x1="19" y1="10.5" x2="19" y2="27" stroke="#0d1b32" strokeWidth="1.8" />
+                <line x1="12" y1="20" x2="26" y2="20" stroke="#0d1b32" strokeWidth="1.4" />
+                <line x1="26" y1="20" x2="32" y2="13.5" stroke="#0d1b32" strokeWidth="1.4" />
 
-              {/* Side Zipper Pocket */}
-              <rect x="6" y="34" width="44" height="12" rx="3" fill="#ea580c" stroke="#c2410c" strokeWidth="1" />
-              <line x1="10" y1="40" x2="46" y2="40" stroke="#fef08a" strokeWidth="1.5" strokeDasharray="3 2" />
-
-              {/* Official Kite Icon on Box */}
-              <g transform="translate(18, 14) scale(0.028) translate(-303, -831)">
-                <path
-                  d="M640.36,856.8v170.38c0,4.02-5.75,4.71-6.69.8-9.97-41.71-30.1-79.47-57.65-110.5-1.2-1.35-1.15-3.38.12-4.66l58.42-58.42c2.14-2.14,5.8-.62,5.8,2.4Z"
-                  fill="#ffffff"
-                />
-                <path
-                  d="M617.45,837.29l-58.43,58.42c-1.27,1.27-3.31,1.32-4.66.12-31.03-27.55-68.79-47.69-110.5-57.65-3.91-.93-3.23-6.69.8-6.69h170.39c3.03,0,4.54,3.66,2.4,5.8Z"
-                  fill="#f8b030"
-                />
-                <path
-                  d="M537.08,917.65l-147.3,147.3c-2.14,2.14-5.8.62-5.8-2.4v-203.78c0-1.89,1.55-3.44,3.44-3.41,57.22.83,109.43,22.32,149.52,57.34,1.48,1.29,1.54,3.58.15,4.96Z"
-                  fill="#ffffff"
-                />
-                <path
-                  d="M613.1,1087.86h-203.8c-3.03,0-4.54-3.66-2.4-5.8l147.3-147.3c1.39-1.39,3.67-1.33,4.96.15,35.02,40.09,56.52,92.29,57.35,149.52.03,1.89-1.52,3.44-3.41,3.44Z"
-                  fill="#f8b030"
-                />
+                {/* Motion Speed Lines Trailing the Package */}
+                <line x1="-6" y1="14" x2="6" y2="14" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                <line x1="-10" y1="20" x2="6" y2="20" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                <line x1="-5" y1="26" x2="6" y2="26" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
               </g>
 
-              {/* Chrome Luggage Carrier Rack Brackets */}
-              <line x1="8" y1="52" x2="8" y2="68" stroke="#94a3b8" strokeWidth="3" />
-              <line x1="48" y1="52" x2="48" y2="68" stroke="#94a3b8" strokeWidth="3" />
+              {/* Rear Rack Support Brackets */}
+              <line x1="12" y1="54" x2="12" y2="72" stroke="#ffffff" strokeWidth="2.5" />
+              <line x1="48" y1="54" x2="48" y2="72" stroke="#ffffff" strokeWidth="2.5" />
             </g>
 
-            {/* ---------------- Motorcycle Chassis, Engine, Exhaust ---------------- */}
-            {/* Stainless Steel Upswept Exhaust Pipe */}
+            {/* ---------------- 2. Scooter Chassis & Aerodynamic Bodywork (From Logo) ---------------- */}
+            {/* Rear Taillight Cluster */}
+            <rect x="36" y="86" width="6" height="10" rx="3" fill="#ef4444" stroke="#ffffff" strokeWidth="1" />
+
+            {/* Rear Engine Cowl & Curvaceous Body Panels (Deep Navy with White Accent Piping) */}
             <path
-              d="M85 106 C100 114 116 114 135 100 L152 90"
-              stroke="#cbd5e1"
-              strokeWidth="7"
-              strokeLinecap="round"
-              fill="none"
-            />
-            {/* Carbon-fiber Muffler Canister */}
-            <path
-              d="M125 104 L156 90"
-              stroke="#0f172a"
-              strokeWidth="11"
-              strokeLinecap="round"
-              fill="none"
-            />
-            {/* Muffler Chrome Tip */}
-            <circle cx="156" cy="90" r="3.5" fill="#f8fafc" />
-
-            {/* Rear Swingarm */}
-            <line x1="40" y1="120" x2="95" y2="108" stroke="#1e293b" strokeWidth="7" strokeLinecap="round" />
-
-            {/* Rear Monoshock Spring (Yellow Coils) */}
-            <line x1="72" y1="94" x2="86" y2="108" stroke="#f8b030" strokeWidth="6" strokeLinecap="round" />
-
-            {/* Trellis Frame (Dark Navy with Brand Orange Accents) */}
-            <path
-              d="M40 120 L82 92 L112 68 L168 84 L178 120"
-              stroke="#0b1b38"
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-
-            {/* Engine Block with Cooling Fins & Crankcase */}
-            <rect x="80" y="88" width="36" height="26" rx="5" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-            <line x1="84" y1="94" x2="112" y2="94" stroke="#475569" strokeWidth="1.5" />
-            <line x1="84" y1="100" x2="112" y2="100" stroke="#475569" strokeWidth="1.5" />
-            <line x1="84" y1="106" x2="112" y2="106" stroke="#475569" strokeWidth="1.5" />
-            {/* Gold Stator Cap */}
-            <circle cx="98" cy="102" r="6" fill="#f8b030" stroke="#d97706" strokeWidth="1.5" />
-
-            {/* Sculpted Fuel Tank (Morning Rider Orange) */}
-            <path
-              d="M92 68 C102 54 136 56 148 70 C150 80 142 86 118 86 Z"
-              fill="#f57a10"
-              stroke="#ea580c"
+              d="M48 116 C48 90 70 76 114 76 L130 76 L118 116 Z"
+              fill="#0d1b32"
+              stroke="#ffffff"
               strokeWidth="2.5"
             />
-            {/* Rubber Knee Grip Pad */}
-            <path d="M110 70 C116 64 132 66 136 74 C134 78 126 80 112 78 Z" fill="#0b1b38" opacity="0.8" />
-
-            {/* Front Inverted Telescopic Forks (Gold Stanchions) */}
-            <line x1="150" y1="70" x2="180" y2="120" stroke="#f8b030" strokeWidth="5.5" strokeLinecap="round" />
-            <line x1="155" y1="70" x2="185" y2="120" stroke="#0f172a" strokeWidth="3.5" strokeLinecap="round" />
-
-            {/* Front Wheel Hugger Fender */}
-            <path d="M162 102 A 26 26 0 0 1 198 108" fill="none" stroke="#f57a10" strokeWidth="4.5" strokeLinecap="round" />
-
-            {/* Streetfighter Angular Headlight Cowl */}
-            <polygon points="152,64 176,68 188,80 168,86 152,78" fill="#0b1b38" stroke="#1e293b" strokeWidth="1.5" />
-            {/* Dual LED Projector Headlamp */}
-            <polygon points="176,70 186,80 180,84 172,76" fill="#fef08a" />
-            <circle cx="180" cy="78" r="3.5" fill="#ffffff" />
-
-            {/* Clip-on Sport Handlebar */}
-            <path d="M146 62 L158 66" stroke="#0f172a" strokeWidth="5" strokeLinecap="round" />
-
-            {/* ---------------- REALISTIC RIDER (DETAILED HUMAN ANATOMY) ---------------- */}
-            {/* Rider Boots & Footrest Peg */}
-            <rect x="98" y="112" width="18" height="8" rx="3" fill="#060f22" stroke="#1e293b" strokeWidth="1" />
-            <rect x="95" y="115" width="4" height="4" fill="#94a3b8" /> {/* Peg */}
-
-            {/* Rider Legs: Tucked bent knee into tank */}
+            {/* Body Accent Highlight Line */}
             <path
-              d="M86 82 L112 96 L104 116"
-              stroke="#0b1b38"
-              strokeWidth="11"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              d="M58 108 C64 94 82 86 112 86"
               fill="none"
+              stroke="#ffffff"
+              strokeWidth="1.8"
+              strokeLinecap="round"
             />
-            {/* Knee Armor Slider */}
-            <ellipse cx="112" cy="96" rx="4" ry="6" fill="#1e293b" stroke="#f8b030" strokeWidth="1.5" />
 
-            {/* Rider Torso Leaned Forward 45° Aggressive Aero Posture */}
+            {/* Scooter Step-Through Floorboard */}
+            <path d="M112 114 L152 114 L148 119 L108 119 Z" fill="#060f1d" stroke="#ffffff" strokeWidth="1.8" />
+
+            {/* Front Aerodynamic Leg Shield / Apron (Sweeping up from floorboard to headlight) */}
             <path
-              d="M74 74 C74 58 92 44 114 38 L136 56 C120 70 102 82 74 74 Z"
-              fill="#f57a10"
-              stroke="#c2410c"
+              d="M125 114 L148 114 L178 64 C175 56 162 58 156 68 L135 114 Z"
+              fill="#0d1b32"
+              stroke="#ffffff"
               strokeWidth="2.5"
             />
-            {/* Jacket Spine Shield & Shoulder Armor */}
-            <path d="M80 68 C88 56 104 46 120 44" stroke="#0b1b38" strokeWidth="6.5" strokeLinecap="round" fill="none" />
-            {/* High-Vis Reflective Stripe on Jacket Back */}
-            <path d="M86 62 C94 52 108 44 118 42" stroke="#fef08a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-
-            {/* Rider Arm Reaching Forward to Handlebar Grip */}
+            {/* Apron Center White Contour Stripe (from logo) */}
             <path
-              d="M112 46 L136 56 L152 65"
-              stroke="#f57a10"
+              d="M142 110 L166 68"
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              fill="none"
+            />
+
+            {/* Front Wheel Mudguard / Fender */}
+            <path d="M165 106 A 28 28 0 0 1 202 114" fill="none" stroke="#0d1b32" strokeWidth="6" strokeLinecap="round" />
+            <path d="M165 106 A 28 28 0 0 1 202 114" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+
+            {/* Handlebar & Right Rear-View Mirror on Stem */}
+            <line x1="162" y1="60" x2="162" y2="44" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+            <ellipse cx="162" cy="42" rx="4" ry="6" fill="#0d1b32" stroke="#ffffff" strokeWidth="1.5" />
+            <ellipse cx="162" cy="42" rx="2.5" ry="4" fill="#38bdf8" />
+
+            {/* Front Headlight Assembly (Matching Logo) */}
+            <path
+              d="M172 64 C180 64 186 70 186 78 C182 82 174 82 170 78 Z"
+              fill="#0d1b32"
+              stroke="#ffffff"
+              strokeWidth="2"
+            />
+            {/* LED Projector Bulb (Auto Night/Day Switched via CSS) */}
+            <circle cx="178" cy="74" r="4.5" fill="#ffffff" stroke="#fef08a" strokeWidth="1.5" className="headlight-bulb" />
+
+            {/* ---------------- 3. The Rider (Exact Sitting Silhouette from Logo) ---------------- */}
+            {/* Scooter Saddle Cushion */}
+            <path d="M72 74 C85 70 120 70 128 76 L70 76 Z" fill="#060f1d" stroke="#ffffff" strokeWidth="1.5" />
+
+            {/* Rider Torso Leaned Ergonomically Forward */}
+            <path
+              d="M80 72 C80 50 96 36 122 34 L138 52 C124 66 108 78 80 72 Z"
+              fill="#0d1b32"
+              stroke="#ffffff"
+              strokeWidth="2.5"
+            />
+            {/* White Contour Seam on Jacket Back */}
+            <path d="M86 66 C94 54 108 44 122 42" stroke="#ffffff" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+
+            {/* Rider Arm Reaching Down to Handlebar */}
+            <path
+              d="M115 42 L138 56 L158 64"
+              stroke="#0d1b32"
               strokeWidth="8.5"
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
             />
-            {/* Elbow Armor Pad */}
-            <circle cx="136" cy="56" r="4" fill="#0b1b38" />
-            {/* Leather Glove Gripping Throttle */}
-            <circle cx="152" cy="65" r="5" fill="#060f22" stroke="#475569" strokeWidth="1" />
+            <path
+              d="M115 42 L138 56 L158 64"
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            {/* Glove Gripping Throttle Handle */}
+            <circle cx="158" cy="64" r="4" fill="#0d1b32" stroke="#ffffff" strokeWidth="1.5" />
 
-            {/* Full-Face Motorcycle Helmet (Realistic Aerodynamic Shape) */}
-            <g transform="translate(130, 28)">
-              {/* Main Helmet Shell */}
-              <ellipse cx="0" cy="0" rx="16" ry="14" fill="#0b1b38" stroke="#1e293b" strokeWidth="1.5" />
-              {/* Helmet Chin Guard */}
-              <path d="M-8 4 C-4 14 8 14 14 6 C12 -2 6 -6 -2 -6 Z" fill="#060f22" />
-              {/* Top Air Vent */}
-              <path d="M-10 -10 L-2 -12 L4 -10 Z" fill="#f57a10" />
-              {/* Rear Aero Spoiler Wing */}
-              <path d="M-14 -4 L-19 0 L-13 4 Z" fill="#f8b030" />
+            {/* Rider Leg (Seated Position with Foot on Floorboard) */}
+            <path
+              d="M88 74 L122 86 L118 112"
+              stroke="#0d1b32"
+              strokeWidth="11"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            <path
+              d="M88 74 L122 86 L118 112"
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            {/* Riding Boot Resting on Floorboard */}
+            <polygon points="112,110 135,110 133,116 110,116" fill="#060f1d" stroke="#ffffff" strokeWidth="1.5" />
 
-              {/* Iridescent Mirror Tinted Visor with Speed Glare */}
+            {/* Full-Face Helmet from Logo with Iconic White Visor */}
+            <g transform="translate(130, 24)">
+              {/* Round Aerodynamic Helmet Shell */}
+              <ellipse cx="0" cy="0" rx="16" ry="14" fill="#0d1b32" stroke="#ffffff" strokeWidth="2.2" />
+              {/* White Visor Reflection / Eye Slot (Matching Logo) */}
               <path
-                d="M-2 -5 C10 -5 18 0 16 7 C8 8 -2 5 -2 -5 Z"
-                fill="#38bdf8"
-                stroke="#0284c7"
-                strokeWidth="1.5"
-                opacity="0.95"
+                d="M-2 -3 C6 -3 15 2 13 8 C6 9 -2 6 -2 -3 Z"
+                fill="#ffffff"
               />
-              {/* High-Speed Glare Stripe Across Visor */}
-              <line x1="2" y1="-2" x2="13" y2="4" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+              {/* Chin Guard Accent Line */}
+              <path d="M-8 4 C-4 12 8 12 14 5" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" fill="none" />
             </g>
 
-            {/* ---------------- PROMINENT, HIGH-VISIBILITY ROTATING MOTORCYCLE WHEELS ---------------- */}
-            {/* REAR MOTORCYCLE WHEEL (Center at x=40, y=120, Radius=28px) */}
-            <g transform="translate(40, 120)">
-              {/* Black Rubber Tire with Tread Pattern */}
-              <circle cx="0" cy="0" r="28" fill="#0a0f1d" stroke="#1e293b" strokeWidth="2" />
-              <circle cx="0" cy="0" r="23" fill="#182030" />
-              {/* High-visibility Brand Orange Rim Tape Wall */}
-              <circle cx="0" cy="0" r="20" fill="none" stroke="#f57a10" strokeWidth="2.5" />
-              {/* Slotted Brake Rotor Disc */}
-              <circle cx="0" cy="0" r="14" fill="url(#brakeRotor)" stroke="#94a3b8" strokeWidth="0.8" />
-              {/* Gold Rear Brake Caliper */}
-              <path d="M-7 -14 A 14 14 0 0 1 7 -14 L5 -9 A 9 9 0 0 0 -5 -9 Z" fill="#f8b030" />
+            {/* ---------------- 4. PROMINENT ROTATING SCOOTER WHEELS (FROM LOGO) ---------------- */}
+            {/* REAR WHEEL (Center at x=45, y=120, Radius=26px) */}
+            <g transform="translate(45, 120)">
+              {/* Outer Black Tire */}
+              <circle cx="0" cy="0" r="26" fill="#070c17" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="0" cy="0" r="22" fill="#141d2e" />
+              {/* Crisp White Outer Rim */}
+              <circle cx="0" cy="0" r="18" fill="none" stroke="#ffffff" strokeWidth="2" />
+              {/* Center Hub */}
+              <circle cx="0" cy="0" r="6" fill="#0d1b32" stroke="#ffffff" strokeWidth="1.5" />
 
-              {/* 5-SPOKE HIGH-CONTRAST ALLOY WHEEL (Spins continuously around 0,0) */}
+              {/* 5-Spoke Rotating Alloy Spokes */}
               <g className="bike-wheel-rotate">
                 <animateTransform
                   attributeName="transform"
@@ -911,39 +888,26 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
                   dur="0.45s"
                   repeatCount="indefinite"
                 />
-                {/* 5 Distinct Silver-White Alloy Spokes */}
-                <line x1="0" y1="0" x2="0" y2="-19" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="18" y2="-6" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="11" y2="15" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="-11" y2="15" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="-18" y2="-6" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-
-                {/* Inner Spoke Highlight Grooves */}
-                <line x1="0" y1="-2" x2="0" y2="-17" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="2" y1="-1" x2="16" y2="-5" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="1" y1="2" x2="10" y2="14" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="-1" y1="2" x2="-10" y2="14" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="-2" y1="-1" x2="-16" y2="-5" stroke="#f8b030" strokeWidth="1.5" />
-
-                {/* Center Hub Nut */}
-                <circle cx="0" cy="0" r="6" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
-                <circle cx="0" cy="0" r="3" fill="#f8b030" />
+                <line x1="0" y1="0" x2="0" y2="-17" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="16" y2="-5" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="10" y2="13" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="-10" y2="13" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="-16" y2="-5" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <circle cx="0" cy="0" r="2.5" fill="#f8b030" />
               </g>
             </g>
 
-            {/* FRONT MOTORCYCLE WHEEL (Center at x=180, y=120, Radius=28px) */}
-            <g transform="translate(180, 120)">
-              {/* Black Rubber Tire with Tread Pattern */}
-              <circle cx="0" cy="0" r="28" fill="#0a0f1d" stroke="#1e293b" strokeWidth="2" />
-              <circle cx="0" cy="0" r="23" fill="#182030" />
-              {/* High-visibility Brand Orange Rim Tape Wall */}
-              <circle cx="0" cy="0" r="20" fill="none" stroke="#f57a10" strokeWidth="2.5" />
-              {/* Slotted Brake Rotor Disc */}
-              <circle cx="0" cy="0" r="14" fill="url(#brakeRotor)" stroke="#94a3b8" strokeWidth="0.8" />
-              {/* Gold Front Brake Caliper */}
-              <path d="M-7 -14 A 14 14 0 0 1 7 -14 L5 -9 A 9 9 0 0 0 -5 -9 Z" fill="#f8b030" />
+            {/* FRONT WHEEL (Center at x=185, y=120, Radius=26px) */}
+            <g transform="translate(185, 120)">
+              {/* Outer Black Tire */}
+              <circle cx="0" cy="0" r="26" fill="#070c17" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="0" cy="0" r="22" fill="#141d2e" />
+              {/* Crisp White Outer Rim */}
+              <circle cx="0" cy="0" r="18" fill="none" stroke="#ffffff" strokeWidth="2" />
+              {/* Center Hub */}
+              <circle cx="0" cy="0" r="6" fill="#0d1b32" stroke="#ffffff" strokeWidth="1.5" />
 
-              {/* 5-SPOKE HIGH-CONTRAST ALLOY WHEEL (Spins continuously around 0,0) */}
+              {/* 5-Spoke Rotating Alloy Spokes */}
               <g className="bike-wheel-rotate">
                 <animateTransform
                   attributeName="transform"
@@ -953,23 +917,12 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
                   dur="0.45s"
                   repeatCount="indefinite"
                 />
-                {/* 5 Distinct Silver-White Alloy Spokes */}
-                <line x1="0" y1="0" x2="0" y2="-19" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="18" y2="-6" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="11" y2="15" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="-11" y2="15" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-                <line x1="0" y1="0" x2="-18" y2="-6" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
-
-                {/* Inner Spoke Highlight Grooves */}
-                <line x1="0" y1="-2" x2="0" y2="-17" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="2" y1="-1" x2="16" y2="-5" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="1" y1="2" x2="10" y2="14" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="-1" y1="2" x2="-10" y2="14" stroke="#f8b030" strokeWidth="1.5" />
-                <line x1="-2" y1="-1" x2="-16" y2="-5" stroke="#f8b030" strokeWidth="1.5" />
-
-                {/* Center Hub Nut */}
-                <circle cx="0" cy="0" r="6" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
-                <circle cx="0" cy="0" r="3" fill="#f8b030" />
+                <line x1="0" y1="0" x2="0" y2="-17" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="16" y2="-5" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="10" y2="13" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="-10" y2="13" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <line x1="0" y1="0" x2="-16" y2="-5" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+                <circle cx="0" cy="0" r="2.5" fill="#f8b030" />
               </g>
             </g>
           </g>
@@ -1121,16 +1074,51 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
           100% { transform: translateX(-800px); opacity: 0; }
         }
 
-        /* Headlights Beam Intensity */
+        /* ========================================================
+           HEADLIGHTS: AUTOMATIC DAY/NIGHT SWITCHING
+           Morning & Daytime (0% - 54%): Completely OFF (nive jabe)
+           Sunset / Dusk (55% - 66%): Turns on as dusk falls
+           Deep Night (68% - 92%): Fully illuminated (jolbe)
+           Morning Dawn (96% - 100%): Extinguishes (nive jabe)
+           ======================================================== */
         .headlight-beam {
-          animation: beamGlow 24s infinite ease-in-out;
+          animation: beamNightCycle 24s infinite ease-in-out;
         }
-        @keyframes beamGlow {
-          0%, 20% { opacity: 0.55; }
-          25%, 45% { opacity: 0.25; }
-          50%, 65% { opacity: 0.7; }
-          70%, 95% { opacity: 0.95; }
-          100% { opacity: 0.55; }
+        @keyframes beamNightCycle {
+          0%, 54%   { opacity: 0; }
+          58%       { opacity: 0.35; }
+          68%, 92%  { opacity: 0.95; }
+          96%, 100% { opacity: 0; }
+        }
+
+        .headlight-bulb {
+          animation: bulbNightCycle 24s infinite ease-in-out;
+        }
+        @keyframes bulbNightCycle {
+          0%, 54% {
+            fill: #94a3b8;
+            stroke: #64748b;
+            filter: none;
+            opacity: 0.7;
+          }
+          58% {
+            fill: #fef08a;
+            stroke: #fde047;
+            filter: drop-shadow(0 0 4px #fef08a);
+            opacity: 0.9;
+          }
+          68%, 92% {
+            fill: #ffffff;
+            stroke: #fef08a;
+            filter: drop-shadow(0 0 10px #fef08a) drop-shadow(0 0 20px #fde047);
+            opacity: 1;
+          }
+          96%, 100% {
+            fill: #94a3b8;
+            stroke: #64748b;
+            filter: none;
+            opacity: 0.7;
+          }
         }
 
         /* =======================================================
