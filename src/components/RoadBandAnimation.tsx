@@ -407,6 +407,164 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
           </g>
 
           {/* =========================================================================
+              PANICKED COURIER RUNNER WITH PARCEL ON HEAD (RUNNING IN FEAR OF THE TRUCK!)
+              Position: x=580, y=175 (Sprinting between the Delivery Van and Motorcycle)
+              ========================================================================= */}
+          <g className="runner-container">
+            {/* Ground Contact Shadow under Running Feet */}
+            <ellipse cx="2" cy="50" rx="20" ry="4.5" fill="#050a14" opacity="0.75" />
+
+            {/* Foot Dust Puffs Flying Backward */}
+            <g className="dust-cloud">
+              <circle cx="-22" cy="46" r="4.5" fill="#94a3b8" opacity="0.6" />
+              <circle cx="-30" cy="48" r="3" fill="#cbd5e1" opacity="0.4" />
+            </g>
+
+            {/* ---------------- SPRINTING LEGS ---------------- */}
+            {/* Back Leg (Left) */}
+            <g className="runner-leg-back">
+              <path
+                d="M-2 12 L-18 26 L-26 44"
+                stroke="#0b1b38"
+                strokeWidth="6.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              {/* Sneaker Shoe */}
+              <path d="M-32 42 L-22 42 L-20 47 L-32 47 Z" fill="#ea580c" />
+              <rect x="-30" y="46" width="10" height="2" fill="#ffffff" />
+            </g>
+
+            {/* Front Leg (Right) */}
+            <g className="runner-leg-front">
+              <path
+                d="M4 12 L22 24 L16 46"
+                stroke="#0b1b38"
+                strokeWidth="6.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              {/* Sneaker Shoe */}
+              <path d="M12 44 L24 44 L26 49 L12 49 Z" fill="#ea580c" />
+              <rect x="14" y="48" width="10" height="2" fill="#ffffff" />
+            </g>
+
+            {/* ---------------- TORSO & UNIFORM ---------------- */}
+            {/* Torso aggressively leaned forward in full sprint */}
+            <path
+              d="M-6 12 C-6 2 -2 -8 8 -12 L16 -8 C10 4 2 14 -6 12 Z"
+              fill="#f57a10"
+              stroke="#c2410c"
+              strokeWidth="2"
+            />
+            {/* T-shirt Collar & White Accent */}
+            <path d="M6 -12 L12 -8 L4 -6 Z" fill="#ffffff" />
+            {/* Morning Rider Kite Icon on Runner's Chest */}
+            <circle cx="8" cy="-2" r="2.5" fill="#f8b030" />
+
+            {/* Fluttering T-shirt Hem in the Wind */}
+            <path d="M-8 8 L-14 12 L-6 13 Z" fill="#ea580c" />
+
+            {/* ---------------- ARMS HOLDING PARCEL ON HEAD ---------------- */}
+            {/* Left Arm reaching up to balance box */}
+            <path
+              d="M-4 -8 L-15 -24 L-12 -38"
+              stroke="#ea580c"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            {/* Left Hand gripping left side of carton */}
+            <circle cx="-12" cy="-38" r="3.5" fill="#fed7aa" stroke="#c2410c" strokeWidth="1" />
+
+            {/* Right Arm reaching up to balance box */}
+            <path
+              d="M10 -6 L20 -22 L14 -38"
+              stroke="#ea580c"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            {/* Right Hand gripping right side of carton */}
+            <circle cx="14" cy="-38" r="3.5" fill="#fed7aa" stroke="#c2410c" strokeWidth="1" />
+
+            {/* ---------------- PARCEL CARTON BALANCED ON HEAD ---------------- */}
+            <g transform="translate(1, -50)">
+              {/* Corrugated Cardboard Delivery Carton */}
+              <rect
+                x="-18"
+                y="-14"
+                width="36"
+                height="26"
+                rx="3"
+                fill="#d97706"
+                stroke="#92400e"
+                strokeWidth="2"
+              />
+              {/* Box Top Flap Crease */}
+              <line x1="-18" y1="-7" x2="18" y2="-7" stroke="#b45309" strokeWidth="1.5" />
+
+              {/* Morning Rider Official Orange Packing Tape */}
+              <rect x="-18" y="-4" width="36" height="6" fill="#f57a10" />
+              <rect x="-3" y="-14" width="6" height="26" fill="#ea580c" />
+
+              {/* White Barcode Shipping Label */}
+              <rect x="-14" y="3" width="14" height="7" rx="1" fill="#ffffff" />
+              <line x1="-12" y1="5" x2="-2" y2="5" stroke="#0f172a" strokeWidth="1" strokeDasharray="1.5 1" />
+              <line x1="-12" y1="8" x2="-4" y2="8" stroke="#0f172a" strokeWidth="0.8" />
+
+              {/* "FRAGILE / THIS SIDE UP" Arrows in Red */}
+              <path d="M10 4 L10 9 M8 6 L10 4 L12 6" stroke="#ef4444" strokeWidth="1.2" strokeLinecap="round" />
+            </g>
+
+            {/* ---------------- PANICKED FACE (LOOKING BACK AT TRUCK IN FEAR!) ---------------- */}
+            <g transform="translate(1, -22)">
+              {/* Head (tilted backward looking over left shoulder at oncoming truck) */}
+              <circle cx="0" cy="0" r="11" fill="#fed7aa" stroke="#ea580c" strokeWidth="1.5" />
+
+              {/* Disheveled Black Hair blowing in the wind */}
+              <path d="M-8 -6 C-12 -12 4 -14 10 -8 C6 -4 -4 -4 -8 -6 Z" fill="#0f172a" />
+              <path d="M-10 -4 L-15 -7 L-9 -1 Z" fill="#0f172a" />
+
+              {/* Wide Terrified Cartoon Eyes (Looking back to the left at the truck!) */}
+              {/* Left Eye */}
+              <ellipse cx="-4" cy="-1" rx="4" ry="4.5" fill="#ffffff" stroke="#0f172a" strokeWidth="1" />
+              <circle cx="-6" cy="-1" r="1.8" fill="#0f172a" />
+              {/* Right Eye */}
+              <ellipse cx="4" cy="-1" rx="3.5" ry="4" fill="#ffffff" stroke="#0f172a" strokeWidth="1" />
+              <circle cx="2" cy="-1" r="1.6" fill="#0f172a" />
+
+              {/* Panicked Open Screaming / Gasping Mouth */}
+              <path d="M-5 5 Q-1 9 4 5 Q-1 4 -5 5 Z" fill="#ef4444" stroke="#0f172a" strokeWidth="1" />
+              <ellipse cx="-1" cy="6" rx="2.5" ry="1.5" fill="#ffffff" />
+
+              {/* Flying Panic Sweat Drops (Popping off and flying backward!) */}
+              <path
+                d="M-10 -8 C-14 -8 -16 -4 -12 -2 C-10 -4 -8 -8 -10 -8 Z"
+                fill="#38bdf8"
+                stroke="#0284c7"
+                strokeWidth="0.8"
+                className="sweat-burst-1"
+              />
+              <path
+                d="M-7 -12 C-10 -12 -12 -9 -9 -7 C-7 -9 -5 -12 -7 -12 Z"
+                fill="#38bdf8"
+                stroke="#0284c7"
+                strokeWidth="0.8"
+                className="sweat-burst-2"
+              />
+
+              {/* Comical Panic Stress Lines Above Eyebrows */}
+              <line x1="-8" y1="-8" x2="-4" y2="-6" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="2" y1="-7" x2="6" y2="-8" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+            </g>
+          </g>
+
+          {/* =========================================================================
               VEHICLE 2: REALISTIC MORNING RIDER SPORT MOTORCYCLE & RIDER
               Position: x=880, y=90
               ========================================================================= */}
@@ -857,6 +1015,62 @@ export const RoadBandAnimation = memo(function RoadBandAnimation() {
           50%, 65% { opacity: 0.7; }
           70%, 95% { opacity: 0.95; }
           100% { opacity: 0.55; }
+        }
+
+        /* Panicked Courier Runner Sprint (Fleeing the oncoming truck in fear!) */
+        .runner-container {
+          animation: runnerSprintPanic 0.22s ease-in-out infinite;
+        }
+        @keyframes runnerSprintPanic {
+          0%, 100% {
+            transform: translate(575px, 175px) rotate(8deg);
+          }
+          50% {
+            transform: translate(575px, 169px) rotate(4deg);
+          }
+        }
+
+        /* Frantic Sprinting Legs */
+        .runner-leg-front {
+          transform-box: fill-box;
+          transform-origin: top center;
+          animation: sprintFrontLeg 0.22s ease-in-out infinite alternate;
+        }
+        @keyframes sprintFrontLeg {
+          0% { transform: rotate(-38deg); }
+          100% { transform: rotate(45deg); }
+        }
+
+        .runner-leg-back {
+          transform-box: fill-box;
+          transform-origin: top center;
+          animation: sprintBackLeg 0.22s ease-in-out infinite alternate;
+        }
+        @keyframes sprintBackLeg {
+          0% { transform: rotate(45deg); }
+          100% { transform: rotate(-38deg); }
+        }
+
+        /* Flying Panic Sweat Drops */
+        .sweat-burst-1 {
+          animation: sweatFly 0.45s linear infinite;
+        }
+        .sweat-burst-2 {
+          animation: sweatFly 0.45s linear infinite 0.22s;
+        }
+        @keyframes sweatFly {
+          0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+          25% { opacity: 1; }
+          100% { transform: translate(-28px, -18px) scale(1.3); opacity: 0; }
+        }
+
+        /* Foot Dust Puffs */
+        .dust-cloud {
+          animation: dustPuffBlow 0.35s linear infinite;
+        }
+        @keyframes dustPuffBlow {
+          0% { transform: translate(0, 0) scale(0.6); opacity: 0.8; }
+          100% { transform: translate(-25px, -6px) scale(1.8); opacity: 0; }
         }
       `}</style>
     </div>
