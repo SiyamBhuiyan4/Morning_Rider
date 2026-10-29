@@ -30,17 +30,14 @@ export default function App() {
   // The admin website has no public pages: everything starts at its login.
   if (
     IS_ADMIN_PORTAL &&
-    (path === "/" || path === "/register" || path === "/rider" || path === "/join" || path.startsWith("/track"))
+    (path === "/" || path === "/register" || path === "/rider" || path === "/login-rider" || path === "/join" || path.startsWith("/track"))
   ) {
-    return <Redirect to={me ? "/app" : "/login"} />;
+    return <Redirect to={me ? "/app" : "/login-admin"} />;
   }
 
-  // Admin routes
-  if (path === "/admin") {
+  // Admin routes - Confidential
+  if (path === "/login-admin" || path === "/admin" || path === "/admin/login") {
     if (me && me.role === "admin") return <Redirect to="/app" />;
-    return <AdminLogin />;
-  }
-  if (path === "/admin/login") {
     return <AdminLogin />;
   }
 
@@ -51,18 +48,27 @@ export default function App() {
   }
   if (path === "/join") return <Join />;
   if (path === "/forgot" && !IS_ADMIN_PORTAL) return <ForgotPassword />;
-  if (path === "/login" || path === "/register" || path === "/rider") {
-    // Sign-in and sign-up pages always show their form. A stored session
-    // (possibly another person's, left on a shared browser) must not skip it:
-    // a fresh sign-in or sign-up replaces the stored session.
-    if (path === "/login") return <Login />;
-    if (path === "/rider") return <RiderLogin />;
+
+  // Dedicated Rider login
+  if (path === "/login-rider" || path === "/rider") {
+    return <RiderLogin />;
+  }
+
+  // Merchant login & register
+  if (path === "/login") {
+    return <Login />;
+  }
+  if (path === "/register") {
     return <Register />;
   }
 
   // Everything below needs a signed-in user
   if (me === undefined) return <Spinner className="h-full items-center" />;
-  if (me === null) return <Redirect to={path.startsWith("/admin") ? "/admin" : "/login"} />;
+  if (me === null) {
+    if (path.startsWith("/admin") || path === "/login-admin") return <Redirect to="/login-admin" />;
+    if (path.startsWith("/rider") || path === "/login-rider") return <Redirect to="/login-rider" />;
+    return <Redirect to="/login" />;
+  }
 
   if (path === "/print/labels") {
     const ids = (new URLSearchParams(search).get("ids") ?? "").split(",").filter(Boolean) as Id<"parcels">[];

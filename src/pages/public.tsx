@@ -21,7 +21,6 @@ import {
   Search,
   ShieldCheck,
   Snowflake,
-  Store,
   Sunrise,
   ThumbsUp,
   Truck,
@@ -47,10 +46,6 @@ export function safeNext(raw: string | null) {
   return raw && raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\") ? raw : "/app";
 }
 const nextParam = () => new URLSearchParams(location.search).get("next");
-const withNext = (path: string) => {
-  const n = nextParam();
-  return n ? `${path}?next=${encodeURIComponent(n)}` : path;
-};
 
 /* ------------------------------------------------------------------ nav */
 
@@ -814,7 +809,6 @@ export function Home() {
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-2">
             <Link href="/login" className="transition hover:text-brand">{t("Merchant login")}</Link>
             <Link href="/join" className="transition hover:text-brand">{t("Join as rider")}</Link>
-            <Link href="/admin" className="transition hover:text-brand">{t("Admin portal")}</Link>
             <span>
               {t("Hotline")}: {CONTACT.phone}, {CONTACT.phone2}
             </span>
@@ -939,40 +933,6 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
 
   return (
     <AuthLayout title={copy.title} subtitle={copy.subtitle}>
-      {/* Portal door switcher */}
-      <div className="-mt-2 mb-6 grid grid-cols-3 rounded-2xl bg-surface-2 p-1 text-xs sm:text-sm font-bold">
-        <button
-          type="button"
-          onClick={() => navigate(withNext("/login"))}
-          className={cx(
-            "flex items-center justify-center gap-1.5 rounded-xl py-2 transition cursor-pointer",
-            door === "merchant" ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink"
-          )}
-        >
-          <Store className="size-4" /> <span>{t("Merchant")}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate(withNext("/rider"))}
-          className={cx(
-            "flex items-center justify-center gap-1.5 rounded-xl py-2 transition cursor-pointer",
-            door === "rider" ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink"
-          )}
-        >
-          <Bike className="size-4" /> <span>{t("Rider")}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate(withNext("/admin"))}
-          className={cx(
-            "flex items-center justify-center gap-1.5 rounded-xl py-2 transition cursor-pointer",
-            door === "admin" ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink"
-          )}
-        >
-          <ShieldCheck className="size-4" /> <span>{t("Admin")}</span>
-        </button>
-      </div>
-
       {door === "rider" && (
         <div className="-mt-2 mb-6 flex items-center gap-3 rounded-2xl bg-brand-50 p-3.5 text-sm font-semibold text-brand-700">
           <Bike className="size-5 shrink-0" /> {t("Riders get their account from the Morning Rider office.")}
@@ -1029,13 +989,10 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
           </Field>
         )}
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">{error}</p>}
-        {wrongDoor && (
-          <Link
-            href={withNext(wrongDoor === "rider" ? "/rider" : "/login")}
-            className="block rounded-xl bg-brand px-3.5 py-2.5 text-center text-sm font-bold text-white hover:bg-brand-600"
-          >
-            {wrongDoor === "rider" ? t("Go to Rider login →") : t("Go to Merchant login →")}
-          </Link>
+        {wrongDoor && door === "merchant" && wrongDoor === "rider" && (
+          <p className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm font-medium text-amber-800">
+            {t("This phone number is registered as a delivery rider. Please log in through the rider application.")}
+          </p>
         )}
         <Button
           type="submit"
@@ -1056,19 +1013,7 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
               {t("Create an account")}
             </Link>
           </p>
-          <p className="mt-3 text-center text-sm text-ink-2">
-            {t("Are you a rider?")}{" "}
-            <Link href={withNext("/rider")} className="font-semibold text-brand hover:underline">
-              {t("Rider login")}
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-sm text-ink-2">
-            {t("Staff or Admin?")}{" "}
-            <Link href={withNext("/admin")} className="font-semibold text-brand hover:underline">
-              {t("Admin portal")}
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-sm">
+          <p className="mt-3 text-center text-sm">
             <Link href="/forgot" className="font-semibold text-brand hover:underline">
               {t("Forgot password?")}
             </Link>
@@ -1081,34 +1026,6 @@ function SignIn({ door }: { door: "merchant" | "rider" | "admin" }) {
             {t("Want to work with us?")}{" "}
             <Link href="/join" className="font-semibold text-brand hover:underline">
               {t("Apply as a rider")}
-            </Link>
-          </p>
-          <p className="mt-3 text-center text-sm text-ink-2">
-            {t("Are you a merchant?")}{" "}
-            <Link href={withNext("/login")} className="font-semibold text-brand hover:underline">
-              {t("Merchant login")}
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-sm text-ink-2">
-            {t("Staff or Admin?")}{" "}
-            <Link href={withNext("/admin")} className="font-semibold text-brand hover:underline">
-              {t("Admin portal")}
-            </Link>
-          </p>
-        </>
-      )}
-      {door === "admin" && (
-        <>
-          <p className="mt-6 text-center text-sm text-ink-2">
-            {t("Are you a merchant?")}{" "}
-            <Link href={withNext("/login")} className="font-semibold text-brand hover:underline">
-              {t("Merchant login")}
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-sm text-ink-2">
-            {t("Are you a rider?")}{" "}
-            <Link href={withNext("/rider")} className="font-semibold text-brand hover:underline">
-              {t("Rider login")}
             </Link>
           </p>
         </>
