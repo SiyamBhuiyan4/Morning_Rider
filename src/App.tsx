@@ -12,6 +12,10 @@ import { RiderCash, RiderTasks } from "./pages/rider";
 import { Account, EditParcel, FraudCheck, NewParcel, ParcelsPage } from "./pages/shared";
 import { PrintLabels, PrintPayout } from "./pages/print";
 import { VerifyBusiness } from "./pages/verify";
+import { HubsPage } from "./pages/hubs";
+import { AccountsPage } from "./pages/accounts";
+import { HRM as HrmPage } from "./pages/hrm";
+import { CommissionsPage } from "./pages/commissions";
 import { IS_ADMIN_PORTAL } from "./lib/portal";
 
 function Redirect({ to }: { to: string }) {
@@ -87,6 +91,7 @@ function route(path: string, role: "admin" | "merchant" | "rider"): ReactNode {
   if (role === "rider") {
     if (path === "/app") return <RiderTasks />;
     if (path === "/app/cash") return <RiderCash />;
+    if (path === "/app/commissions") return <CommissionsPage />;
     return <Redirect to="/app" />;
   }
 
@@ -107,6 +112,10 @@ function route(path: string, role: "admin" | "merchant" | "rider"): ReactNode {
   if (path === "/app") return <AdminDashboard />;
   if (path === "/app/merchants") return <Merchants />;
   if (path === "/app/riders") return <Riders />;
+  if (path === "/app/hubs") return <HubsPage />;
+  if (path === "/app/accounts") return <AccountsPage />;
+  if (path === "/app/hrm") return <HrmPage />;
+  if (path === "/app/commissions") return <CommissionsPage />;
   if (path === "/app/payouts") return <Payouts />;
   if (path === "/app/cash") return <RiderCashAdmin />;
   if (path === "/app/settings") return <RateSettings />;

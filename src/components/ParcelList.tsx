@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { Package, PackagePlus, Printer, Search, X } from "lucide-react";
+import { Download, Package, PackagePlus, Printer, ScanBarcode, Search, X } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useAuthed } from "../lib/session";
@@ -11,6 +11,8 @@ import { Button, Card, Empty, Input, Select, Spinner, StatusBadge, cx } from "./
 import { ParcelDetail, RiderSelect } from "./ParcelDetail";
 import { RangePills, useDateRange } from "./RangePicker";
 import { t } from "../lib/prefs";
+import { exportToCsv, formatParcelForExport } from "../lib/csv";
+import { SmartScannerModal } from "./SmartScannerModal";
 
 export function ParcelList() {
   const { token, me } = useAuthed();
@@ -26,6 +28,18 @@ export function ParcelList() {
   const [open, setOpen] = useState<Id<"parcels"> | null>(null);
   const [selected, setSelected] = useState<Set<Id<"parcels">>>(new Set());
   const [bulkRider, setBulkRider] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  function handleExportCsv() {
+    if (!results || results.length === 0) {
+      toast.error(t("No parcels to export."));
+      return;
+    }
+    const { headers } = formatParcelForExport(results[0], t);
+    const rows = results.map((p) => formatParcelForExport(p, t).values);
+    exportToCsv(`parcels-${status || "all"}-${Date.now()}.csv`, headers, rows);
+    toast.ok(t("Exported {n} parcels to CSV.", { n: results.length }));
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 300);
@@ -98,6 +112,24 @@ export function ParcelList() {
               ))}
             </Select>
           )}
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              size="sm"
+              variant="outline"
+              icon={Download}
+              onClick={handleExportCsv}
+            >
+              {t("Export CSV")}
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              icon={ScanBarcode}
+              onClick={() => setScannerOpen(true)}
+            >
+              {t("Smart Scanner")}
+            </Button>
+          </div>
         </div>
         <div className="mt-3">
           <RangePills value={range} onChange={setRange} withAll />
@@ -233,6 +265,7 @@ export function ParcelList() {
       </Card>
 
       <ParcelDetail id={open} onClose={() => setOpen(null)} />
+      {scannerOpen && <SmartScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />}
     </>
   );
 }

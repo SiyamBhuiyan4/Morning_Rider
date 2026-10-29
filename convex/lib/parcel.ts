@@ -2,6 +2,27 @@ import { ConvexError } from "convex/values";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { Role } from "./auth";
+import { recordDeliveryCommission } from "../commissions";
+
+export type CustomRates = {
+  uttara?: number;
+  dhakaCity?: number;
+  gazipurCity?: number;
+  narayanganjCity?: number;
+  codPercent?: number;
+};
+
+export function resolveRatesForMerchant(baseRates: Rates, custom?: CustomRates): Rates {
+  if (!custom) return baseRates;
+  return {
+    ...baseRates,
+    uttara: custom.uttara ?? baseRates.uttara,
+    dhakaCity: custom.dhakaCity ?? baseRates.dhakaCity,
+    gazipurCity: custom.gazipurCity ?? baseRates.gazipurCity,
+    narayanganjCity: custom.narayanganjCity ?? baseRates.narayanganjCity,
+    codPercent: custom.codPercent ?? baseRates.codPercent,
+  };
+}
 
 export type Status = Doc<"parcels">["status"];
 export type Zone = Doc<"parcels">["zone"];
@@ -205,6 +226,20 @@ export async function changeStatus(
   await ctx.db.patch("parcels", p._id, patch);
   await countParcel(ctx, p, p.status, to);
   await logEvent(ctx, p._id, to, user, opts.note);
+
+  // Automatically credit rider delivery commission upon successful delivery
+  if (to === "delivered" || to === "partial_delivered") {
+    const effectiveRiderId = (patch.deliveryRiderId ?? p.deliveryRiderId) ?? (user.role === "rider" ? user._id : undefined);
+    try {
+      await recordDeliveryCommission(ctx, {
+        parcelId: p._id,
+        trackingCode: p.trackingCode,
+        riderId: effectiveRiderId,
+      });
+    } catch {
+      // Safe fallback: non-blocking
+    }
+  }
 }
 
 export async function requireActiveRider(ctx: QueryCtx | MutationCtx, riderId: Id<"users">) {

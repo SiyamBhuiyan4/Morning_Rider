@@ -317,3 +317,48 @@ export const adminUpdate = mutation({
     return null;
   },
 });
+
+export const setMerchantCustomRates = mutation({
+  args: {
+    token: v.string(),
+    merchantId: v.id("users"),
+    customRates: v.optional(
+      v.object({
+        uttara: v.optional(v.number()),
+        dhakaCity: v.optional(v.number()),
+        gazipurCity: v.optional(v.number()),
+        narayanganjCity: v.optional(v.number()),
+        codPercent: v.optional(v.number()),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const merchant = await ctx.db.get("users", args.merchantId);
+    if (!merchant || merchant.role !== "merchant") throw new ConvexError("Merchant not found.");
+    await ctx.db.patch("users", merchant._id, { customRates: args.customRates });
+    return { ok: true };
+  },
+});
+
+export const setAdminSubrole = mutation({
+  args: {
+    token: v.string(),
+    adminId: v.id("users"),
+    adminRole: v.optional(
+      v.union(
+        v.literal("super_admin"),
+        v.literal("hub_manager"),
+        v.literal("accounts_manager"),
+        v.literal("support_agent"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireUser(ctx, args.token, ["admin"]);
+    const targetAdmin = await ctx.db.get("users", args.adminId);
+    if (!targetAdmin || targetAdmin.role !== "admin") throw new ConvexError("Admin user not found.");
+    await ctx.db.patch("users", targetAdmin._id, { adminRole: args.adminRole });
+    return { ok: true };
+  },
+});

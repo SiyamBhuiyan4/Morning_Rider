@@ -491,6 +491,7 @@ export function Merchants() {
   const [given, setGiven] = useState<GivenLogin | null>(null);
   const [docsFor, setDocsFor] = useState<Id<"users"> | null>(null);
   const [viewing, setViewing] = useState<Id<"users"> | null>(null);
+  const [customRatesFor, setCustomRatesFor] = useState<any | null>(null);
 
   function act(userId: Id<"users">, status: "active" | "suspended", msg: string) {
     toast.undoable(msg, () => setStatus({ token, userId, status }), `user:${userId}`);
@@ -580,6 +581,14 @@ export function Merchants() {
                       </Button>
                       <Button
                         size="sm"
+                        variant="outline"
+                        icon={Settings}
+                        onClick={() => setCustomRatesFor(m)}
+                      >
+                        {m.customRates ? t("Rates (Custom)") : t("Custom rates")}
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="ghost"
                         icon={KeyRound}
                         onClick={() =>
@@ -618,7 +627,106 @@ export function Merchants() {
       <LoginDetailsModal value={given} onClose={() => setGiven(null)} />
       {docsFor && <VerificationReviewModal merchantId={docsFor} onClose={() => setDocsFor(null)} />}
       <MerchantProfileModal merchantId={viewing} onClose={() => setViewing(null)} />
+      {customRatesFor && <MerchantCustomRatesModal merchant={customRatesFor} onClose={() => setCustomRatesFor(null)} />}
     </>
+  );
+}
+
+function MerchantCustomRatesModal({ merchant, onClose }: { merchant: any; onClose: () => void }) {
+  const { token } = useAuthed();
+  const toast = useToast();
+  const setRates = useMutation(api.users.setMerchantCustomRates);
+  const existing = merchant.customRates ?? {};
+
+  const [uttara, setUttara] = useState(existing.uttara !== undefined ? String(existing.uttara) : "");
+  const [dhakaCity, setDhakaCity] = useState(existing.dhakaCity !== undefined ? String(existing.dhakaCity) : "");
+  const [gazipurCity, setGazipurCity] = useState(existing.gazipurCity !== undefined ? String(existing.gazipurCity) : "");
+  const [narayanganjCity, setNarayanganjCity] = useState(existing.narayanganjCity !== undefined ? String(existing.narayanganjCity) : "");
+  const [codPercent, setCodPercent] = useState(existing.codPercent !== undefined ? String(existing.codPercent) : "");
+  const [busy, setBusy] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const payload: any = {};
+      if (uttara) payload.uttara = Number(uttara);
+      if (dhakaCity) payload.dhakaCity = Number(dhakaCity);
+      if (gazipurCity) payload.gazipurCity = Number(gazipurCity);
+      if (narayanganjCity) payload.narayanganjCity = Number(narayanganjCity);
+      if (codPercent) payload.codPercent = Number(codPercent);
+
+      await setRates({
+        token,
+        merchantId: merchant._id,
+        customRates: Object.keys(payload).length > 0 ? payload : undefined,
+      });
+      toast.ok(t("Custom rates updated for {name}.", { name: merchant.businessName ?? merchant.name }));
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save rates.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <Card className="relative w-full max-w-md p-6">
+        <button onClick={onClose} className="absolute top-4 right-4 text-ink-3 hover:text-ink">
+          <X className="size-5" />
+        </button>
+        <h3 className="text-lg font-bold">{t("Merchant Custom Rates")}</h3>
+        <p className="text-xs text-ink-3 mb-4">
+          {merchant.businessName ?? merchant.name} ({merchant.phone}) — {t("Leave blank to inherit global rates.")}
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("Uttara (Tk)")}>
+              {(id) => <Input id={id} type="number" placeholder="Default 60" value={uttara} onChange={(e) => setUttara(e.target.value)} />}
+            </Field>
+            <Field label={t("Dhaka City (Tk)")}>
+              {(id) => <Input id={id} type="number" placeholder="Default 70" value={dhakaCity} onChange={(e) => setDhakaCity(e.target.value)} />}
+            </Field>
+            <Field label={t("Gazipur (Tk)")}>
+              {(id) => <Input id={id} type="number" placeholder="Default 90" value={gazipurCity} onChange={(e) => setGazipurCity(e.target.value)} />}
+            </Field>
+            <Field label={t("Narayanganj (Tk)")}>
+              {(id) => <Input id={id} type="number" placeholder="Default 110" value={narayanganjCity} onChange={(e) => setNarayanganjCity(e.target.value)} />}
+            </Field>
+          </div>
+          <Field label={t("COD Commission (%)")}>
+            {(id) => <Input id={id} type="number" step="0.1" placeholder="Default 0%" value={codPercent} onChange={(e) => setCodPercent(e.target.value)} />}
+          </Field>
+          <div className="pt-2 flex justify-between items-center">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await setRates({ token, merchantId: merchant._id, customRates: undefined });
+                  toast.ok(t("Reset to global rates."));
+                  onClose();
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t("Reset to Global")}
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={onClose}>
+                {t("Cancel")}
+              </Button>
+              <Button type="submit" variant="primary" loading={busy}>
+                {t("Save Rates")}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }
 

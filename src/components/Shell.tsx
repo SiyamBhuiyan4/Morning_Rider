@@ -18,6 +18,10 @@ import {
   BadgeCheck,
   MessageCircle,
   MessagesSquare,
+  Building2,
+  PieChart,
+  Users,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import { useQuery } from "convex/react";
@@ -57,6 +61,7 @@ const NAV: Record<"admin" | "merchant" | "rider", NavItem[]> = {
   rider: [
     { href: "/app", label: "My tasks", icon: ClipboardList },
     { href: "/app/cash", label: "Cash in hand", icon: Banknote },
+    { href: "/app/commissions", label: "My commissions", icon: TrendingUp },
   ],
 };
 
@@ -95,6 +100,8 @@ export function Shell({ children }: { children: ReactNode }) {
       items: [
         { href: "/app/merchants", label: "Merchants", icon: Store },
         { href: "/app/riders", label: "Riders", icon: Bike },
+        { href: "/app/hubs", label: "Hubs & Warehouses", icon: Building2 },
+        { href: "/app/hrm", label: "HRM & Payroll", icon: Users },
         { href: "/app/messages", label: "Merchant messages", icon: MessageCircle },
         { href: "/app/rider-messages", label: "Rider messages", icon: MessagesSquare },
       ],
@@ -102,6 +109,8 @@ export function Shell({ children }: { children: ReactNode }) {
     {
       title: t("Finance & Rates"),
       items: [
+        { href: "/app/accounts", label: "Smart Accounts", icon: PieChart },
+        { href: "/app/commissions", label: "Commissions", icon: TrendingUp },
         { href: "/app/payouts", label: "Merchant payouts", icon: Wallet },
         { href: "/app/cash", label: "Rider cash", icon: Banknote },
         { href: "/app/fraud", label: "Fraud check", icon: ShieldCheck },

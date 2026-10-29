@@ -16,7 +16,15 @@ import {
   ADMIN_LOGIN_ID,
   randomHex,
   type Role,
+  type Ctx,
+  requireUser,
 } from "./lib/auth";
+
+export { requireUser };
+
+export async function requireAdmin(ctx: Ctx, token: string) {
+  return await requireUser(ctx, token, ["admin"]);
+}
 import { payoutMethod } from "./schema";
 import { assertEmailFree, cleanEmail } from "./lib/email";
 

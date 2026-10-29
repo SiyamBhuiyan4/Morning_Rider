@@ -113,6 +113,11 @@ export async function requireUser(ctx: Ctx, token: string, roles: Role[]) {
   return user;
 }
 
+/** Resolves the session token to an active admin user, or throws. */
+export async function requireAdmin(ctx: Ctx, token: string) {
+  return await requireUser(ctx, token, ["admin"]);
+}
+
 /** Same lookup as `requireUser`, but returns null instead of throwing. */
 export async function currentUser(ctx: Ctx, token: string) {
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;

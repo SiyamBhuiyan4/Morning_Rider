@@ -13,6 +13,7 @@ import {
   logEvent,
   newTrackingCode,
   requireActiveRider,
+  resolveRatesForMerchant,
   type Rates,
 } from "./lib/parcel";
 import { category, parcelStatus, zone } from "./schema";
@@ -68,11 +69,12 @@ export async function insertParcel(
   const input = validateInput(raw);
   const trackingCode = await newTrackingCode(ctx);
   const now = Date.now();
+  const effectiveRates = resolveRatesForMerchant(rates, merchant.customRates);
   const doc = {
     ...input,
     trackingCode,
     merchantId: merchant._id,
-    ...computeCharges(rates, input.zone, input.weightKg, input.codAmount),
+    ...computeCharges(effectiveRates, input.zone, input.weightKg, input.codAmount),
     status: "pending" as const,
     collectedAmount: 0,
     settlement: "open" as const,
@@ -106,10 +108,12 @@ async function resolveMerchant(ctx: MutationCtx, user: Doc<"users">, merchantId?
 export const quote = query({
   args: { token: v.string(), zone, weightKg: v.number(), codAmount: v.number() },
   handler: async (ctx, args) => {
-    await requireUser(ctx, args.token, ["admin", "merchant"]);
+    const user = await requireUser(ctx, args.token, ["admin", "merchant"]);
     const weight = Number.isFinite(args.weightKg) && args.weightKg > 0 ? args.weightKg : 1;
     const cod = Number.isFinite(args.codAmount) && args.codAmount > 0 ? args.codAmount : 0;
-    return computeCharges(await getRates(ctx), args.zone, weight, cod);
+    const baseRates = await getRates(ctx);
+    const effectiveRates = user.role === "merchant" ? resolveRatesForMerchant(baseRates, user.customRates) : baseRates;
+    return computeCharges(effectiveRates, args.zone, weight, cod);
   },
 });
 
@@ -210,6 +214,45 @@ export const get = query({
       .withIndex("by_parcelId_and_at", (q) => q.eq("parcelId", p._id))
       .order("desc")
       .take(50);
+    const merchant = await ctx.db.get("users", p.merchantId);
+    const pickupRider = p.pickupRiderId ? await ctx.db.get("users", p.pickupRiderId) : null;
+    const deliveryRider = p.deliveryRiderId ? await ctx.db.get("users", p.deliveryRiderId) : null;
+    const person = (u: Doc<"users"> | null) => (u ? { name: u.name, phone: u.phone } : null);
+
+    return {
+      parcel: strip(p),
+      events: events.map((e) => ({ status: e.status, note: e.note, at: e.at, byRole: e.byRole })),
+      merchant: merchant && {
+        name: merchant.name,
+        businessName: merchant.businessName,
+        phone: merchant.phone,
+        pickupAddress: merchant.pickupAddress,
+      },
+      pickupRider: person(pickupRider),
+      deliveryRider: person(deliveryRider),
+      moves: allowedMoves(p, user),
+      canEdit: canEdit(p, user),
+    };
+  },
+});
+
+export const getByTrackingCode = query({
+  args: { token: v.string(), code: v.string() },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.token, ["admin", "merchant", "rider"]);
+    const code = args.code.trim().toUpperCase();
+    if (!code) return null;
+    const p = await ctx.db
+      .query("parcels")
+      .withIndex("by_trackingCode", (q) => q.eq("trackingCode", code))
+      .unique();
+    if (!p || !canSee(p, user)) return null;
+
+    const events = await ctx.db
+      .query("parcelEvents")
+      .withIndex("by_parcelId_and_at", (q) => q.eq("parcelId", p._id))
+      .order("desc")
+      .take(20);
     const merchant = await ctx.db.get("users", p.merchantId);
     const pickupRider = p.pickupRiderId ? await ctx.db.get("users", p.pickupRiderId) : null;
     const deliveryRider = p.deliveryRiderId ? await ctx.db.get("users", p.deliveryRiderId) : null;

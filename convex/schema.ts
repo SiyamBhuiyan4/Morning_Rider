@@ -88,6 +88,60 @@ export const education = v.union(
   v.literal("masters"),
 );
 
+export const adminRole = v.union(
+  v.literal("super_admin"),
+  v.literal("hub_manager"),
+  v.literal("accounts_manager"),
+  v.literal("support_agent"),
+);
+
+export const vehicleType = v.union(
+  v.literal("van"),
+  v.literal("truck"),
+  v.literal("pickup"),
+  v.literal("bike"),
+);
+
+export const manifestStatus = v.union(
+  v.literal("created"),
+  v.literal("dispatched"),
+  v.literal("received"),
+);
+
+export const employeeDepartment = v.union(
+  v.literal("logistics"),
+  v.literal("operations"),
+  v.literal("finance"),
+  v.literal("support"),
+  v.literal("management"),
+);
+
+export const attendanceStatus = v.union(
+  v.literal("present"),
+  v.literal("absent"),
+  v.literal("late"),
+  v.literal("leave"),
+);
+
+export const payrollStatus = v.union(
+  v.literal("draft"),
+  v.literal("approved"),
+  v.literal("paid"),
+);
+
+export const expenseCategory = v.union(
+  v.literal("delivery_fee"),
+  v.literal("cod_fee"),
+  v.literal("office_rent"),
+  v.literal("fuel_transport"),
+  v.literal("rider_commission"),
+  v.literal("agent_commission"),
+  v.literal("staff_salary"),
+  v.literal("utility"),
+  v.literal("equipment"),
+  v.literal("other"),
+);
+
 export default defineSchema({
   users: defineTable({
     name: v.string(),
@@ -105,6 +159,21 @@ export default defineSchema({
     payoutAccount: v.optional(v.string()),
     // rider profile
     riderArea: v.optional(v.string()),
+    // Admin sub-role (Custom Multi-role Admin)
+    adminRole: v.optional(adminRole),
+    // Merchant custom rates (Merchant-wise delivery charge)
+    customRates: v.optional(
+      v.object({
+        uttara: v.optional(v.number()),
+        dhakaCity: v.optional(v.number()),
+        gazipurCity: v.optional(v.number()),
+        narayanganjCity: v.optional(v.number()),
+        codPercent: v.optional(v.number()),
+      }),
+    ),
+    // Hub and commission settings
+    assignedHubId: v.optional(v.string()),
+    commissionPerDelivery: v.optional(v.number()),
     // merchant business verification; undefined = not submitted yet
     verification: v.optional(verificationStatus),
     demo: v.optional(v.boolean()), // sample data, removable from the admin dashboard
@@ -406,4 +475,126 @@ export default defineSchema({
 
   /* Rate limit for the public "find my account" form. */
   supportLookups: defineTable({ at: v.number() }).index("by_at", ["at"]),
+
+  /* Central Hub & Warehouse Management (Item 2, 12, 17) */
+  hubs: defineTable({
+    name: v.string(),
+    code: v.string(), // e.g. "HUB-UTTARA", "HUB-GAZIPUR"
+    address: v.string(),
+    city: v.string(),
+    managerId: v.optional(v.id("users")),
+    phone: v.string(),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    createdAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_status", ["status"]),
+
+  /* Fleet & Transport Panel (Item 12) */
+  transports: defineTable({
+    vehicleNumber: v.string(),
+    vehicleType,
+    driverName: v.string(),
+    driverPhone: v.string(),
+    capacityKg: v.number(),
+    status: v.union(v.literal("available"), v.literal("in_transit"), v.literal("maintenance")),
+    currentHubId: v.optional(v.id("hubs")),
+    createdAt: v.number(),
+  }).index("by_status", ["status"]),
+
+  /* Hub-to-Hub Dispatch Manifests & Bags (Item 12, 17) */
+  manifests: defineTable({
+    manifestNumber: v.string(),
+    sourceHubId: v.id("hubs"),
+    destinationHubId: v.id("hubs"),
+    transportId: v.optional(v.id("transports")),
+    driverName: v.optional(v.string()),
+    driverPhone: v.optional(v.string()),
+    parcelIds: v.array(v.id("parcels")),
+    parcelCount: v.number(),
+    status: manifestStatus,
+    dispatchedAt: v.optional(v.number()),
+    receivedAt: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_manifestNumber", ["manifestNumber"])
+    .index("by_sourceHubId", ["sourceHubId"])
+    .index("by_destinationHubId", ["destinationHubId"])
+    .index("by_status", ["status"]),
+
+  /* Rider & Hub Agent Delivery Commission Ledger (Item 8, 9) */
+  commissions: defineTable({
+    userId: v.id("users"),
+    userRole: v.union(v.literal("rider"), v.literal("agent")),
+    parcelId: v.id("parcels"),
+    trackingCode: v.string(),
+    amount: v.number(),
+    status: v.union(v.literal("earned"), v.literal("paid")),
+    createdAt: v.number(),
+    paidAt: v.optional(v.number()),
+  })
+    .index("by_userId_and_createdAt", ["userId", "createdAt"])
+    .index("by_status", ["status"]),
+
+  /* Smart Accounts Management & Expense Vouchers (Item 19) */
+  accountsTransactions: defineTable({
+    type: v.union(v.literal("income"), v.literal("expense"), v.literal("payout"), v.literal("deposit")),
+    category: expenseCategory,
+    amount: v.number(),
+    description: v.string(),
+    referenceId: v.optional(v.string()),
+    receiptUrl: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_type_and_createdAt", ["type", "createdAt"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_category", ["category"]),
+
+  /* HRM & Payroll: Staff Directory (Item 11) */
+  employees: defineTable({
+    name: v.string(),
+    phone: v.string(),
+    email: v.optional(v.string()),
+    designation: v.string(),
+    department: employeeDepartment,
+    baseSalary: v.number(),
+    joinDate: v.string(), // YYYY-MM-DD
+    status: v.union(v.literal("active"), v.literal("on_leave"), v.literal("terminated")),
+    createdAt: v.number(),
+  })
+    .index("by_phone", ["phone"])
+    .index("by_status", ["status"]),
+
+  /* HRM: Daily Attendance (Item 11) */
+  attendance: defineTable({
+    employeeId: v.id("employees"),
+    date: v.string(), // YYYY-MM-DD
+    status: attendanceStatus,
+    clockIn: v.optional(v.string()),
+    clockOut: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_employeeId_and_date", ["employeeId", "date"])
+    .index("by_date", ["date"]),
+
+  /* HRM: Monthly Payroll & Salary Disbursal (Item 11) */
+  payroll: defineTable({
+    employeeId: v.id("employees"),
+    month: v.string(), // YYYY-MM
+    baseSalary: v.number(),
+    bonus: v.number(),
+    deductions: v.number(),
+    netSalary: v.number(),
+    status: payrollStatus,
+    paidAt: v.optional(v.number()),
+    paymentMethod: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_employeeId_and_month", ["employeeId", "month"])
+    .index("by_month", ["month"])
+    .index("by_status", ["status"]),
 });
