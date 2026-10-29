@@ -46,7 +46,7 @@ import { AddRiderModal, RiderProfileModal } from "./riderProfile";
 import { LoginDetailsModal, SetPasswordModal, type GivenLogin, type Person } from "../components/PasswordTools";
 import { generatePassword } from "../lib/password";
 import { MerchantProfileModal } from "./merchantProfile";
-import { LiveBadge, LiveFeed, Ticker } from "../components/Live";
+import { LiveFeed, Ticker } from "../components/Live";
 import { RangePills, rangeLabel, useDateRange } from "../components/RangePicker";
 
 /* -------------------------------------------------------------- dashboard */
@@ -72,14 +72,7 @@ export function AdminDashboard() {
         <div className="pointer-events-none absolute -right-12 -top-12 size-56 rounded-full bg-brand/15 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-sun ring-1 ring-white/15">
-                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {t("Admin Console")}
-              </span>
-              <LiveBadge />
-            </div>
-            <h1 className="mt-3 text-2xl font-black italic tracking-tight sm:text-3xl">
+            <h1 className="text-2xl font-black italic tracking-tight sm:text-3xl">
               {t(new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening")},{" "}
               <span className="text-sun">{me.name.split(" ")[0]}</span>
             </h1>
